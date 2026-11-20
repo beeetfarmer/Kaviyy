@@ -9,7 +9,10 @@ pluginManagement {
             }
         }
         mavenCentral()
-        gradlePluginPortal()
+        // Only the foojay toolchain resolver lives exclusively on the plugin portal (MASVS K6).
+        gradlePluginPortal {
+            content { includeGroupByRegex("org\\.gradle\\.toolchains.*") }
+        }
     }
 }
 plugins {
