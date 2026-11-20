@@ -5,6 +5,7 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nl.kaviyy.core.data.AdminRepository
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.ReadStateRepository
@@ -49,6 +50,7 @@ data class SeriesUiState(
     val reviews: ReviewsState = ReviewsState.Loading,
     /** Saving the review failed (reviews are online only). */
     val reviewError: AppError? = null,
+    val adminNotice: AdminNotice? = null,
 ) {
     /** The server's continue point, when it's among the cached chapters. */
     val continueChapter: ChapterEntity?
@@ -70,7 +72,13 @@ sealed interface SeriesSheet {
 
     /** Your rating and review, community ratings, others' reviews, links. */
     data object Reviews : SeriesSheet
+
+    /** Admin: edit the summary. */
+    data object EditSummary : SeriesSheet
 }
+
+/** Result line for an admin action. */
+enum class AdminNotice { Started, Saved, Failed }
 
 sealed interface ReviewsState {
     data object Loading : ReviewsState
@@ -107,6 +115,7 @@ private data class Status(
     val syncPending: Boolean = false,
     val reviews: ReviewsState = ReviewsState.Loading,
     val reviewError: AppError? = null,
+    val adminNotice: AdminNotice? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -118,8 +127,12 @@ class SeriesViewModel
         private val repository: CatalogRepository,
         private val readState: ReadStateRepository,
         private val reviewRepository: ReviewRepository,
+        private val admin: AdminRepository,
         saved: SavedStateHandle,
     ) : ViewModel() {
+        /** Admin summary draft (EditSummary sheet). */
+        val summaryText = TextFieldState()
+
         /** The user's review draft (Reviews sheet). */
         val reviewText = TextFieldState()
         private var libraryType = 0
@@ -153,6 +166,7 @@ class SeriesViewModel
                                 st.syncPending,
                                 st.reviews,
                                 st.reviewError,
+                                st.adminNotice,
                             )
                         }
                     }
@@ -237,6 +251,49 @@ class SeriesViewModel
                         is AppResult.Success -> RelatedState.Loaded(r.value)
                         is AppResult.Failure -> RelatedState.Failed(r.error)
                     }
+            }
+        }
+
+        fun refreshMetadata() =
+            adminJob(AdminNotice.Started) { s, libraryId -> admin.refreshMetadata(s, libraryId, seriesId) }
+
+        fun scan() = adminJob(AdminNotice.Started) { s, libraryId -> admin.scan(s, libraryId, seriesId) }
+
+        fun editSummary() {
+            summaryText.setTextAndPlaceCursorAtEnd(
+                plainSummary(
+                    state.value.detail
+                        ?.metadata
+                        ?.summary,
+                ),
+            )
+            showSheet(SeriesSheet.EditSummary)
+        }
+
+        fun saveSummary() =
+            adminJob(AdminNotice.Saved) { s, _ ->
+                admin
+                    .updateSummary(
+                        s,
+                        seriesId,
+                        summaryText.text.toString(),
+                    ).also { if (it is AppResult.Success) refresh() }
+            }
+
+        /** Closes the sheet, runs [block] and reports its outcome under the actions. */
+        private fun adminJob(
+            success: AdminNotice,
+            block: suspend (Server, libraryId: Int) -> AppResult<Unit>,
+        ) {
+            val libraryId =
+                state.value.detail
+                    ?.series
+                    ?.libraryId ?: return
+            status.update { it.copy(sheet = null, adminNotice = null) }
+            viewModelScope.launch {
+                val s = session.activeServer.first() ?: return@launch
+                val notice = if (block(s, libraryId) is AppResult.Success) success else AdminNotice.Failed
+                status.update { it.copy(adminNotice = notice) }
             }
         }
 

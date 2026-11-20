@@ -15,6 +15,7 @@ import com.nl.kaviyy.core.network.MarkVolumeReadDto
 import com.nl.kaviyy.core.network.MarkVolumesReadDto
 import com.nl.kaviyy.core.network.MetadataValueDto
 import com.nl.kaviyy.core.network.PersonDto
+import com.nl.kaviyy.core.network.RefreshSeriesDto
 import com.nl.kaviyy.core.network.RelatedSeriesDto
 import com.nl.kaviyy.core.network.SeriesDetailDto
 import com.nl.kaviyy.core.network.SeriesDetailPlusDto
@@ -84,6 +85,14 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun allRelated(seriesId: Int): RelatedSeriesDto = error("unused")
 
     override suspend fun person(name: String): PersonDto = error("unused")
+
+    override suspend fun refreshSeriesMetadata(body: RefreshSeriesDto): Unit = error("unused")
+
+    override suspend fun scanSeries(body: RefreshSeriesDto): Unit = error("unused")
+
+    override suspend fun rawSeriesMetadata(seriesId: Int): JsonObject = error("unused")
+
+    override suspend fun updateSeriesMetadata(body: JsonObject): Unit = error("unused")
 
     override suspend fun rateSeries(body: UpdateRatingDto): Unit = error("unused")
 

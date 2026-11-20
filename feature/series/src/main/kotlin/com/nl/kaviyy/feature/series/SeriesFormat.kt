@@ -46,13 +46,17 @@ internal fun ageRatingLabel(rating: Int): Int? = AGE_RATING_LABELS.getOrNull(rat
  * decoded, no links or images), collapsing runs of blank lines.
  */
 internal fun plainSummary(html: String?): String =
-    HtmlCompat
-        // fromHtml keeps the text of <script>/<style> blocks; drop them first.
-        .fromHtml(html.orEmpty().replace(HIDDEN_BLOCKS, ""), HtmlCompat.FROM_HTML_MODE_COMPACT)
-        .toString()
-        .replace(OBJECT_CHAR, "") // images become U+FFFC
-        .replace(Regex("\n{3,}"), "\n\n")
-        .trim()
+    if (html.isNullOrBlank()) {
+        ""
+    } else {
+        HtmlCompat
+            // fromHtml keeps the text of <script>/<style> blocks; drop them first.
+            .fromHtml(html.orEmpty().replace(HIDDEN_BLOCKS, ""), HtmlCompat.FROM_HTML_MODE_COMPACT)
+            .toString()
+            .replace(OBJECT_CHAR, "") // images become U+FFFC
+            .replace(Regex("\n{3,}"), "\n\n")
+            .trim()
+    }
 
 private val HIDDEN_BLOCKS =
     Regex("<(script|style)\\b[^>]*>.*?</\\1\\s*>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))

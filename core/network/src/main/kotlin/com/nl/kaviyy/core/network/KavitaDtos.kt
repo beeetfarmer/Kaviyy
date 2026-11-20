@@ -330,3 +330,11 @@ data class SeriesDetailPlusDto(
     val reviews: List<UserReviewDto>? = null,
     val ratings: List<RatingDto>? = null,
 )
+
+/** `POST api/Series/refresh-metadata|scan` (admin). No defaults: always sent. */
+@Serializable
+data class RefreshSeriesDto(
+    val libraryId: Int,
+    val seriesId: Int,
+    val forceUpdate: Boolean,
+)

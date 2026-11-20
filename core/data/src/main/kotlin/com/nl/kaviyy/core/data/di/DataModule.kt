@@ -1,9 +1,11 @@
 package com.nl.kaviyy.core.data.di
 
+import com.nl.kaviyy.core.data.AdminRepository
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.ConnectivityNetworkMonitor
 import com.nl.kaviyy.core.data.HomeRepository
+import com.nl.kaviyy.core.data.KavitaAdminRepository
 import com.nl.kaviyy.core.data.KavitaPersonRepository
 import com.nl.kaviyy.core.data.KavitaReviewRepository
 import com.nl.kaviyy.core.data.KavitaSmartFilterRepository
@@ -35,6 +37,9 @@ internal interface DataModule {
 
     @Binds
     fun catalog(repository: OfflineFirstCatalogRepository): CatalogRepository
+
+    @Binds
+    fun admin(repository: KavitaAdminRepository): AdminRepository
 
     @Binds
     fun people(repository: KavitaPersonRepository): PersonRepository

@@ -226,6 +226,28 @@ interface KavitaApi {
         @Query("name") name: String,
     ): PersonDto
 
+    @POST("api/Series/refresh-metadata")
+    suspend fun refreshSeriesMetadata(
+        @Body body: RefreshSeriesDto,
+    )
+
+    @POST("api/Series/scan")
+    suspend fun scanSeries(
+        @Body body: RefreshSeriesDto,
+    )
+
+    /** The full SeriesMetadataDto as raw JSON, so an edit can send every field back unchanged. */
+    @GET("api/Series/metadata")
+    suspend fun rawSeriesMetadata(
+        @Query("seriesId") seriesId: Int,
+    ): JsonObject
+
+    /** Body: `UpdateSeriesMetadataDto` (`{"seriesMetadata": {...}}`). */
+    @POST("api/Series/metadata")
+    suspend fun updateSeriesMetadata(
+        @Body body: JsonObject,
+    )
+
     @GET("api/Series/all-related")
     suspend fun allRelated(
         @Query("seriesId") seriesId: Int,

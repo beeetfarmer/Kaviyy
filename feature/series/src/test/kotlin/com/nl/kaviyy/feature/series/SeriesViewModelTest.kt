@@ -4,6 +4,7 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.SavedStateHandle
 import androidx.paging.PagingData
 import app.cash.turbine.test
+import com.nl.kaviyy.core.data.AdminRepository
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.FilterField
@@ -103,6 +104,37 @@ class SeriesViewModelTest {
                 return pushResult
             }
         }
+    private val adminCalls = mutableListOf<String>()
+    private var adminResult: AppResult<Unit> = AppResult.Success(Unit)
+    private val admin =
+        object : AdminRepository {
+            override suspend fun refreshMetadata(
+                server: Server,
+                libraryId: Int,
+                seriesId: Int,
+            ): AppResult<Unit> {
+                adminCalls += "refresh $libraryId $seriesId"
+                return adminResult
+            }
+
+            override suspend fun scan(
+                server: Server,
+                libraryId: Int,
+                seriesId: Int,
+            ): AppResult<Unit> {
+                adminCalls += "scan $libraryId $seriesId"
+                return adminResult
+            }
+
+            override suspend fun updateSummary(
+                server: Server,
+                seriesId: Int,
+                summary: String,
+            ): AppResult<Unit> {
+                adminCalls += "summary $summary"
+                return adminResult
+            }
+        }
     private val queries = mutableListOf<LibraryQuery>()
     private val described = mutableListOf<String>()
     private val people =
@@ -186,7 +218,8 @@ class SeriesViewModelTest {
     @Test
     fun showsCachedDetailWithLibraryAndContinuePointAndRefreshes() =
         runTest {
-            val vm = SeriesViewModel(session, repo, readState, reviews, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            val vm =
+                SeriesViewModel(session, repo, readState, reviews, admin, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
             vm.state.test {
                 runCurrent()
                 assertEquals(listOf(7), refreshed)
@@ -210,7 +243,8 @@ class SeriesViewModelTest {
     fun refreshFailureIsReportedAndRetryCallsAgain() =
         runTest {
             refreshResult = AppResult.Failure(AppError.Network)
-            val vm = SeriesViewModel(session, repo, readState, reviews, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            val vm =
+                SeriesViewModel(session, repo, readState, reviews, admin, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
             vm.state.test {
                 runCurrent()
                 assertEquals(AppError.Network, expectMostRecentItem().error)
@@ -225,7 +259,8 @@ class SeriesViewModelTest {
     @Test
     fun relatedLoadsOnFirstOpenRetriesAfterFailureAndSheetsOpen() =
         runTest {
-            val vm = SeriesViewModel(session, repo, readState, reviews, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            val vm =
+                SeriesViewModel(session, repo, readState, reviews, admin, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
             vm.state.test {
                 runCurrent()
                 vm.selectTab(SeriesTab.Related)
@@ -253,7 +288,8 @@ class SeriesViewModelTest {
     @Test
     fun marksPushAndRefreshOrReportPendingSync() =
         runTest {
-            val vm = SeriesViewModel(session, repo, readState, reviews, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            val vm =
+                SeriesViewModel(session, repo, readState, reviews, admin, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
             vm.state.test {
                 runCurrent()
                 detail.value = detail.value.copy(metadata = SeriesMetadata(wantToRead = true))
@@ -276,7 +312,8 @@ class SeriesViewModelTest {
     @Test
     fun reviewsSheetLoadsPrefillsMyReviewAndSaves() =
         runTest {
-            val vm = SeriesViewModel(session, repo, readState, reviews, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            val vm =
+                SeriesViewModel(session, repo, readState, reviews, admin, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
             vm.state.test {
                 runCurrent()
                 vm.showSheet(SeriesSheet.Reviews)
@@ -324,5 +361,41 @@ class SeriesViewModelTest {
                     .filter.rules
                     .single()
             assertEquals(FilterField.Genres to listOf("8"), rule.field to rule.values.map { it.code })
+        }
+
+    @Test
+    fun adminActionsRunAndReportTheirOutcome() =
+        runTest {
+            val vm =
+                SeriesViewModel(session, repo, readState, reviews, admin, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            vm.state.test {
+                runCurrent()
+                detail.value =
+                    SeriesDetail(
+                        SeriesEntity(1, 7, 3, "Ember Road", "ember road", format = 0, pages = 1, pagesRead = 0),
+                        emptyList(),
+                        emptyList(),
+                    )
+                runCurrent()
+                vm.editSummary() // prefill sanitizing is covered by SeriesFormatTest (needs Robolectric)
+                runCurrent()
+                assertEquals(SeriesSheet.EditSummary, expectMostRecentItem().sheet)
+                assertEquals("", vm.summaryText.text.toString())
+                vm.summaryText.setTextAndPlaceCursorAtEnd("New")
+                vm.saveSummary()
+                runCurrent()
+                var st = expectMostRecentItem()
+                assertEquals(null, st.sheet)
+                assertEquals(AdminNotice.Saved, st.adminNotice)
+                assertEquals(listOf(7, 7), refreshed) // init + after the save
+                adminResult = AppResult.Failure(AppError.Forbidden)
+                vm.scan()
+                runCurrent()
+                st = expectMostRecentItem()
+                assertEquals(AdminNotice.Failed, st.adminNotice)
+                val lib = st.detail?.series?.libraryId
+                assertEquals(listOf("summary New", "scan $lib 7"), adminCalls)
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 }

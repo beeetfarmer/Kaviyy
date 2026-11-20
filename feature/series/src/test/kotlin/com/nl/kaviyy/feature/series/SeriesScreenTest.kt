@@ -1,5 +1,8 @@
 package com.nl.kaviyy.feature.series
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -183,6 +186,50 @@ class SeriesScreenTest {
         shot("browse_dark") {
             KavitaTheme(appearance = Appearance.Dark) { BrowsePreview(previewBrowse) }
         }
+
+    @Test
+    fun adminRowsOnlyForAdmins() {
+        var scans = 0
+        var role by mutableStateOf(emptySet<String>())
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) {
+                val server = previewSeries.server?.copy(roles = role)
+                SeriesScreen(
+                    previewSeries.copy(
+                        server = server,
+                        sheet = SeriesSheet.Actions,
+                    ),
+                    SeriesActions(
+                        admin =
+                            AdminActions(onScan = {
+                                scans++
+                            }),
+                    ),
+                )
+            }
+        }
+        compose.onNodeWithText("Scan Series").assertDoesNotExist()
+        role = setOf("Admin")
+        compose.onNodeWithText("Scan Series").performClick()
+        assertEquals(1, scans)
+        compose.onNodeWithText("Refresh Metadata").assertExists()
+    }
+
+    @Test
+    fun editSummarySheetSaves() {
+        var saved = 0
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) {
+                SeriesScreen(
+                    previewSeries.copy(sheet = SeriesSheet.EditSummary, adminNotice = AdminNotice.Failed),
+                    SeriesActions(admin = AdminActions(onSaveSummary = { saved++ })),
+                )
+            }
+        }
+        compose.onNodeWithText("That didn't work. Check your connection and permissions.").assertExists()
+        compose.onNodeWithText("Save").performClick()
+        assertEquals(1, saved)
+    }
 
     @Test
     fun failedFirstLoadOffersRetry() {

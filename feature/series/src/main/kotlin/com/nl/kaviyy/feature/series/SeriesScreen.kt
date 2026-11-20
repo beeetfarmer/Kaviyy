@@ -77,6 +77,14 @@ data class SeriesActions(
     val onRate: (Float) -> Unit = {},
     val onSaveReview: () -> Unit = {},
     val onBrowse: (BrowseTarget) -> Unit = {},
+    val admin: AdminActions = AdminActions(),
+)
+
+data class AdminActions(
+    val onRefreshMetadata: () -> Unit = {},
+    val onScan: () -> Unit = {},
+    val onEditSummary: () -> Unit = {},
+    val onSaveSummary: () -> Unit = {},
 )
 
 @Composable
@@ -102,8 +110,16 @@ fun SeriesRoute(
             onRate = viewModel::setRating,
             onSaveReview = viewModel::saveReview,
             onBrowse = onBrowse,
+            admin =
+                AdminActions(
+                    viewModel::refreshMetadata,
+                    viewModel::scan,
+                    viewModel::editSummary,
+                    viewModel::saveSummary,
+                ),
         ),
         reviewText = viewModel.reviewText,
+        summaryText = viewModel.summaryText,
     )
 }
 
@@ -114,6 +130,7 @@ fun SeriesScreen(
     actions: SeriesActions,
     modifier: Modifier = Modifier,
     reviewText: TextFieldState = remember { TextFieldState() },
+    summaryText: TextFieldState = remember { TextFieldState() },
 ) {
     val series = state.detail?.series
     val heroColor = series?.heroColor() ?: Kavita.colors.fillSegmented
@@ -130,7 +147,11 @@ fun SeriesScreen(
         TopBar(series, state, actions)
         val detail = state.detail
         val sheet = state.sheet
-        if (sheet != null && detail != null) SeriesDetailSheet(sheet, state, detail, reviewText, actions)
+        if (sheet != null &&
+            detail != null
+        ) {
+            SeriesDetailSheet(sheet, state, detail, SheetDrafts(reviewText, summaryText), actions)
+        }
     }
 }
 
@@ -241,7 +262,20 @@ private fun Body(
         }
         Chips(series, state) { actions.onSheet(SeriesSheet.Reviews) }
         ActionRow(series, state, actions)
-        if (state.syncPending) {
+        if (state.adminNotice != null) {
+            Text(
+                stringResource(adminNoticeText(state.adminNotice)),
+                style = Kavita.type.footnote,
+                color =
+                    if (state.adminNotice ==
+                        AdminNotice.Failed
+                    ) {
+                        Kavita.colors.destructive
+                    } else {
+                        Kavita.colors.labelSecondary
+                    },
+            )
+        } else if (state.syncPending) {
             Text(
                 stringResource(R.string.series_sync_pending),
                 style = Kavita.type.footnote,

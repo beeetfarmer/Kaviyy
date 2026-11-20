@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nl.kaviyy.core.data.ReadTarget
 import com.nl.kaviyy.core.data.SeriesDetail
+import com.nl.kaviyy.core.data.isAdmin
 import com.nl.kaviyy.core.data.minutesLeft
 import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.designsystem.component.CoverImage
@@ -47,7 +48,7 @@ internal fun SeriesDetailSheet(
     sheet: SeriesSheet,
     state: SeriesUiState,
     detail: SeriesDetail,
-    reviewText: TextFieldState,
+    drafts: SheetDrafts,
     actions: SeriesActions,
 ) {
     val close = { actions.onSheet(null) }
@@ -57,7 +58,7 @@ internal fun SeriesDetailSheet(
             SheetFrame(
                 stringResource(R.string.series_reviews_title),
                 close,
-            ) { ReviewsContent(state, reviewText, actions) }
+            ) { ReviewsContent(state, drafts.review, actions) }
         }
 
         is SeriesSheet.Volume -> {
@@ -96,6 +97,12 @@ internal fun SeriesDetailSheet(
             }
         }
 
+        SeriesSheet.EditSummary -> {
+            SheetFrame(stringResource(R.string.series_edit_summary), close) {
+                EditSummaryContent(drafts.summary, actions.admin.onSaveSummary)
+            }
+        }
+
         SeriesSheet.Actions -> {
             val series = detail.series
             if (series != null) {
@@ -113,6 +120,7 @@ internal fun SeriesDetailSheet(
                             showChevron = false,
                         )
                     }
+                    if (server?.isAdmin == true) AdminSection(actions.admin)
                 }
             }
         }
@@ -222,3 +230,9 @@ private fun MarkRow(
         showChevron = false,
     )
 }
+
+/** Text drafts owned by the ViewModel, edited inside sheets. */
+internal data class SheetDrafts(
+    val review: TextFieldState,
+    val summary: TextFieldState,
+)
