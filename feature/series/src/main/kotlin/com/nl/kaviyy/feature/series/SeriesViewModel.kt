@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
+import com.nl.kaviyy.core.data.RelatedSeries
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.model.result.AppError
@@ -34,15 +35,46 @@ data class SeriesUiState(
     val refreshing: Boolean = true,
     /** Last refresh failed; cached data (if any) is still shown. */
     val error: AppError? = null,
+    val tab: SeriesTab = SeriesTab.Volumes,
+    val sheet: SeriesSheet? = null,
+    val related: RelatedState = RelatedState.Idle,
 ) {
     /** The server's continue point, when it's among the cached chapters. */
     val continueChapter: ChapterEntity?
         get() = detail?.metadata?.continueChapterId?.let { id -> detail.chapters.firstOrNull { it.id == id } }
 }
 
+/** Opens a detail sheet for a row. */
+sealed interface SeriesSheet {
+    data class Volume(
+        val id: Int,
+    ) : SeriesSheet
+
+    data class Chapter(
+        val id: Int,
+    ) : SeriesSheet
+}
+
+/** Related tab: fetched on first open (network only). */
+sealed interface RelatedState {
+    data object Idle : RelatedState
+
+    data object Loading : RelatedState
+
+    data class Loaded(
+        val items: List<RelatedSeries>,
+    ) : RelatedState
+
+    data class Failed(
+        val error: AppError,
+    ) : RelatedState
+}
+
 private data class Status(
     val refreshing: Boolean = true,
     val error: AppError? = null,
+    val tab: SeriesTab = SeriesTab.Volumes,
+    val sheet: SeriesSheet? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -56,6 +88,7 @@ class SeriesViewModel
     ) : ViewModel() {
         val seriesId: Int = checkNotNull(saved.get<Int>(SERIES_ID_ARG)) { "missing $SERIES_ID_ARG" }
         private val status = MutableStateFlow(Status())
+        private val relatedState = MutableStateFlow<RelatedState>(RelatedState.Idle)
 
         val state: StateFlow<SeriesUiState> =
             session.activeServer
@@ -63,9 +96,14 @@ class SeriesViewModel
                     if (s == null) {
                         flowOf(SeriesUiState(refreshing = false))
                     } else {
-                        combine(repository.seriesDetail(s, seriesId), repository.libraries(s), status) { d, libs, st ->
+                        combine(
+                            repository.seriesDetail(s, seriesId),
+                            repository.libraries(s),
+                            status,
+                            relatedState,
+                        ) { d, libs, st, rel ->
                             val name = libs.firstOrNull { it.id == d.series?.libraryId }?.name
-                            SeriesUiState(s, d, name, st.refreshing, st.error)
+                            SeriesUiState(s, d, name, st.refreshing, st.error, st.tab, st.sheet, rel)
                         }
                     }
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), SeriesUiState())
@@ -74,12 +112,34 @@ class SeriesViewModel
             refresh()
         }
 
+        fun selectTab(tab: SeriesTab) {
+            status.update { it.copy(tab = tab) }
+            if (tab == SeriesTab.Related) loadRelated()
+        }
+
+        fun showSheet(sheet: SeriesSheet?) = status.update { it.copy(sheet = sheet) }
+
+        /** No-op while loading or once loaded; retries after a failure. */
+        fun loadRelated() {
+            val current = relatedState.value
+            if (current is RelatedState.Loading || current is RelatedState.Loaded) return
+            relatedState.value = RelatedState.Loading
+            viewModelScope.launch {
+                val s = session.activeServer.first() ?: return@launch
+                relatedState.value =
+                    when (val r = repository.relatedSeries(s, seriesId)) {
+                        is AppResult.Success -> RelatedState.Loaded(r.value)
+                        is AppResult.Failure -> RelatedState.Failed(r.error)
+                    }
+            }
+        }
+
         fun refresh() {
             viewModelScope.launch {
                 val s = session.activeServer.first() ?: return@launch
                 status.update { it.copy(refreshing = true) }
                 val result = repository.refreshSeries(s, seriesId)
-                status.value = Status(refreshing = false, error = (result as? AppResult.Failure)?.error)
+                status.update { it.copy(refreshing = false, error = (result as? AppResult.Failure)?.error) }
             }
         }
     }

@@ -82,4 +82,6 @@ object ServerImageLoaders {
 /** Cover URLs (api/openapi.json, Image endpoints). `apiKey` is added on the wire by [AuthInterceptor], never here. */
 fun Server.seriesCoverUrl(seriesId: Int): String = url.resolve("api/Image/series-cover?seriesId=$seriesId")
 
+fun Server.volumeCoverUrl(volumeId: Int): String = url.resolve("api/Image/volume-cover?volumeId=$volumeId")
+
 fun Server.chapterCoverUrl(chapterId: Int): String = url.resolve("api/Image/chapter-cover?chapterId=$chapterId")

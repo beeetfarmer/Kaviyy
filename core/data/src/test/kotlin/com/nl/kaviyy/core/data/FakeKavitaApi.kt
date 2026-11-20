@@ -12,6 +12,7 @@ import com.nl.kaviyy.core.network.LanguageDto
 import com.nl.kaviyy.core.network.LibraryDto
 import com.nl.kaviyy.core.network.MetadataValueDto
 import com.nl.kaviyy.core.network.PersonDto
+import com.nl.kaviyy.core.network.RelatedSeriesDto
 import com.nl.kaviyy.core.network.SeriesDetailDto
 import com.nl.kaviyy.core.network.SeriesDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
@@ -70,6 +71,8 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun smartFilters(): List<SmartFilterDto> = error("unused")
 
     override suspend fun seriesMetadata(seriesId: Int): SeriesMetadataDto = SeriesMetadataDto()
+
+    override suspend fun allRelated(seriesId: Int): RelatedSeriesDto = error("unused")
 
     override suspend fun timeLeft(seriesId: Int): HourEstimateRangeDto = HourEstimateRangeDto()
 

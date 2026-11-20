@@ -81,7 +81,8 @@ internal fun MainScreen(
                 }, onServerPill, onSignOut, onDeleteLocalData) { filterFor = it }
             }
             composable<SeriesDestination> {
-                SeriesRoute(onBack = { nav.popBackStack() }, onRead = { _, _ -> }) // Readers: M10–M12.
+                // Readers: M10–M12.
+                SeriesRoute(onBack = { nav.popBackStack() }, onRead = { _, _ -> }, onOpenSeries = openSeries)
             }
         }
         filterFor?.let { id -> FilterSheet(id.takeIf { it != NO_LIBRARY }, onDismiss = { filterFor = null }) }

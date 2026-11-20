@@ -7,6 +7,8 @@ import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.LibraryQuery
 import com.nl.kaviyy.core.data.OptionSource
+import com.nl.kaviyy.core.data.RelatedSeries
+import com.nl.kaviyy.core.data.Relation
 import com.nl.kaviyy.core.data.RuleValue
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.SeriesMetadata
@@ -40,6 +42,8 @@ class SeriesViewModelTest {
     private val detail = MutableStateFlow(SeriesDetail(null, emptyList(), emptyList()))
     private var refreshResult: AppResult<Unit> = AppResult.Success(Unit)
     private val refreshed = mutableListOf<Int>()
+    private var relatedCalls = 0
+    private var relatedResult: AppResult<List<RelatedSeries>> = AppResult.Failure(AppError.Network)
 
     private val session =
         object : AuthSession {
@@ -94,6 +98,14 @@ class SeriesViewModelTest {
                 refreshed += seriesId
                 return refreshResult
             }
+
+            override suspend fun relatedSeries(
+                server: Server,
+                seriesId: Int,
+            ): AppResult<List<RelatedSeries>> {
+                relatedCalls++
+                return relatedResult
+            }
         }
 
     @Test
@@ -132,6 +144,34 @@ class SeriesViewModelTest {
                 runCurrent()
                 assertEquals(null, expectMostRecentItem().error)
                 assertEquals(listOf(7, 7), refreshed)
+            }
+        }
+
+    @Test
+    fun relatedLoadsOnFirstOpenRetriesAfterFailureAndSheetsOpen() =
+        runTest {
+            val vm = SeriesViewModel(session, repo, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            vm.state.test {
+                runCurrent()
+                vm.selectTab(SeriesTab.Related)
+                runCurrent()
+                assertEquals(RelatedState.Failed(AppError.Network), expectMostRecentItem().related)
+                val sequel =
+                    RelatedSeries(
+                        Relation.Sequel,
+                        SeriesEntity(1, 8, 3, "Ashes", "ashes", format = 0, pages = 1, pagesRead = 0),
+                    )
+                relatedResult = AppResult.Success(listOf(sequel))
+                vm.selectTab(SeriesTab.Related)
+                runCurrent()
+                assertEquals(RelatedState.Loaded(listOf(sequel)), expectMostRecentItem().related)
+                vm.selectTab(SeriesTab.Related) // loaded: no refetch
+                assertEquals(2, relatedCalls)
+                vm.showSheet(SeriesSheet.Chapter(49))
+                runCurrent()
+                val s = expectMostRecentItem()
+                assertEquals(SeriesTab.Related, s.tab)
+                assertEquals(SeriesSheet.Chapter(49), s.sheet)
             }
         }
 }

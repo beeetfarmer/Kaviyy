@@ -73,6 +73,12 @@ interface CatalogRepository {
         server: Server,
         seriesId: Int,
     ): AppResult<Unit>
+
+    /** Network only (Related tab); the related series are also cached so opening one shows its name at once. */
+    suspend fun relatedSeries(
+        server: Server,
+        seriesId: Int,
+    ): AppResult<List<RelatedSeries>>
 }
 
 /** Room-backed [CatalogRepository]. */
@@ -195,6 +201,19 @@ class OfflineFirstCatalogRepository
                     )
                 }.let { if (it is AppResult.Failure) it else refreshMetadata(api, id, seriesId) }
         }
+
+        override suspend fun relatedSeries(
+            server: Server,
+            seriesId: Int,
+        ): AppResult<List<RelatedSeries>> =
+            apiCall { apis.api(server).allRelated(seriesId) }.map { dto ->
+                val related =
+                    dto.flatten().map { (relation, series) ->
+                        RelatedSeries(relation, series.toEntity(server.id.value))
+                    }
+                dao.upsertSeries(related.map { it.series }.distinctBy { it.id })
+                related
+            }
 
         /** Summary, chips, Want to Read and the continue point; one call each (all in the spec). */
         private suspend fun refreshMetadata(

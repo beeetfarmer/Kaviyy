@@ -224,3 +224,22 @@ data class HourEstimateRangeDto(
     val maxHours: Int = 0,
     val avgHours: Float = 0f,
 )
+
+/** `GET api/Series/all-related`: one list per Kavita `RelationKind`. */
+@Serializable
+data class RelatedSeriesDto(
+    val sequels: List<SeriesDto> = emptyList(),
+    val prequels: List<SeriesDto> = emptyList(),
+    val spinOffs: List<SeriesDto> = emptyList(),
+    val adaptations: List<SeriesDto> = emptyList(),
+    val sideStories: List<SeriesDto> = emptyList(),
+    val characters: List<SeriesDto> = emptyList(),
+    val contains: List<SeriesDto> = emptyList(),
+    val others: List<SeriesDto> = emptyList(),
+    val alternativeSettings: List<SeriesDto> = emptyList(),
+    val alternativeVersions: List<SeriesDto> = emptyList(),
+    val doujinshis: List<SeriesDto> = emptyList(),
+    val parent: List<SeriesDto> = emptyList(),
+    val editions: List<SeriesDto> = emptyList(),
+    val annuals: List<SeriesDto> = emptyList(),
+)

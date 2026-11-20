@@ -1,5 +1,7 @@
 package com.nl.kaviyy.feature.series
 
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -44,6 +46,42 @@ class SeriesScreenTest {
     }
 
     @Test
+    fun tabsListRowsAndRowsOpenSheets() {
+        var tab: SeriesTab? = null
+        var sheet: SeriesSheet? = null
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) {
+                SeriesScreen(previewSeries, SeriesActions(onTab = { tab = it }, onSheet = { sheet = it }))
+            }
+        }
+        compose.onNodeWithText("Volume 5").assertExists()
+        compose.onNodeWithText("Ch. 48–50 · 212 pages").assertExists()
+        compose.onNodeWithText("61%").assertExists()
+        compose.onNodeWithText("Volume 5").performClick()
+        assertEquals(SeriesSheet.Volume(5), sheet)
+        compose.onNodeWithText("Chapters").performClick()
+        assertEquals(SeriesTab.Chapters, tab)
+    }
+
+    @Test
+    fun chapterTabAndSheet() {
+        var read: Int? = null
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) {
+                SeriesScreen(
+                    previewSeries.copy(tab = SeriesTab.Chapters, sheet = SeriesSheet.Chapter(49)),
+                    SeriesActions(onRead = { read = it }),
+                )
+            }
+        }
+        compose.onNodeWithText("The Ash Ledger · 32 pages").assertExists()
+        compose.onNodeWithText("14 left").assertExists()
+        // The sheet's Read button (row states also say "Read").
+        compose.onNode(hasText("Read") and hasClickAction() and !hasText("Crossing", substring = true)).performClick()
+        assertEquals(49, read)
+    }
+
+    @Test
     fun failedFirstLoadOffersRetry() {
         var retried = 0
         compose.setContent {
@@ -60,6 +98,16 @@ class SeriesScreenTest {
 
     @Test
     fun screenshotDark() = shot("series_dark") { SeriesPreview(Appearance.Dark) }
+
+    @Test
+    @Config(qualifiers = "w412dp-h1400dp-xhdpi")
+    fun screenshotVolumes() = shot("series_volumes_light") { SeriesPreview(Appearance.Light) }
+
+    @Test
+    fun screenshotVolumeSheet() =
+        shot("series_volume_sheet_dark") {
+            SeriesPreview(Appearance.Dark, previewSeries.copy(sheet = SeriesSheet.Volume(5)))
+        }
 
     private fun shot(
         name: String,

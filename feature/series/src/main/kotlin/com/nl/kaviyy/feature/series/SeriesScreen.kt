@@ -66,16 +66,25 @@ data class SeriesActions(
     val onBack: () -> Unit = {},
     val onRead: (chapterId: Int?) -> Unit = {},
     val onRetry: () -> Unit = {},
+    val onTab: (SeriesTab) -> Unit = {},
+    val onSheet: (SeriesSheet?) -> Unit = {},
+    val onOpenSeries: (seriesId: Int) -> Unit = {},
 )
 
 @Composable
 fun SeriesRoute(
     onBack: () -> Unit,
     onRead: (seriesId: Int, chapterId: Int?) -> Unit,
+    onOpenSeries: (seriesId: Int) -> Unit,
     viewModel: SeriesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    SeriesScreen(state, SeriesActions(onBack, { onRead(viewModel.seriesId, it) }, viewModel::refresh))
+    SeriesScreen(
+        state,
+        SeriesActions(onBack, {
+            onRead(viewModel.seriesId, it)
+        }, viewModel::refresh, viewModel::selectTab, viewModel::showSheet, onOpenSeries),
+    )
 }
 
 /** Screen 04 (DESIGN.md §7): hero, cover, title, chips, actions, summary. Tabs: M8.2. */
@@ -98,6 +107,8 @@ fun SeriesScreen(
             if (series == null) Placeholder(state, actions.onRetry)
         }
         TopBar(series, state, actions.onBack)
+        val detail = state.detail
+        if (state.sheet != null && detail != null) SeriesDetailSheet(state.sheet, detail, state.server, actions)
     }
 }
 
@@ -209,6 +220,7 @@ private fun Body(
             )
         }
         Summary(plainSummary(meta?.summary))
+        state.detail?.let { SeriesTabs(it, state.server, state.tab, state.related, actions) }
     }
 }
 

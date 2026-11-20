@@ -23,6 +23,7 @@ import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.LibraryDto
 import com.nl.kaviyy.core.network.MangaFileDto
 import com.nl.kaviyy.core.network.PersonDto
+import com.nl.kaviyy.core.network.RelatedSeriesDto
 import com.nl.kaviyy.core.network.SeriesDetailDto
 import com.nl.kaviyy.core.network.SeriesDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
@@ -106,6 +107,16 @@ class CatalogRepositoryTest {
             override suspend fun isWantToRead(seriesId: Int) = true
 
             override suspend fun continuePoint(seriesId: Int) = ChapterDto(11, volumeId = 5)
+
+            override suspend fun allRelated(seriesId: Int) =
+                RelatedSeriesDto(
+                    sequels = listOf(SeriesDto(20, libraryId = 3, name = "Ashes")),
+                    others =
+                        listOf(
+                            SeriesDto(21, libraryId = 3, name = "Signal Fires"),
+                            SeriesDto(20, libraryId = 3, name = "Ashes"),
+                        ),
+                )
         }
 
     private val repo = OfflineFirstCatalogRepository(db.libraryDao(), dao, { api })
@@ -188,6 +199,17 @@ class CatalogRepositoryTest {
                     (it as RemoteMediator.MediatorResult.Success).endOfPaginationReached
                 },
             )
+        }
+
+    @Test
+    fun relatedSeriesAreGroupedByRelationAndCached() =
+        runTest {
+            val related = assertIs<AppResult.Success<List<RelatedSeries>>>(repo.relatedSeries(server, 7)).value
+            assertEquals(
+                listOf(Relation.Sequel to 20, Relation.Other to 21, Relation.Other to 20),
+                related.map { it.relation to it.series.id },
+            )
+            assertEquals("Signal Fires", dao.observeSeries(serverId, 21).first()?.name)
         }
 
     @Test

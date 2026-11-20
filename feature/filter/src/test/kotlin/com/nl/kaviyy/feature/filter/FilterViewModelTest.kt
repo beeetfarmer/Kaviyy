@@ -11,6 +11,7 @@ import com.nl.kaviyy.core.data.FilterRule
 import com.nl.kaviyy.core.data.LibraryFilterStore
 import com.nl.kaviyy.core.data.LibraryQuery
 import com.nl.kaviyy.core.data.OptionSource
+import com.nl.kaviyy.core.data.RelatedSeries
 import com.nl.kaviyy.core.data.RuleValue
 import com.nl.kaviyy.core.data.SavedFilter
 import com.nl.kaviyy.core.data.SeriesDetail
@@ -101,6 +102,11 @@ class FilterViewModelTest {
                 server: Server,
                 seriesId: Int,
             ): AppResult<Unit> = error("unused")
+
+            override suspend fun relatedSeries(
+                server: Server,
+                seriesId: Int,
+            ): AppResult<List<RelatedSeries>> = error("unused")
         }
 
     private var saveResult: AppResult<SavedFilter> = AppResult.Success(SavedFilter(5, "Fantasy", "e"))

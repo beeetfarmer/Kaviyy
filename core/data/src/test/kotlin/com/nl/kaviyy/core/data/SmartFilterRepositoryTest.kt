@@ -99,6 +99,11 @@ class SmartFilterRepositoryTest {
                 server: Server,
                 seriesId: Int,
             ): AppResult<Unit> = error("unused")
+
+            override suspend fun relatedSeries(
+                server: Server,
+                seriesId: Int,
+            ): AppResult<List<RelatedSeries>> = error("unused")
         }
 
     private val repo = KavitaSmartFilterRepository({ api }, catalog)

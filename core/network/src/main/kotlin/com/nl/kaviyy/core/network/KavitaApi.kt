@@ -158,6 +158,11 @@ interface KavitaApi {
     ): List<SeriesDto>
 
     /** The chapter to resume in a series. */
+    @GET("api/Series/all-related")
+    suspend fun allRelated(
+        @Query("seriesId") seriesId: Int,
+    ): RelatedSeriesDto
+
     @GET("api/Series/metadata")
     suspend fun seriesMetadata(
         @Query("seriesId") seriesId: Int,

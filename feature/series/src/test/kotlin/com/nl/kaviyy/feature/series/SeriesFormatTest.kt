@@ -37,6 +37,39 @@ class SeriesFormatTest {
     }
 
     @Test
+    fun tabsListOnlyWhatTheSeriesHas() {
+        val d = previewSeries.detail ?: error("preview")
+        assertEquals(listOf(SeriesTab.Volumes, SeriesTab.Chapters, SeriesTab.Specials, SeriesTab.Related), d.tabs())
+        val book =
+            d.copy(
+                volumes = d.volumes.map { it.copy(minNumber = -100_000f) },
+                chapters = d.chapters.map { it.copy(range = "-100000", isSpecial = false) },
+            )
+        assertEquals(listOf(SeriesTab.Related), book.tabs())
+        assertEquals(listOf(5, 4, 6), d.realVolumes().map { it.id })
+        assertEquals(listOf(90), d.specials().map { it.id })
+    }
+
+    @Test
+    fun rowStatesSpansAndNextChapter() {
+        assertEquals(RowState.Read, rowState(30, 30, asPagesLeft = true))
+        assertEquals(RowState.Unread, rowState(30, 0, asPagesLeft = true))
+        assertEquals(RowState.PagesLeft(14), rowState(32, 18, asPagesLeft = true))
+        assertEquals(RowState.Percent(61), rowState(212, 131, asPagesLeft = false))
+        assertEquals(RowState.Percent(1), rowState(1000, 1, asPagesLeft = false)) // never shows 0% when started
+        val chapters =
+            previewSeries.detail
+                ?.chapters
+                .orEmpty()
+                .filter { !it.isSpecial }
+        assertEquals("48–50", chapterSpan(chapters))
+        assertEquals("48", chapterSpan(chapters.take(1)))
+        assertEquals(null, chapterSpan(emptyList()))
+        assertEquals(49, nextIn(chapters)?.id)
+        assertEquals(48, nextIn(chapters.take(1))?.id) // all read: start over
+    }
+
+    @Test
     fun labelsAndHours() {
         assertNull(ageRatingLabel(0))
         assertNull(ageRatingLabel(-1))

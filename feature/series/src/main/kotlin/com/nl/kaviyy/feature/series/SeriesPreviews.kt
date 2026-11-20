@@ -7,6 +7,7 @@ import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.SeriesMetadata
 import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.database.SeriesEntity
+import com.nl.kaviyy.core.database.VolumeEntity
 import com.nl.kaviyy.core.designsystem.theme.Appearance
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
 import com.nl.kaviyy.core.model.server.Server
@@ -33,19 +34,58 @@ internal val previewSeries =
                         userRating = 4.6f,
                         primaryColor = "#B4441B",
                     ),
-                volumes = emptyList(),
+                volumes =
+                    listOf(
+                        VolumeEntity(1, 5, 7, "5", 5f, 5f, pages = 212, pagesRead = 131),
+                        VolumeEntity(1, 4, 7, "4", 4f, 4f, pages = 198, pagesRead = 198),
+                        VolumeEntity(1, 6, 7, "6", 6f, 6f, pages = 220, pagesRead = 0),
+                    ),
                 chapters =
                     listOf(
+                        ChapterEntity(
+                            1,
+                            48,
+                            5,
+                            7,
+                            range = "48",
+                            titleName = "Crossing",
+                            pages = 34,
+                            pagesRead = 34,
+                            format = 0,
+                        ),
                         ChapterEntity(
                             1,
                             49,
                             5,
                             7,
                             range = "49",
+                            titleName = "The Ash Ledger",
                             pages = 32,
                             pagesRead = 18,
                             format = 0,
                             volumeTitle = "5",
+                        ),
+                        ChapterEntity(
+                            1,
+                            50,
+                            5,
+                            7,
+                            range = "50",
+                            titleName = "Smoke Signals",
+                            pages = 30,
+                            pagesRead = 0,
+                            format = 0,
+                        ),
+                        ChapterEntity(
+                            1,
+                            90,
+                            6,
+                            7,
+                            range = "Artbook: Roads",
+                            pages = 64,
+                            pagesRead = 0,
+                            isSpecial = true,
+                            format = 0,
                         ),
                     ),
                 metadata =
@@ -78,3 +118,8 @@ private fun SeriesLightPreview() = SeriesPreview(Appearance.Light)
 @Preview(widthDp = 412, heightDp = 915)
 @Composable
 private fun SeriesDarkPreview() = SeriesPreview(Appearance.Dark)
+
+/** Tall preview so the Volumes list is visible below the summary. */
+@Preview(widthDp = 412, heightDp = 1400)
+@Composable
+private fun SeriesVolumesPreview() = SeriesPreview(Appearance.Light)
