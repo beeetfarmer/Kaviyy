@@ -79,4 +79,11 @@
     <string name="series_fact_time">Reading time</string>
     <string name="series_minutes">~%1$d min</string>
     <string name="series_chapters_header">Chapters</string>
+    <string name="series_more_actions">More actions</string>
+    <string name="series_sync_pending">Saved on this device. It will sync when you\'re back online.</string>
+    <string name="series_actions_title">Series</string>
+    <string name="series_mark_series_read">Mark Series as Read</string>
+    <string name="series_mark_series_unread">Mark Series as Unread</string>
+    <string name="series_mark_read">Mark as Read</string>
+    <string name="series_mark_unread">Mark as Unread</string>
 </resources>

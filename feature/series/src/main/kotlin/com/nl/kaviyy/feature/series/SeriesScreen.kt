@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -35,14 +37,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nl.kaviyy.core.data.ReadTarget
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.designsystem.component.CircleIconButton
 import com.nl.kaviyy.core.designsystem.component.CoverImage
@@ -69,6 +70,8 @@ data class SeriesActions(
     val onTab: (SeriesTab) -> Unit = {},
     val onSheet: (SeriesSheet?) -> Unit = {},
     val onOpenSeries: (seriesId: Int) -> Unit = {},
+    val onWantToRead: () -> Unit = {},
+    val onMark: (ReadTarget, read: Boolean) -> Unit = { _, _ -> },
 )
 
 @Composable
@@ -81,9 +84,16 @@ fun SeriesRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     SeriesScreen(
         state,
-        SeriesActions(onBack, {
-            onRead(viewModel.seriesId, it)
-        }, viewModel::refresh, viewModel::selectTab, viewModel::showSheet, onOpenSeries),
+        SeriesActions(
+            onBack = onBack,
+            onRead = { onRead(viewModel.seriesId, it) },
+            onRetry = viewModel::refresh,
+            onTab = viewModel::selectTab,
+            onSheet = viewModel::showSheet,
+            onOpenSeries = onOpenSeries,
+            onWantToRead = viewModel::toggleWantToRead,
+            onMark = viewModel::setRead,
+        ),
     )
 }
 
@@ -106,7 +116,7 @@ fun SeriesScreen(
             }
             if (series == null) Placeholder(state, actions.onRetry)
         }
-        TopBar(series, state, actions.onBack)
+        TopBar(series, state, actions)
         val detail = state.detail
         if (state.sheet != null && detail != null) SeriesDetailSheet(state.sheet, detail, state.server, actions)
     }
@@ -116,39 +126,46 @@ fun SeriesScreen(
 private fun TopBar(
     series: SeriesEntity?,
     state: SeriesUiState,
-    onBack: () -> Unit,
+    actions: SeriesActions,
 ) {
     val context = LocalContext.current
     val chooser = stringResource(R.string.series_share_chooser)
     val translucent = Color.White.copy(alpha = HERO_BUTTON_ALPHA)
     Row(
         Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         CircleIconButton(
             KavitaIcons.ChevronLeft,
             stringResource(R.string.series_back),
-            onBack,
+            actions.onBack,
             containerColor = translucent,
             contentColor = Color.White,
         )
+        Spacer(Modifier.weight(1f))
         val server = state.server
         if (series != null && server != null) {
             // Kavita's web page for the series, so the link opens for anyone with access to this server.
             val link = server.url.resolve("library/${series.libraryId}/series/${series.id}")
+            val share = {
+                val send =
+                    Intent(Intent.ACTION_SEND)
+                        .setType("text/plain")
+                        .putExtra(Intent.EXTRA_TEXT, link)
+                        .putExtra(Intent.EXTRA_SUBJECT, series.name)
+                context.startActivity(Intent.createChooser(send, chooser))
+            }
             CircleIconButton(
                 KavitaIcons.Share,
                 stringResource(R.string.series_share),
-                {
-                    val send =
-                        Intent(
-                            Intent.ACTION_SEND,
-                        ).setType(
-                            "text/plain",
-                        ).putExtra(Intent.EXTRA_TEXT, link)
-                            .putExtra(Intent.EXTRA_SUBJECT, series.name)
-                    context.startActivity(Intent.createChooser(send, chooser))
-                },
+                share,
+                containerColor = translucent,
+                contentColor = Color.White,
+            )
+            CircleIconButton(
+                KavitaIcons.More,
+                stringResource(R.string.series_more_actions),
+                { actions.onSheet(SeriesSheet.Actions) },
                 containerColor = translucent,
                 contentColor = Color.White,
             )
@@ -211,8 +228,14 @@ private fun Body(
             }
         }
         Chips(series, state)
-        ActionRow(series, state, actions.onRead)
-        if (state.error != null) {
+        ActionRow(series, state, actions)
+        if (state.syncPending) {
+            Text(
+                stringResource(R.string.series_sync_pending),
+                style = Kavita.type.footnote,
+                color = Kavita.colors.labelSecondary,
+            )
+        } else if (state.error != null) {
             Text(
                 stringResource(R.string.series_refresh_failed),
                 style = Kavita.type.footnote,
@@ -259,8 +282,9 @@ private fun Chips(
 private fun ActionRow(
     series: SeriesEntity,
     state: SeriesUiState,
-    onRead: (Int?) -> Unit,
+    actions: SeriesActions,
 ) {
+    val onRead = actions.onRead
     val next = state.continueChapter
     val label =
         when (val a = readAction(series, next)) {
@@ -287,13 +311,16 @@ private fun ActionRow(
     ) {
         PrimaryButton(label, { onRead(next?.id) }, Modifier.weight(1f), leadingIcon = KavitaIcons.Play)
         // Toggle: M8.3. Download: M15 (behind the Download role).
-        WantToRead(state.detail?.metadata?.wantToRead == true)
+        WantToRead(state.detail?.metadata?.wantToRead == true, actions.onWantToRead)
     }
 }
 
 /** 50dp round toggle: filled bookmark on accentContainer when on. */
 @Composable
-private fun WantToRead(on: Boolean) {
+private fun WantToRead(
+    on: Boolean,
+    onToggle: () -> Unit,
+) {
     val label = stringResource(if (on) R.string.series_want_to_read_remove else R.string.series_want_to_read_add)
     Box(
         Modifier
@@ -301,7 +328,7 @@ private fun WantToRead(on: Boolean) {
             .clip(CircleShape)
             .background(if (on) Kavita.colors.accentContainer else Kavita.colors.surface)
             .border(0.5.dp, Kavita.colors.hairline, CircleShape)
-            .semantics { stateDescription = label },
+            .toggleable(on, role = Role.Switch) { onToggle() },
         contentAlignment = Alignment.Center,
     ) {
         Icon(

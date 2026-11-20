@@ -10,6 +10,9 @@ import com.nl.kaviyy.core.network.HourEstimateRangeDto
 import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.LanguageDto
 import com.nl.kaviyy.core.network.LibraryDto
+import com.nl.kaviyy.core.network.MarkReadDto
+import com.nl.kaviyy.core.network.MarkVolumeReadDto
+import com.nl.kaviyy.core.network.MarkVolumesReadDto
 import com.nl.kaviyy.core.network.MetadataValueDto
 import com.nl.kaviyy.core.network.PersonDto
 import com.nl.kaviyy.core.network.RelatedSeriesDto
@@ -19,6 +22,7 @@ import com.nl.kaviyy.core.network.SeriesFilterV2Dto
 import com.nl.kaviyy.core.network.SeriesMetadataDto
 import com.nl.kaviyy.core.network.SideNavStreamDto
 import com.nl.kaviyy.core.network.SmartFilterDto
+import com.nl.kaviyy.core.network.UpdateWantToReadDto
 import kotlinx.serialization.json.JsonObject
 
 /** Base fake: every call fails loudly unless a test overrides it. */
@@ -73,6 +77,22 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun seriesMetadata(seriesId: Int): SeriesMetadataDto = SeriesMetadataDto()
 
     override suspend fun allRelated(seriesId: Int): RelatedSeriesDto = error("unused")
+
+    override suspend fun markSeriesRead(body: MarkReadDto): Unit = error("unused")
+
+    override suspend fun markSeriesUnread(body: MarkReadDto): Unit = error("unused")
+
+    override suspend fun markVolumeRead(body: MarkVolumeReadDto): Unit = error("unused")
+
+    override suspend fun markVolumeUnread(body: MarkVolumeReadDto): Unit = error("unused")
+
+    override suspend fun markMultipleRead(body: MarkVolumesReadDto): Unit = error("unused")
+
+    override suspend fun markMultipleUnread(body: MarkVolumesReadDto): Unit = error("unused")
+
+    override suspend fun addWantToRead(body: UpdateWantToReadDto): Unit = error("unused")
+
+    override suspend fun removeWantToRead(body: UpdateWantToReadDto): Unit = error("unused")
 
     override suspend fun timeLeft(seriesId: Int): HourEstimateRangeDto = HourEstimateRangeDto()
 

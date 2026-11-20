@@ -70,6 +70,68 @@ interface SeriesDao {
     @Upsert
     suspend fun upsertSeries(rows: List<SeriesEntity>)
 
+    @Query("SELECT id FROM chapters WHERE serverId = :serverId AND seriesId = :seriesId")
+    suspend fun chapterIdsOfSeries(
+        serverId: Long,
+        seriesId: Int,
+    ): List<Int>
+
+    @Query("SELECT id FROM chapters WHERE serverId = :serverId AND volumeId = :volumeId")
+    suspend fun chapterIdsOfVolume(
+        serverId: Long,
+        volumeId: Int,
+    ): List<Int>
+
+    @Query(
+        "UPDATE chapters SET pagesRead = CASE WHEN :read THEN pages ELSE 0 END " +
+            "WHERE serverId = :serverId AND id IN (:ids)",
+    )
+    suspend fun setChaptersRead(
+        serverId: Long,
+        ids: List<Int>,
+        read: Boolean,
+    )
+
+    @Query(
+        "UPDATE volumes SET pagesRead = (SELECT COALESCE(SUM(c.pagesRead), 0) FROM chapters c " +
+            "WHERE c.serverId = volumes.serverId AND c.volumeId = volumes.id) " +
+            "WHERE serverId = :serverId AND seriesId = :seriesId",
+    )
+    suspend fun recountVolumes(
+        serverId: Long,
+        seriesId: Int,
+    )
+
+    @Query(
+        "UPDATE series SET pagesRead = (SELECT COALESCE(SUM(c.pagesRead), 0) FROM chapters c " +
+            "WHERE c.serverId = series.serverId AND c.seriesId = series.id) " +
+            "WHERE serverId = :serverId AND id = :seriesId",
+    )
+    suspend fun recountSeries(
+        serverId: Long,
+        seriesId: Int,
+    )
+
+    /** Marks [ids] fully read or unread and recomputes their volume and series totals. */
+    @Transaction
+    suspend fun applyRead(
+        serverId: Long,
+        seriesId: Int,
+        ids: List<Int>,
+        read: Boolean,
+    ) {
+        setChaptersRead(serverId, ids, read)
+        recountVolumes(serverId, seriesId)
+        recountSeries(serverId, seriesId)
+    }
+
+    @Query("UPDATE series_metadata SET wantToRead = :on WHERE serverId = :serverId AND seriesId = :seriesId")
+    suspend fun setWantToRead(
+        serverId: Long,
+        seriesId: Int,
+        on: Boolean,
+    )
+
     @Query("SELECT * FROM series_metadata WHERE serverId = :serverId AND seriesId = :seriesId")
     fun observeMetadata(
         serverId: Long,

@@ -158,6 +158,46 @@ interface KavitaApi {
     ): List<SeriesDto>
 
     /** The chapter to resume in a series. */
+    @POST("api/Reader/mark-read")
+    suspend fun markSeriesRead(
+        @Body body: MarkReadDto,
+    )
+
+    @POST("api/Reader/mark-unread")
+    suspend fun markSeriesUnread(
+        @Body body: MarkReadDto,
+    )
+
+    @POST("api/Reader/mark-volume-read")
+    suspend fun markVolumeRead(
+        @Body body: MarkVolumeReadDto,
+    )
+
+    @POST("api/Reader/mark-volume-unread")
+    suspend fun markVolumeUnread(
+        @Body body: MarkVolumeReadDto,
+    )
+
+    @POST("api/Reader/mark-multiple-read")
+    suspend fun markMultipleRead(
+        @Body body: MarkVolumesReadDto,
+    )
+
+    @POST("api/Reader/mark-multiple-unread")
+    suspend fun markMultipleUnread(
+        @Body body: MarkVolumesReadDto,
+    )
+
+    @POST("api/want-to-read/add-series")
+    suspend fun addWantToRead(
+        @Body body: UpdateWantToReadDto,
+    )
+
+    @POST("api/want-to-read/remove-series")
+    suspend fun removeWantToRead(
+        @Body body: UpdateWantToReadDto,
+    )
+
     @GET("api/Series/all-related")
     suspend fun allRelated(
         @Query("seriesId") seriesId: Int,

@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
+import com.nl.kaviyy.core.data.ReadStateRepository
+import com.nl.kaviyy.core.data.ReadTarget
 import com.nl.kaviyy.core.data.RelatedSeries
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.database.ChapterEntity
@@ -38,6 +40,8 @@ data class SeriesUiState(
     val tab: SeriesTab = SeriesTab.Volumes,
     val sheet: SeriesSheet? = null,
     val related: RelatedState = RelatedState.Idle,
+    /** A change was saved locally but not pushed yet (offline); it syncs later. */
+    val syncPending: Boolean = false,
 ) {
     /** The server's continue point, when it's among the cached chapters. */
     val continueChapter: ChapterEntity?
@@ -53,6 +57,9 @@ sealed interface SeriesSheet {
     data class Chapter(
         val id: Int,
     ) : SeriesSheet
+
+    /** The top bar's "more" menu. */
+    data object Actions : SeriesSheet
 }
 
 /** Related tab: fetched on first open (network only). */
@@ -75,6 +82,7 @@ private data class Status(
     val error: AppError? = null,
     val tab: SeriesTab = SeriesTab.Volumes,
     val sheet: SeriesSheet? = null,
+    val syncPending: Boolean = false,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -84,6 +92,7 @@ class SeriesViewModel
     constructor(
         private val session: AuthSession,
         private val repository: CatalogRepository,
+        private val readState: ReadStateRepository,
         saved: SavedStateHandle,
     ) : ViewModel() {
         val seriesId: Int = checkNotNull(saved.get<Int>(SERIES_ID_ARG)) { "missing $SERIES_ID_ARG" }
@@ -103,7 +112,7 @@ class SeriesViewModel
                             relatedState,
                         ) { d, libs, st, rel ->
                             val name = libs.firstOrNull { it.id == d.series?.libraryId }?.name
-                            SeriesUiState(s, d, name, st.refreshing, st.error, st.tab, st.sheet, rel)
+                            SeriesUiState(s, d, name, st.refreshing, st.error, st.tab, st.sheet, rel, st.syncPending)
                         }
                     }
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), SeriesUiState())
@@ -118,6 +127,31 @@ class SeriesViewModel
         }
 
         fun showSheet(sheet: SeriesSheet?) = status.update { it.copy(sheet = sheet) }
+
+        fun toggleWantToRead() {
+            val on =
+                state.value.detail
+                    ?.metadata
+                    ?.wantToRead != true
+            push { s -> readState.setWantToRead(s, seriesId, on) }
+        }
+
+        /** Closes the sheet; on a successful push, refreshes so the continue point follows. */
+        fun setRead(
+            target: ReadTarget,
+            read: Boolean,
+        ) {
+            showSheet(null)
+            push { s -> readState.setRead(s, target, read).also { if (it is AppResult.Success) refresh() } }
+        }
+
+        private fun push(block: suspend (Server) -> AppResult<Unit>) {
+            viewModelScope.launch {
+                val s = session.activeServer.first() ?: return@launch
+                val result = block(s)
+                status.update { it.copy(syncPending = result is AppResult.Failure) }
+            }
+        }
 
         /** No-op while loading or once loaded; retries after a failure. */
         fun loadRelated() {

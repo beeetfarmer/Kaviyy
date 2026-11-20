@@ -243,3 +243,32 @@ data class RelatedSeriesDto(
     val editions: List<SeriesDto> = emptyList(),
     val annuals: List<SeriesDto> = emptyList(),
 )
+
+// Read-state bodies: no defaults, so every field is always sent (the API JSON omits defaults).
+
+/** `api/Reader/mark-read|mark-unread`. */
+@Serializable
+data class MarkReadDto(
+    val seriesId: Int,
+)
+
+/** `api/Reader/mark-volume-read|mark-volume-unread`. */
+@Serializable
+data class MarkVolumeReadDto(
+    val seriesId: Int,
+    val volumeId: Int,
+)
+
+/** `api/Reader/mark-multiple-read|mark-multiple-unread` (used for single chapters: there is no chapter-unread call). */
+@Serializable
+data class MarkVolumesReadDto(
+    val seriesId: Int,
+    val volumeIds: List<Int>,
+    val chapterIds: List<Int>,
+)
+
+/** `api/want-to-read/add-series|remove-series`. */
+@Serializable
+data class UpdateWantToReadDto(
+    val seriesIds: List<Int>,
+)

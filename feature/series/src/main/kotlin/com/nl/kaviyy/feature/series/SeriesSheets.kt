@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.nl.kaviyy.core.data.ReadTarget
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.minutesLeft
 import com.nl.kaviyy.core.database.ChapterEntity
@@ -61,6 +62,11 @@ internal fun SeriesDetailSheet(
                     bytes = chapters.sumOf { it.fileBytes },
                 )
                 ReadButton(nextIn(chapters), actions)
+                MarkRow(
+                    volume.pages > 0 && volume.pagesRead >= volume.pages,
+                    ReadTarget.Volume(volume.seriesId, volume.id),
+                    actions,
+                )
                 if (chapters.size > 1) {
                     SectionHeader(stringResource(R.string.series_chapters_header), Modifier.padding(top = 8.dp))
                     GroupedList {
@@ -80,6 +86,27 @@ internal fun SeriesDetailSheet(
             }
         }
 
+        SeriesSheet.Actions -> {
+            val series = detail.series
+            if (series != null) {
+                SheetFrame(stringResource(R.string.series_actions_title), close) {
+                    GroupedList {
+                        GroupedRow(
+                            stringResource(R.string.series_mark_series_read),
+                            onClick = { actions.onMark(ReadTarget.Series(series.id), true) },
+                            showChevron = false,
+                            divider = true,
+                        )
+                        GroupedRow(
+                            stringResource(R.string.series_mark_series_unread),
+                            onClick = { actions.onMark(ReadTarget.Series(series.id), false) },
+                            showChevron = false,
+                        )
+                    }
+                }
+            }
+        }
+
         is SeriesSheet.Chapter -> {
             val chapter = detail.chapters.firstOrNull { it.id == sheet.id } ?: return
             SheetFrame(chapterTitle(chapter), close) {
@@ -93,6 +120,11 @@ internal fun SeriesDetailSheet(
                     minutes = chapter.minutesLeft().takeIf { chapter.pagesRead < chapter.pages },
                 )
                 ReadButton(chapter, actions)
+                MarkRow(
+                    chapter.pages > 0 && chapter.pagesRead >= chapter.pages,
+                    ReadTarget.Chapter(chapter.seriesId, chapter.id),
+                    actions,
+                )
             }
         }
     }
@@ -165,4 +197,18 @@ private fun ReadButton(
     PrimaryButton(stringResource(R.string.series_read), {
         actions.onRead(chapter.id)
     }, Modifier.fillMaxWidth(), leadingIcon = KavitaIcons.Play)
+}
+
+/** Flips a volume/chapter between fully read and unread. */
+@Composable
+private fun MarkRow(
+    isRead: Boolean,
+    target: ReadTarget,
+    actions: SeriesActions,
+) = GroupedList {
+    GroupedRow(
+        stringResource(if (isRead) R.string.series_mark_unread else R.string.series_mark_read),
+        onClick = { actions.onMark(target, !isRead) },
+        showChevron = false,
+    )
 }

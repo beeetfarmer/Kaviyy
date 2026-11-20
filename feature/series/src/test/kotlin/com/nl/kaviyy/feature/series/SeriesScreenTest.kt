@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.nl.kaviyy.core.data.ReadTarget
 import com.nl.kaviyy.core.designsystem.theme.Appearance
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
 import org.junit.Rule
@@ -79,6 +80,46 @@ class SeriesScreenTest {
         // The sheet's Read button (row states also say "Read").
         compose.onNode(hasText("Read") and hasClickAction() and !hasText("Crossing", substring = true)).performClick()
         assertEquals(49, read)
+    }
+
+    @Test
+    fun wantToReadAndMarkActions() {
+        var toggled = 0
+        val marks = mutableListOf<Pair<ReadTarget, Boolean>>()
+        var sheet: SeriesSheet? = null
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) {
+                SeriesScreen(
+                    previewSeries.copy(sheet = SeriesSheet.Actions),
+                    SeriesActions(onWantToRead = { toggled++ }, onMark = { t, r -> marks += t to r }, onSheet = {
+                        sheet =
+                            it
+                    }),
+                )
+            }
+        }
+        compose.onNodeWithText("Mark Series as Unread").performClick()
+        assertEquals(listOf<Pair<ReadTarget, Boolean>>(ReadTarget.Series(7) to false), marks)
+        compose.onNodeWithContentDescription("More actions").performClick()
+        assertEquals(SeriesSheet.Actions, sheet)
+        compose.onNodeWithContentDescription("Remove from Want to Read").performClick()
+        assertEquals(1, toggled)
+    }
+
+    @Test
+    fun chapterSheetMarksReadAndShowsPendingSync() {
+        val marks = mutableListOf<Pair<ReadTarget, Boolean>>()
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) {
+                SeriesScreen(
+                    previewSeries.copy(sheet = SeriesSheet.Chapter(49), syncPending = true),
+                    SeriesActions(onMark = { t, r -> marks += t to r }),
+                )
+            }
+        }
+        compose.onNodeWithText("Saved on this device. It will sync when you're back online.").assertExists()
+        compose.onNodeWithText("Mark as Read").performClick()
+        assertEquals(listOf<Pair<ReadTarget, Boolean>>(ReadTarget.Chapter(7, 49) to true), marks)
     }
 
     @Test

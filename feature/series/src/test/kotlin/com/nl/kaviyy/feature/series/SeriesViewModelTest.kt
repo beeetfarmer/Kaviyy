@@ -7,6 +7,8 @@ import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.LibraryQuery
 import com.nl.kaviyy.core.data.OptionSource
+import com.nl.kaviyy.core.data.ReadStateRepository
+import com.nl.kaviyy.core.data.ReadTarget
 import com.nl.kaviyy.core.data.RelatedSeries
 import com.nl.kaviyy.core.data.Relation
 import com.nl.kaviyy.core.data.RuleValue
@@ -43,6 +45,28 @@ class SeriesViewModelTest {
     private var refreshResult: AppResult<Unit> = AppResult.Success(Unit)
     private val refreshed = mutableListOf<Int>()
     private var relatedCalls = 0
+    private val marks = mutableListOf<String>()
+    private var pushResult: AppResult<Unit> = AppResult.Success(Unit)
+    private val readState =
+        object : ReadStateRepository {
+            override suspend fun setRead(
+                server: Server,
+                target: ReadTarget,
+                read: Boolean,
+            ): AppResult<Unit> {
+                marks += "${target.key} $read"
+                return pushResult
+            }
+
+            override suspend fun setWantToRead(
+                server: Server,
+                seriesId: Int,
+                on: Boolean,
+            ): AppResult<Unit> {
+                marks += "wtr $seriesId $on"
+                return pushResult
+            }
+        }
     private var relatedResult: AppResult<List<RelatedSeries>> = AppResult.Failure(AppError.Network)
 
     private val session =
@@ -111,7 +135,7 @@ class SeriesViewModelTest {
     @Test
     fun showsCachedDetailWithLibraryAndContinuePointAndRefreshes() =
         runTest {
-            val vm = SeriesViewModel(session, repo, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            val vm = SeriesViewModel(session, repo, readState, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
             vm.state.test {
                 runCurrent()
                 assertEquals(listOf(7), refreshed)
@@ -135,7 +159,7 @@ class SeriesViewModelTest {
     fun refreshFailureIsReportedAndRetryCallsAgain() =
         runTest {
             refreshResult = AppResult.Failure(AppError.Network)
-            val vm = SeriesViewModel(session, repo, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            val vm = SeriesViewModel(session, repo, readState, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
             vm.state.test {
                 runCurrent()
                 assertEquals(AppError.Network, expectMostRecentItem().error)
@@ -150,7 +174,7 @@ class SeriesViewModelTest {
     @Test
     fun relatedLoadsOnFirstOpenRetriesAfterFailureAndSheetsOpen() =
         runTest {
-            val vm = SeriesViewModel(session, repo, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            val vm = SeriesViewModel(session, repo, readState, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
             vm.state.test {
                 runCurrent()
                 vm.selectTab(SeriesTab.Related)
@@ -172,6 +196,29 @@ class SeriesViewModelTest {
                 val s = expectMostRecentItem()
                 assertEquals(SeriesTab.Related, s.tab)
                 assertEquals(SeriesSheet.Chapter(49), s.sheet)
+            }
+        }
+
+    @Test
+    fun marksPushAndRefreshOrReportPendingSync() =
+        runTest {
+            val vm = SeriesViewModel(session, repo, readState, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            vm.state.test {
+                runCurrent()
+                detail.value = detail.value.copy(metadata = SeriesMetadata(wantToRead = true))
+                runCurrent()
+                vm.toggleWantToRead()
+                vm.showSheet(SeriesSheet.Volume(5))
+                vm.setRead(ReadTarget.Volume(7, 5), read = true)
+                runCurrent()
+                assertEquals(listOf("wtr 7 false", "volume:5 true"), marks)
+                assertEquals(null, expectMostRecentItem().sheet)
+                assertEquals(listOf(7, 7), refreshed) // init + after the successful mark
+                pushResult = AppResult.Failure(AppError.Network)
+                vm.setRead(ReadTarget.Series(7), read = false)
+                runCurrent()
+                assertEquals(true, expectMostRecentItem().syncPending)
+                assertEquals(listOf(7, 7), refreshed)
             }
         }
 }
