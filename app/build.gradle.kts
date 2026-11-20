@@ -1,41 +1,37 @@
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.kaviyy.android.application)
+    alias(libs.plugins.kaviyy.android.compose)
+    alias(libs.plugins.kaviyy.hilt)
 }
 
 android {
     namespace = "com.nl.kaviyy"
-    compileSdk {
-        version = release(37)
-    }
 
     defaultConfig {
         applicationId = "com.nl.kaviyy"
-        minSdk = 24
-        targetSdk = 37
         versionCode = 1
-        versionName = "1.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        versionName = "0.1.0"
     }
 
     buildTypes {
         release {
             optimization {
-                enable = false
+                enable = true
             }
         }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
     }
 }
 
 dependencies {
-    implementation(libs.androidx.appcompat)
+    implementation(projects.core.designsystem)
+    implementation(projects.core.data)
+    implementation(projects.core.model)
+    listOf(
+        projects.feature.auth, projects.feature.home, projects.feature.library, projects.feature.series,
+        projects.feature.search, projects.feature.filter, projects.feature.lists, projects.feature.profile,
+        projects.feature.downloads, projects.feature.readerImage, projects.feature.readerEpub,
+        projects.feature.readerPdf,
+    ).forEach { implementation(it) }
     implementation(libs.androidx.core.ktx)
-    implementation(libs.material)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.junit)
+    implementation(libs.androidx.activity.compose)
 }
