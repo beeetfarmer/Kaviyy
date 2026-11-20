@@ -33,14 +33,19 @@ data class ServerInfo(
     val isSupported: Boolean get() = version?.isSupported == true
 }
 
+/** Reachability + version check (the seam ViewModels depend on; [ServerProbe] is the implementation). */
+fun interface ServerProber {
+    suspend fun probe(server: Server): AppResult<ServerInfo>
+}
+
 /** Reachability + version check used by the Connect screen. Unauthenticated; goes through the server's policy. */
 class ServerProbe
     @Inject
     constructor(
         private val clients: ServerHttpClients,
         @param:Dispatcher(KaviyyDispatchers.IO) private val io: CoroutineDispatcher,
-    ) {
-        suspend fun probe(server: Server): AppResult<ServerInfo> =
+    ) : ServerProber {
+        override suspend fun probe(server: Server): AppResult<ServerInfo> =
             withContext(io) {
                 val request = Request.Builder().url(server.url.resolve("api/Server/server-info-slim")).build()
                 // ponytail: blocking execute on IO; cancellation doesn't abort the call (bounded by timeouts).
