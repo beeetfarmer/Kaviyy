@@ -2,13 +2,18 @@ package com.nl.kaviyy.feature.auth
 
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.snapshots.Snapshot
+import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.KavitaVersion
 import com.nl.kaviyy.core.model.server.Server
+import com.nl.kaviyy.core.model.server.ServerId
+import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlError
+import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.ServerInfo
 import com.nl.kaviyy.core.testing.MainDispatcherRule
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -27,11 +32,36 @@ class ConnectViewModelTest {
     private val probed = mutableListOf<Server>()
     private var answer: AppResult<ServerInfo> = AppResult.Success(ServerInfo(KavitaVersion.parse("0.9.0.2")))
 
-    private fun viewModel() =
-        ConnectViewModel { server ->
-            probed += server
-            answer
+    private var loginResult: AppResult<Server> = AppResult.Failure(AppError.Unauthorized)
+    private val signIns = mutableListOf<List<Any?>>()
+    private val session =
+        object : AuthSession {
+            override val activeServer = emptyFlow<Server?>()
+
+            override suspend fun signIn(
+                url: ServerUrl,
+                version: String?,
+                username: String,
+                password: String,
+                staySignedIn: Boolean,
+            ): AppResult<Server> {
+                signIns += listOf(url.value, version, username, password, staySignedIn)
+                return loginResult
+            }
+
+            override suspend fun signOut(serverId: ServerId) = Unit
+
+            override fun credentialSource(serverId: ServerId) = error("unused")
         }
+
+    private fun viewModel() =
+        ConnectViewModel(
+            { server ->
+                probed += server
+                answer
+            },
+            session,
+        )
 
     private fun ConnectViewModel.type(text: String) {
         address.setTextAndPlaceCursorAtEnd(text)
@@ -106,5 +136,50 @@ class ConnectViewModelTest {
             assertTrue(vm.state.value.canSignIn)
             vm.setStaySignedIn(false)
             assertFalse(vm.state.value.staySignedIn)
+        }
+
+    private suspend fun kotlinx.coroutines.test.TestScope.readyToSignIn(): ConnectViewModel {
+        val vm = viewModel()
+        vm.type("k.example")
+        advanceTimeBy(ADDRESS_DEBOUNCE_MS + 1)
+        vm.username.setTextAndPlaceCursorAtEnd(" aarav ")
+        vm.password.setTextAndPlaceCursorAtEnd("hunter2")
+        Snapshot.sendApplyNotifications()
+        runCurrent()
+        return vm
+    }
+
+    @Test
+    fun wrongPasswordShowsErrorAndKeepsInput() =
+        runTest {
+            val vm = readyToSignIn()
+            vm.setStaySignedIn(false)
+            vm.signIn()
+            runCurrent()
+            assertEquals(listOf<Any?>("https://k.example", "0.9.0.2", "aarav", "hunter2", false), signIns.single())
+            assertEquals(AppError.Unauthorized, vm.state.value.signInError)
+            assertFalse(vm.state.value.signingIn)
+            assertEquals("hunter2", vm.password.text.toString())
+        }
+
+    @Test
+    fun successClearsThePassword() =
+        runTest {
+            val vm = readyToSignIn()
+            val url = (ServerUrl.parse("https://k.example") as ServerUrlResult.Valid).url
+            loginResult = AppResult.Success(Server(ServerId(1), "k", url))
+            vm.signIn()
+            runCurrent()
+            assertEquals("", vm.password.text.toString())
+            assertEquals(null, vm.state.value.signInError)
+        }
+
+    @Test
+    fun signInIsIgnoredUntilReady() =
+        runTest {
+            val vm = viewModel()
+            vm.signIn()
+            runCurrent()
+            assertTrue(signIns.isEmpty())
         }
 }

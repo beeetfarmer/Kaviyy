@@ -1,5 +1,7 @@
 package com.nl.kaviyy.core.network.di
 
+import com.nl.kaviyy.core.network.AccountApi
+import com.nl.kaviyy.core.network.KavitaAccountApi
 import com.nl.kaviyy.core.network.ServerProbe
 import com.nl.kaviyy.core.network.ServerProber
 import com.nl.kaviyy.core.network.baseHttpClient
@@ -24,4 +26,7 @@ object NetworkModule {
 internal interface NetworkBindings {
     @Binds
     fun prober(probe: ServerProbe): ServerProber
+
+    @Binds
+    fun accountApi(api: KavitaAccountApi): AccountApi
 }

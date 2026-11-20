@@ -77,6 +77,15 @@ class CredentialStore
     constructor(
         private val dataStore: DataStore<CredentialFile>,
     ) {
+        /** Servers that have stored credentials. */
+        val serverIds: Flow<Set<ServerId>> =
+            dataStore.data
+                .map { file ->
+                    file.entries.keys
+                        .map(::ServerId)
+                        .toSet()
+                }.distinctUntilChanged()
+
         fun credentials(serverId: ServerId): Flow<Credentials?> =
             dataStore.data.map { it.entries[serverId.value]?.toCredentials() }.distinctUntilChanged()
 

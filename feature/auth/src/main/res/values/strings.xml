@@ -11,6 +11,8 @@
     <string name="auth_required">Required</string>
     <string name="auth_stay_signed_in">Stay signed in</string>
     <string name="auth_sign_in">Sign In</string>
+    <string name="auth_signing_in">Signing in…</string>
+    <string name="auth_error_wrong_credentials">Incorrect username or password.</string>
     <string name="auth_continue_sso">Continue with SSO</string>
     <string name="auth_use_auth_key">Use Auth Key</string>
     <string name="auth_footnote">Self-hosted. Your library never leaves your server.</string>

@@ -1,9 +1,11 @@
 package com.nl.kaviyy.feature.auth
 
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
@@ -54,8 +56,10 @@ data class ConnectUiState(
     val reachability: Reachability = Reachability.Idle,
     val staySignedIn: Boolean = true,
     val credentialsEntered: Boolean = false,
+    val signingIn: Boolean = false,
+    val signInError: AppError? = null,
 ) {
-    val canSignIn: Boolean get() = reachability is Reachability.Found && credentialsEntered
+    val canSignIn: Boolean get() = reachability is Reachability.Found && credentialsEntered && !signingIn
 }
 
 internal const val ADDRESS_DEBOUNCE_MS = 600L
@@ -66,6 +70,7 @@ class ConnectViewModel
     @Inject
     constructor(
         private val prober: ServerProber,
+        private val session: AuthSession,
     ) : ViewModel() {
         val address = TextFieldState()
         val username = TextFieldState()
@@ -92,6 +97,26 @@ class ConnectViewModel
         }
 
         fun setStaySignedIn(value: Boolean) = _state.update { it.copy(staySignedIn = value) }
+
+        /** On success [AuthSession.activeServer] changes and the app leaves this screen. */
+        fun signIn() {
+            val current = _state.value
+            val found = current.reachability as? Reachability.Found
+            if (!current.canSignIn || found == null) return
+            _state.update { it.copy(signingIn = true, signInError = null) }
+            viewModelScope.launch {
+                val result =
+                    session.signIn(
+                        found.url,
+                        found.version,
+                        username.text.toString().trim(),
+                        password.text.toString(),
+                        current.staySignedIn,
+                    )
+                if (result is AppResult.Success) password.clearText()
+                _state.update { it.copy(signingIn = false, signInError = (result as? AppResult.Failure)?.error) }
+            }
+        }
 
         private suspend fun check(input: String) {
             val reachability =

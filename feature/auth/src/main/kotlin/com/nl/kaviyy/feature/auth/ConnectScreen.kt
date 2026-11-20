@@ -59,7 +59,6 @@ private val AddressKeyboard =
 
 @Composable
 fun ConnectRoute(
-    onSignIn: () -> Unit,
     onSso: () -> Unit,
     onAuthKey: () -> Unit,
     modifier: Modifier = Modifier,
@@ -73,7 +72,7 @@ fun ConnectRoute(
         username = viewModel.username,
         password = viewModel.password,
         onStaySignedIn = viewModel::setStaySignedIn,
-        onSignIn = onSignIn,
+        onSignIn = viewModel::signIn,
         onSso = onSso,
         onAuthKey = onAuthKey,
         modifier = modifier,
@@ -141,11 +140,27 @@ fun ConnectScreen(
             GroupedList {
                 GroupedSwitchRow(stringResource(R.string.auth_stay_signed_in), state.staySignedIn, onStaySignedIn)
             }
+            state.signInError?.let { error ->
+                Text(
+                    stringResource(
+                        if (error ==
+                            AppError.Unauthorized
+                        ) {
+                            R.string.auth_error_wrong_credentials
+                        } else {
+                            error.message()
+                        },
+                    ),
+                    style = Kavita.type.footnote,
+                    color = colors.destructive,
+                    modifier = Modifier.padding(horizontal = 16.dp).semantics { liveRegion = LiveRegionMode.Assertive },
+                )
+            }
         }
         Spacer(Modifier.weight(1f))
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             PrimaryButton(
-                stringResource(R.string.auth_sign_in),
+                stringResource(if (state.signingIn) R.string.auth_signing_in else R.string.auth_sign_in),
                 onSignIn,
                 Modifier.fillMaxWidth(),
                 size = ButtonSize.Large,
