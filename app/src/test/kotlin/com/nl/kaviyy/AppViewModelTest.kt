@@ -24,9 +24,10 @@ class AppViewModelTest {
         object : AuthSession {
             override val activeServer = active
 
+            override suspend fun knownServer(url: ServerUrl): Server? = null
+
             override suspend fun signIn(
-                url: ServerUrl,
-                version: String?,
+                target: Server,
                 method: LoginMethod,
                 staySignedIn: Boolean,
             ): AppResult<Server> = error("unused")

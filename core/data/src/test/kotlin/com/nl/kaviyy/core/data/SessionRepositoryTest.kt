@@ -8,6 +8,9 @@ import com.nl.kaviyy.core.datastore.CredentialStore
 import com.nl.kaviyy.core.model.auth.Credentials
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
+import com.nl.kaviyy.core.model.server.PinnedCertificate
+import com.nl.kaviyy.core.model.server.Server
+import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.LoginMethod
@@ -55,8 +58,9 @@ class SessionRepositoryTest {
     @After
     fun tearDown() = db.close()
 
-    private suspend fun signIn(stay: Boolean = true) =
-        session.signIn(url, "0.9.0.2", LoginMethod.Password("aarav", "pw"), stay)
+    private val target = Server(ServerId(0), "kavita.home.lan", url, "0.9.0.2")
+
+    private suspend fun signIn(stay: Boolean = true) = session.signIn(target, LoginMethod.Password("aarav", "pw"), stay)
 
     @Test
     fun signInSavesServerAndCredentials() =
@@ -114,10 +118,19 @@ class SessionRepositoryTest {
         }
 
     @Test
+    fun trustDecisionsArePersistedAndKnown() =
+        runTest {
+            val pin = PinnedCertificate.of(byteArrayOf(9, 9))
+            session.signIn(target.copy(pinnedCertificate = pin), LoginMethod.Password("a", "b"), true)
+            assertEquals(pin, session.knownServer(url)?.pinnedCertificate)
+            assertNull(session.knownServer((ServerUrl.parse("https://other.lan") as ServerUrlResult.Valid).url))
+        }
+
+    @Test
     fun authKeySignInStoresTheKey() =
         runTest {
             login = AppResult.Success(LoginResult(Credentials.AuthKey("pasted"), emptySet()))
-            val server = (session.signIn(url, null, LoginMethod.AuthKey("pasted"), true) as AppResult.Success).value
+            val server = (session.signIn(target, LoginMethod.AuthKey("pasted"), true) as AppResult.Success).value
             assertEquals(Credentials.AuthKey("pasted"), store.credentials(server.id).first())
         }
 

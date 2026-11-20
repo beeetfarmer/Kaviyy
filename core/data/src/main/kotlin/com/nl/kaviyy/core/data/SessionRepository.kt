@@ -27,14 +27,16 @@ interface AuthSession {
     /** The most recently used server that has credentials, or null (show Connect). */
     val activeServer: Flow<Server?>
 
+    /** A saved server for this address (its pin and HTTP opt-in), if any. */
+    suspend fun knownServer(url: ServerUrl): Server?
+
     /**
-     * Signs in (password or Auth Key) and remembers the server.
-     * With [staySignedIn] false the credentials are kept in memory only,
-     * so the user is signed out when the process dies.
+     * Signs in (password or Auth Key) to [target] and remembers it with the trust decisions it carries (pin, HTTP
+     * opt-in; its id is ignored). With [staySignedIn] false the credentials are kept in memory only, so the user is
+     * signed out when the process dies.
      */
     suspend fun signIn(
-        url: ServerUrl,
-        version: String?,
+        target: Server,
         method: LoginMethod,
         staySignedIn: Boolean,
     ): AppResult<Server>
@@ -60,31 +62,31 @@ class SessionRepository
                 rows.firstOrNull { ServerId(it.id) in stored || ServerId(it.id) in memory }?.toModel()
             }.distinctUntilChanged()
 
+        override suspend fun knownServer(url: ServerUrl): Server? = servers.byUrl(url.value)?.toModel()
+
         override suspend fun signIn(
-            url: ServerUrl,
-            version: String?,
+            target: Server,
             method: LoginMethod,
             staySignedIn: Boolean,
         ): AppResult<Server> {
-            val existing = servers.byUrl(url.value)
-            // Keep an existing pin / HTTP opt-in for this address; a new server starts strict.
-            val probe = existing?.toModel() ?: Server(ServerId(0), url.host, url, version)
-            return when (val result = accounts.login(probe, method)) {
+            val existing = servers.byUrl(target.url.value)
+            return when (val result = accounts.login(target, method)) {
                 is AppResult.Failure -> {
                     result
                 }
 
                 is AppResult.Success -> {
-                    val row = (existing ?: ServerEntity(name = url.host, url = url.value))
-                    val id =
-                        ServerId(
-                            servers.upsert(
-                                row.copy(version = version ?: row.version, lastUsedAt = System.currentTimeMillis()),
-                            ),
+                    val row =
+                        (existing ?: ServerEntity(name = target.name, url = target.url.value)).copy(
+                            version = target.version ?: existing?.version,
+                            pinnedCertDerBase64 = target.pinnedCertificate?.derBase64,
+                            allowInsecure = target.allowInsecure,
+                            lastUsedAt = System.currentTimeMillis(),
                         )
-                    val saved = existing?.let { ServerId(it.id) } ?: id
-                    save(saved, result.value.credentials, staySignedIn)
-                    AppResult.Success(checkNotNull(servers.byId(saved.value)?.toModel()))
+                    val inserted = servers.upsert(row)
+                    val id = ServerId(existing?.id ?: inserted)
+                    save(id, result.value.credentials, staySignedIn)
+                    AppResult.Success(checkNotNull(servers.byId(id.value)?.toModel()))
                 }
             }
         }

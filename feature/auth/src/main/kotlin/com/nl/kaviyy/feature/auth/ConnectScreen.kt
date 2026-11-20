@@ -1,6 +1,7 @@
 package com.nl.kaviyy.feature.auth
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,6 +53,8 @@ import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaShapes
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
 import com.nl.kaviyy.core.model.result.AppError
+import com.nl.kaviyy.core.model.server.Server
+import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlError
 import com.nl.kaviyy.core.model.server.ServerUrlResult
@@ -74,18 +77,17 @@ fun ConnectRoute(
         password = viewModel.password,
         onStaySignedIn = viewModel::setStaySignedIn,
         onSignIn = viewModel::signIn,
-        onSso = { viewModel.openAuthKey(viaSso = true) },
-        onAuthKey = { viewModel.openAuthKey() },
+        onSso = { viewModel.showSheet(ConnectSheet.Sso) },
+        onAuthKey = { viewModel.showSheet(ConnectSheet.AuthKey) },
+        onReview = viewModel::showSheet,
         modifier = modifier,
         onLogoLongPress = onLogoLongPress,
     )
-    if (state.authKeySheetOpen) {
-        AuthKeySheet(
-            state,
-            viewModel.authKey,
-            onSubmit = viewModel::signInWithAuthKey,
-            onDismiss = viewModel::closeAuthKey,
-        )
+    val close = { viewModel.showSheet(null) }
+    when (state.sheet) {
+        ConnectSheet.AuthKey, ConnectSheet.Sso -> AuthKeySheet(state, viewModel.authKey, viewModel::confirmSheet, close)
+        ConnectSheet.Certificate, ConnectSheet.InsecureHttp -> TrustSheet(state, viewModel::confirmSheet, close)
+        null -> Unit
     }
 }
 
@@ -101,6 +103,7 @@ fun ConnectScreen(
     onSso: () -> Unit,
     onAuthKey: () -> Unit,
     modifier: Modifier = Modifier,
+    onReview: (ConnectSheet) -> Unit = {},
     onLogoLongPress: (() -> Unit)? = null,
 ) {
     val colors = Kavita.colors
@@ -127,7 +130,7 @@ fun ConnectScreen(
                     trailing = { ReachabilityIcon(state.reachability) },
                 )
             }
-            ReachabilityText(state.reachability)
+            ReachabilityText(state.reachability, onReview)
             if (state.passwordLogin) {
                 Spacer(Modifier.height(6.dp))
                 SectionHeader(stringResource(R.string.auth_section_account))
@@ -155,7 +158,7 @@ fun ConnectScreen(
             GroupedList {
                 GroupedSwitchRow(stringResource(R.string.auth_stay_signed_in), state.staySignedIn, onStaySignedIn)
             }
-            state.signInError?.takeUnless { state.authKeySheetOpen }?.let { error ->
+            state.signInError?.takeUnless { state.sheet != null }?.let { error ->
                 Text(
                     stringResource(
                         if (error ==
@@ -277,37 +280,17 @@ private fun ReachabilityIcon(reachability: Reachability) {
 }
 
 @Composable
-private fun ReachabilityText(reachability: Reachability) {
+private fun ReachabilityText(
+    reachability: Reachability,
+    onReview: (ConnectSheet) -> Unit,
+) {
     val colors = Kavita.colors
-    val (text, isError) =
+    val (text, isError) = reachabilityMessage(reachability)
+    val review =
         when (reachability) {
-            Reachability.Idle -> {
-                null to false
-            }
-
-            Reachability.Checking -> {
-                stringResource(R.string.auth_checking) to false
-            }
-
-            Reachability.InsecureHttp -> {
-                stringResource(R.string.auth_insecure_http) to false
-            }
-
-            is Reachability.Invalid -> {
-                stringResource(reachability.error.message()) to true
-            }
-
-            is Reachability.Failed -> {
-                stringResource(reachability.error.message()) to true
-            }
-
-            is Reachability.Found -> {
-                when {
-                    reachability.version == null -> stringResource(R.string.auth_found_unknown_version)
-                    reachability.supported -> stringResource(R.string.auth_found, reachability.version)
-                    else -> stringResource(R.string.auth_found_outdated, reachability.version)
-                } to !reachability.supported
-            }
+            is Reachability.InsecureHttp -> ConnectSheet.InsecureHttp
+            is Reachability.UntrustedCertificate -> ConnectSheet.Certificate
+            else -> null
         }
     if (text != null) {
         Text(
@@ -317,38 +300,19 @@ private fun ReachabilityText(reachability: Reachability) {
             modifier = Modifier.padding(horizontal = 16.dp).semantics { liveRegion = LiveRegionMode.Polite },
         )
     }
+    if (review != null) {
+        Text(
+            stringResource(R.string.auth_review),
+            style = Kavita.type.footnote.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+            color = colors.accent,
+            modifier =
+                Modifier
+                    .padding(horizontal = 8.dp)
+                    .clickable(role = androidx.compose.ui.semantics.Role.Button) { onReview(review) }
+                    .padding(8.dp),
+        )
+    }
 }
-
-internal fun ServerUrlError.message(): Int =
-    when (this) {
-        ServerUrlError.Empty, ServerUrlError.Malformed, ServerUrlError.InvalidHost -> {
-            R.string.auth_error_invalid_address
-        }
-
-        ServerUrlError.UnsupportedScheme -> {
-            R.string.auth_error_scheme
-        }
-
-        ServerUrlError.ContainsCredentials -> {
-            R.string.auth_error_credentials_in_url
-        }
-
-        ServerUrlError.ContainsQueryOrFragment -> {
-            R.string.auth_error_query
-        }
-
-        ServerUrlError.InvalidPort -> {
-            R.string.auth_error_port
-        }
-    }
-
-internal fun AppError.message(): Int =
-    when (this) {
-        AppError.Network -> R.string.auth_error_unreachable
-        AppError.Tls -> R.string.auth_error_tls
-        AppError.InvalidData, AppError.NotFound -> R.string.auth_error_not_kavita
-        else -> R.string.auth_error_server
-    }
 
 @Preview(name = "Connect · light", widthDp = 412, heightDp = 915)
 @Composable
@@ -376,8 +340,13 @@ internal fun ConnectPreview(appearance: Appearance) {
 
 private val previewFound =
     Reachability.Found(
-        url = (ServerUrl.parse("https://kavita.home.lan:5000") as ServerUrlResult.Valid).url,
-        version = "0.9.0.2",
+        server =
+            Server(
+                ServerId(0),
+                "kavita.home.lan",
+                (ServerUrl.parse("https://kavita.home.lan:5000") as ServerUrlResult.Valid).url,
+                version = "0.9.0.2",
+            ),
         supported = true,
         sso = SsoInfo(providerName = "Authelia", passwordLoginDisabled = false),
     )

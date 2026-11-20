@@ -91,7 +91,7 @@ internal fun AuthKeySheetContent(
         val found = state.reachability as? Reachability.Found
         val provider = state.sso?.providerName ?: stringResource(R.string.auth_sso_generic)
         Text(
-            if (state.authKeyViaSso) {
+            if ((state.sheet == ConnectSheet.Sso)) {
                 stringResource(
                     R.string.auth_sso_help,
                     provider,
@@ -103,7 +103,7 @@ internal fun AuthKeySheetContent(
             color = Kavita.colors.labelSecondary,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
-        if (state.authKeyViaSso && found != null) {
+        if ((state.sheet == ConnectSheet.Sso) && found != null) {
             val uriHandler = LocalUriHandler.current
             // Opens the user's own server in their browser (no in-app WebView: no second HTTP stack, no phishing UI).
             SecondaryButton(

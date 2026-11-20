@@ -1,6 +1,8 @@
 package com.nl.kaviyy.core.network.di
 
 import com.nl.kaviyy.core.network.AccountApi
+import com.nl.kaviyy.core.network.CertificateFetcher
+import com.nl.kaviyy.core.network.CertificateInspector
 import com.nl.kaviyy.core.network.KavitaAccountApi
 import com.nl.kaviyy.core.network.ServerProbe
 import com.nl.kaviyy.core.network.ServerProber
@@ -29,4 +31,7 @@ internal interface NetworkBindings {
 
     @Binds
     fun accountApi(api: KavitaAccountApi): AccountApi
+
+    @Binds
+    fun certificates(inspector: CertificateInspector): CertificateFetcher
 }

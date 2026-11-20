@@ -22,6 +22,18 @@ class ConnectScreenTest {
     @get:Rule
     val compose = createComposeRule()
 
+    private val kServer =
+        com.nl.kaviyy.core.model.server.Server(
+            com.nl.kaviyy.core.model.server
+                .ServerId(0),
+            "k",
+            (
+                com.nl.kaviyy.core.model.server.ServerUrl.parse(
+                    "https://k.lan",
+                ) as com.nl.kaviyy.core.model.server.ServerUrlResult.Valid
+            ).url,
+        )
+
     private fun show(state: ConnectUiState) =
         compose.setContent {
             KavitaTheme {
@@ -50,7 +62,7 @@ class ConnectScreenTest {
             KavitaTheme {
                 androidx.compose.foundation.layout.Column {
                     AuthKeySheetContent(
-                        ConnectUiState(authKeySheetOpen = true, signInError = AppError.Unauthorized),
+                        ConnectUiState(sheet = ConnectSheet.AuthKey, signInError = AppError.Unauthorized),
                         TextFieldState(),
                         {},
                         {},
@@ -66,12 +78,7 @@ class ConnectScreenTest {
     fun ssoSheetExplainsTheBrowserStep() {
         val found =
             Reachability.Found(
-                (
-                    com.nl.kaviyy.core.model.server.ServerUrl.parse(
-                        "https://k.lan",
-                    ) as com.nl.kaviyy.core.model.server.ServerUrlResult.Valid
-                ).url,
-                "0.9.0.2",
+                kServer,
                 true,
                 com.nl.kaviyy.core.network
                     .SsoInfo("Authelia", passwordLoginDisabled = true),
@@ -80,7 +87,7 @@ class ConnectScreenTest {
             KavitaTheme {
                 androidx.compose.foundation.layout.Column {
                     AuthKeySheetContent(
-                        ConnectUiState(found, authKeySheetOpen = true, authKeyViaSso = true),
+                        ConnectUiState(found, sheet = ConnectSheet.Sso),
                         TextFieldState(),
                         {},
                         {},
@@ -96,12 +103,7 @@ class ConnectScreenTest {
     fun passwordDisabledHidesAccountSection() {
         val found =
             Reachability.Found(
-                (
-                    com.nl.kaviyy.core.model.server.ServerUrl.parse(
-                        "https://k.lan",
-                    ) as com.nl.kaviyy.core.model.server.ServerUrlResult.Valid
-                ).url,
-                "0.9.0.2",
+                kServer,
                 true,
                 com.nl.kaviyy.core.network
                     .SsoInfo(null, passwordLoginDisabled = true),
@@ -110,6 +112,35 @@ class ConnectScreenTest {
         compose.onNodeWithText("Continue with SSO").assertExists()
         compose.onNodeWithText("Username").assertDoesNotExist()
         compose.onNodeWithText("Sign In").assertDoesNotExist()
+    }
+
+    @Test
+    fun certificateSheetShowsFingerprintAndOnlyOffersTrustForMatchingNames() {
+        val cert =
+            com.nl.kaviyy.core.network.PresentedCertificate(
+                com.nl.kaviyy.core.model.server.PinnedCertificate
+                    .of(byteArrayOf(1)),
+                "CN=kavita",
+                "CN=kavita",
+                java.util.Date(0),
+                java.util.Date(0),
+                matchesHost = false,
+            )
+        val state =
+            ConnectUiState(Reachability.UntrustedCertificate(kServer.url, cert), sheet = ConnectSheet.Certificate)
+        compose.setContent {
+            KavitaTheme {
+                androidx.compose.foundation.layout.Column {
+                    TrustSheetContent(
+                        state,
+                        {},
+                        {},
+                    )
+                }
+            }
+        }
+        compose.onNodeWithText(cert.fingerprint).assertExists()
+        compose.onNodeWithText("Trust").assertDoesNotExist()
     }
 
     @Test
