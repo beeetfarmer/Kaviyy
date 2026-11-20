@@ -89,7 +89,7 @@ class CatalogRepositoryTest {
             override suspend fun seriesDetail(seriesId: Int) = detail
         }
 
-    private val repo = CatalogRepository(db.libraryDao(), dao, { api })
+    private val repo = OfflineFirstCatalogRepository(db.libraryDao(), dao, { api })
 
     @After
     fun tearDown() = db.close()

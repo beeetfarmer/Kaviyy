@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_title">Library</string>
+    <string name="library_list_view">Switch to list view</string>
+    <string name="library_grid_view">Switch to grid view</string>
+    <string name="library_unread">Unread</string>
+    <string name="library_read">Read</string>
+    <string name="library_percent">%1$d%%</string>
+    <string name="library_format_progress">%1$s · %2$s</string>
+    <string name="library_no_libraries_title">No libraries</string>
+    <string name="library_no_libraries_body">Your account can’t see any libraries on this server yet.</string>
+    <string name="library_empty">This library is empty.</string>
+    <string name="library_error_body">Couldn’t reach your server. Check your connection and try again.</string>
+    <string name="library_retry">Try Again</string>
+    <string name="library_page_error">Couldn’t load more.</string>
+</resources>

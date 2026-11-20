@@ -46,23 +46,45 @@ internal const val SERIES_PAGE_SIZE = 50
  * Offline-first catalogue: screens observe Room; `refresh…` calls fetch from the server and write to Room. A failed
  * refresh leaves the cached data in place and returns the error for the UI to show.
  */
-class CatalogRepository
+interface CatalogRepository {
+    fun libraries(server: Server): Flow<List<LibraryEntity>>
+
+    suspend fun refreshLibraries(server: Server): AppResult<Unit>
+
+    /** Library grid: Room pages, filled from the server as it scrolls. */
+    fun librarySeries(
+        server: Server,
+        libraryId: Int,
+    ): Flow<PagingData<SeriesEntity>>
+
+    fun seriesDetail(
+        server: Server,
+        seriesId: Int,
+    ): Flow<SeriesDetail>
+
+    suspend fun refreshSeries(
+        server: Server,
+        seriesId: Int,
+    ): AppResult<Unit>
+}
+
+/** Room-backed [CatalogRepository]. */
+class OfflineFirstCatalogRepository
     @Inject
     constructor(
         private val libraryDao: LibraryDao,
         private val dao: SeriesDao,
         private val apis: ServerApis,
-    ) {
-        fun libraries(server: Server): Flow<List<LibraryEntity>> = libraryDao.observeLibraries(server.id.value)
+    ) : CatalogRepository {
+        override fun libraries(server: Server): Flow<List<LibraryEntity>> = libraryDao.observeLibraries(server.id.value)
 
-        suspend fun refreshLibraries(server: Server): AppResult<Unit> =
+        override suspend fun refreshLibraries(server: Server): AppResult<Unit> =
             apiCall { apis.api(server).libraries() }.map { list ->
                 libraryDao.replaceLibraries(server.id.value, list.map { it.toEntity(server.id.value) })
             }
 
-        /** Library grid: Room pages, filled from the server by [LibrarySeriesMediator]. */
         @OptIn(ExperimentalPagingApi::class)
-        fun librarySeries(
+        override fun librarySeries(
             server: Server,
             libraryId: Int,
         ): Flow<PagingData<SeriesEntity>> =
@@ -72,7 +94,7 @@ class CatalogRepository
                 pagingSourceFactory = { dao.seriesInLibrary(server.id.value, libraryId) },
             ).flow
 
-        fun seriesDetail(
+        override fun seriesDetail(
             server: Server,
             seriesId: Int,
         ): Flow<SeriesDetail> =
@@ -83,7 +105,7 @@ class CatalogRepository
                 ::SeriesDetail,
             )
 
-        suspend fun refreshSeries(
+        override suspend fun refreshSeries(
             server: Server,
             seriesId: Int,
         ): AppResult<Unit> {

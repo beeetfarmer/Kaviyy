@@ -29,6 +29,7 @@ import com.nl.kaviyy.core.designsystem.theme.KavitaSpacing
 import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.feature.home.HomeActions
 import com.nl.kaviyy.feature.home.HomeRoute
+import com.nl.kaviyy.feature.library.LibraryRoute
 
 private enum class Tab { Home, Library, Lists, Downloads, You }
 
@@ -62,6 +63,11 @@ internal fun MainScreen(
                 )
             }
 
+            Tab.Library -> {
+                LibraryRoute(onOpenSeries = {})
+            }
+
+            // M8
             Tab.You -> {
                 YouPlaceholder(server, tabs[selected].label, onSignOut, onDeleteLocalData)
             }
