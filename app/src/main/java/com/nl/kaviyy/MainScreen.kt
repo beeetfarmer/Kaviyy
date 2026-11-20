@@ -18,8 +18,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.nl.kaviyy.core.designsystem.component.FloatingTabBar
 import com.nl.kaviyy.core.designsystem.component.LargeTitleHeader
@@ -34,6 +36,8 @@ import com.nl.kaviyy.feature.filter.FilterSheet
 import com.nl.kaviyy.feature.home.HomeActions
 import com.nl.kaviyy.feature.home.HomeRoute
 import com.nl.kaviyy.feature.library.LibraryRoute
+import com.nl.kaviyy.feature.search.SearchDestination
+import com.nl.kaviyy.feature.search.SearchRoute
 import com.nl.kaviyy.feature.series.BrowseRoute
 import com.nl.kaviyy.feature.series.BrowseTarget
 import com.nl.kaviyy.feature.series.SeriesRoute
@@ -58,6 +62,10 @@ private data class BrowseDestination(
     val id: Int,
     val name: String,
 )
+
+/** Search (screen 05): replaces the tab bar with its own bottom search bar. */
+@Serializable
+private data object SearchRouteDestination
 
 private const val NO_LIBRARY = -1
 
@@ -99,20 +107,31 @@ internal fun MainScreen(
                     ->
                 }, onOpenSeries = openSeries, onBrowse = browse)
             }
+            composable<SearchRouteDestination> {
+                SearchRoute(onHome = { nav.popBackStack(TabsDestination, inclusive = false) }, onOpen = { d ->
+                    when (d) {
+                        is SearchDestination.Series -> openSeries(d.id)
+                        is SearchDestination.Browse -> browse(BrowseTarget(d.field, d.id, d.name))
+                    }
+                })
+            }
             composable<BrowseDestination> { BrowseRoute(onBack = { nav.popBackStack() }, onOpenSeries = openSeries) }
         }
         filterFor?.let { id -> FilterSheet(id.takeIf { it != NO_LIBRARY }, onDismiss = { filterFor = null }) }
-        FloatingTabBar(
-            items = tabs,
-            selectedIndex = selected,
-            onSelect = {
-                selected = it
-                nav.popBackStack(TabsDestination, inclusive = false)
-            },
-            searchLabel = stringResource(R.string.tab_search),
-            onSearch = {}, // M9
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
+        val entry by nav.currentBackStackEntryAsState()
+        if (entry?.destination?.hasRoute<SearchRouteDestination>() != true) {
+            FloatingTabBar(
+                items = tabs,
+                selectedIndex = selected,
+                onSelect = {
+                    selected = it
+                    nav.popBackStack(TabsDestination, inclusive = false)
+                },
+                searchLabel = stringResource(R.string.tab_search),
+                onSearch = { nav.navigate(SearchRouteDestination) { launchSingleTop = true } },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
     }
 }
 

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">Search</string>
+    <string name="search_field">Search your library</string>
+    <string name="search_home">Back to tabs</string>
+    <string name="search_clear">Clear search</string>
+    <string name="search_scope_all">All</string>
+    <string name="search_scope_series">Series</string>
+    <string name="search_scope_chapters">Chapters</string>
+    <string name="search_scope_people">People</string>
+    <string name="search_scope_tags">Tags</string>
+    <string name="search_scope_lists">Lists</string>
+    <string name="search_group_series">Series</string>
+    <string name="search_group_chapters">Chapters</string>
+    <string name="search_group_people">People</string>
+    <string name="search_group_genres_tags">Genres &amp; Tags</string>
+    <string name="search_group_reading_lists">Reading Lists</string>
+    <string name="search_group_collections">Collections</string>
+    <string name="search_group_files">Files</string>
+    <string name="search_group_bookmarks">Bookmarks</string>
+    <plurals name="search_results">
+        <item quantity="one">%d result</item>
+        <item quantity="other">%d results</item>
+    </plurals>
+    <plurals name="search_volumes">
+        <item quantity="one">%d volume</item>
+        <item quantity="other">%d volumes</item>
+    </plurals>
+    <plurals name="search_items">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <string name="search_dot">%1$s · %2$s</string>
+    <string name="search_chapter">Chapter</string>
+    <string name="search_chapter_number">Ch. %1$s</string>
+    <string name="search_person">Person</string>
+    <string name="search_reading_list">Reading list</string>
+    <string name="search_collection">Collection</string>
+    <string name="search_file">File</string>
+    <string name="search_bookmark">Bookmark</string>
+    <string name="search_recent">Recent</string>
+    <string name="search_clear_recent">Clear Recent Searches</string>
+    <string name="search_hint">Search series, chapters, people, genres, tags and lists.</string>
+    <string name="search_loading">Searching…</string>
+    <string name="search_failed">Couldn\'t search. Check your connection.</string>
+    <string name="search_no_results">No results for \"%1$s\".</string>
+    <string name="search_open_failed">Couldn\'t open that result.</string>
+</resources>
