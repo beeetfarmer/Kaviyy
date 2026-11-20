@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import com.nl.kaviyy.core.database.KaviyyDatabase
 import com.nl.kaviyy.core.database.LibraryDao
+import com.nl.kaviyy.core.database.OutboxDao
+import com.nl.kaviyy.core.database.ReadingProfileDao
 import com.nl.kaviyy.core.database.SeriesDao
 import com.nl.kaviyy.core.database.ServerDao
 import dagger.Module
@@ -30,4 +32,10 @@ object DatabaseModule {
 
     @Provides
     fun seriesDao(db: KaviyyDatabase): SeriesDao = db.seriesDao()
+
+    @Provides
+    fun readingProfileDao(db: KaviyyDatabase): ReadingProfileDao = db.readingProfileDao()
+
+    @Provides
+    fun outboxDao(db: KaviyyDatabase): OutboxDao = db.outboxDao()
 }

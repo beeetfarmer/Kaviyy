@@ -87,6 +87,17 @@ class CatalogRepositoryTest {
                 SeriesDto(seriesId, libraryId = 3, name = "One Piece", sortName = "one piece")
 
             override suspend fun seriesDetail(seriesId: Int) = detail
+
+            override suspend fun readingProfile(
+                libraryId: Int,
+                seriesId: Int,
+            ) = error("unused")
+
+            override suspend fun saveSeriesReadingProfile(
+                libraryId: Int,
+                seriesId: Int,
+                profile: kotlinx.serialization.json.JsonObject,
+            ) = error("unused")
         }
 
     private val repo = CatalogRepository(db.libraryDao(), dao, { api })

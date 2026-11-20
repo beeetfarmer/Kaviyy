@@ -21,14 +21,14 @@ class MigrationTest {
     val helper = MigrationTestHelper(InstrumentationRegistry.getInstrumentation(), KaviyyDatabase::class.java)
 
     @Test
-    fun v1ToV2KeepsServersAndAddsDataTables() {
+    fun migratesFromV1ToLatestKeepingServers() {
         helper.createDatabase(DB, 1).use { db ->
             db.execSQL(
                 "INSERT INTO servers (id, name, url, allowInsecure, lastUsedAt) VALUES (7, 'k', 'https://k.lan', 0, 1)",
             )
         }
-        // Validates the migrated schema against schemas/2.json.
-        helper.runMigrationsAndValidate(DB, 2, true).use { db ->
+        // Runs 1→2→3 and validates against the latest exported schema.
+        helper.runMigrationsAndValidate(DB, LATEST, true).use { db ->
             db.query("SELECT name FROM servers WHERE id = 7").use { c ->
                 c.moveToFirst()
                 assertEquals("k", c.getString(0))
@@ -106,5 +106,6 @@ class MigrationTest {
 
     private companion object {
         const val DB = "migration-test"
+        const val LATEST = 3
     }
 }

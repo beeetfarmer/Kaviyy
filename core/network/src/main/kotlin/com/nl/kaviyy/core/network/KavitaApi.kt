@@ -6,6 +6,7 @@ import com.nl.kaviyy.core.model.result.appResult
 import com.nl.kaviyy.core.model.server.Server
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import okhttp3.MediaType.Companion.toMediaType
 import retrofit2.HttpException
 import retrofit2.Retrofit
@@ -35,6 +36,21 @@ interface KavitaApi {
     suspend fun series(
         @Path("seriesId") seriesId: Int,
     ): SeriesDto
+
+    /** The profile that applies to a series (series → library → default), as raw JSON: see ReadingProfileDto. */
+    @GET("api/reading-profile/{libraryId}/{seriesId}")
+    suspend fun readingProfile(
+        @Path("libraryId") libraryId: Int,
+        @Path("seriesId") seriesId: Int,
+    ): JsonObject
+
+    /** Creates/updates the series' implicit profile. */
+    @POST("api/reading-profile/series")
+    suspend fun saveSeriesReadingProfile(
+        @Query("libraryId") libraryId: Int,
+        @Query("seriesId") seriesId: Int,
+        @Body profile: JsonObject,
+    ): JsonObject
 
     @GET("api/Series/series-detail")
     suspend fun seriesDetail(

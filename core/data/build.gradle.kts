@@ -8,5 +8,6 @@ dependencies {
     api(projects.core.datastore)
     api(projects.core.database)
     api(libs.androidx.paging.common)
+    implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.robolectric)
 }
