@@ -4,6 +4,7 @@ kotlin = "2.4.21"
 ksp = "2.3.14"
 hilt = "2.60.1"
 okhttp = "5.5.1"
+coil = "3.6.3"
 datastore = "1.3.0"
 tink = "1.24.0"
 kotlinxSerialization = "1.13.0"
@@ -38,6 +39,8 @@ androidx-datastore = { group = "androidx.datastore", name = "datastore", version
 tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-protobuf = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-protobuf", version.ref = "kotlinxSerialization" }
+coil = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test-junit", version.ref = "kotlin" }
