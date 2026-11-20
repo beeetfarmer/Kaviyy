@@ -5,6 +5,7 @@ import app.cash.turbine.test
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.BookmarkRepository
 import com.nl.kaviyy.core.data.ImageReaderRepository
+import com.nl.kaviyy.core.data.ProgressRepository
 import com.nl.kaviyy.core.data.ReaderChapter
 import com.nl.kaviyy.core.data.ReaderSettingsRepository
 import com.nl.kaviyy.core.model.result.AppError
@@ -18,6 +19,7 @@ import com.nl.kaviyy.core.network.ReadingProfileDto
 import com.nl.kaviyy.core.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -135,9 +137,36 @@ class ImageReaderViewModelTest {
             }
         }
 
+    private var resumeAt = 0
+    private val recorded = mutableListOf<Pair<Int, Int>>()
+    private val pushed = mutableListOf<Int>()
+    private val progress =
+        object : ProgressRepository {
+            override suspend fun resume(
+                server: Server,
+                chapter: ReaderChapter,
+            ) = resumeAt
+
+            override suspend fun record(
+                server: Server,
+                chapter: ReaderChapter,
+                page: Int,
+            ) {
+                recorded += chapter.id to page
+            }
+
+            override suspend fun push(
+                server: Server,
+                chapterId: Int,
+            ): AppResult<Unit> {
+                pushed += chapterId
+                return AppResult.Success(Unit)
+            }
+        }
+
     private fun vm(
         saved: SavedStateHandle = SavedStateHandle(mapOf(READER_SERIES_ARG to 7, READER_CHAPTER_ARG to 49)),
-    ) = ImageReaderViewModel(session, repo, settings, bookmarks, saved)
+    ) = ImageReaderViewModel(session, repo, settings, bookmarks, progress, saved)
 
     @Test
     fun pagesFlowIntoNeighbouringChapters() =
@@ -181,6 +210,29 @@ class ImageReaderViewModelTest {
                 vm.toggleChrome()
                 runCurrent()
                 assertEquals(false, expectMostRecentItem().chromeVisible)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun opensAtTheReadPositionAndRecordsPageTurns() =
+        runTest {
+            resumeAt = 1
+            val vm = vm()
+            vm.state.test {
+                runCurrent()
+                assertEquals(1, expectMostRecentItem().page)
+                assertEquals(emptyList(), recorded) // opening is not reading
+                vm.goTo(2)
+                runCurrent()
+                assertEquals(listOf(49 to 2), recorded)
+                assertEquals(emptyList(), pushed) // debounced
+                advanceTimeBy(2_000)
+                runCurrent()
+                assertEquals(listOf(49), pushed)
+                vm.nextChapter() // leaving pushes at once
+                runCurrent()
+                assertEquals(listOf(49, 49), pushed)
                 cancelAndIgnoreRemainingEvents()
             }
         }

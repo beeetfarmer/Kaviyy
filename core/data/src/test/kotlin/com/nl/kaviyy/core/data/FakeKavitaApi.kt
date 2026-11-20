@@ -17,6 +17,7 @@ import com.nl.kaviyy.core.network.MarkVolumeReadDto
 import com.nl.kaviyy.core.network.MarkVolumesReadDto
 import com.nl.kaviyy.core.network.MetadataValueDto
 import com.nl.kaviyy.core.network.PersonDto
+import com.nl.kaviyy.core.network.ProgressDto
 import com.nl.kaviyy.core.network.RefreshSeriesDto
 import com.nl.kaviyy.core.network.RelatedSeriesDto
 import com.nl.kaviyy.core.network.SearchResultGroupDto
@@ -105,6 +106,10 @@ open class FakeKavitaApi : KavitaApi {
         volumeId: Int,
         chapterId: Int,
     ): Int = error("unused")
+
+    override suspend fun progress(chapterId: Int): ProgressDto = error("unused")
+
+    override suspend fun saveProgress(body: ProgressDto): Unit = error("unused")
 
     override suspend fun chapterBookmarks(chapterId: Int): List<BookmarkDto> = error("unused")
 

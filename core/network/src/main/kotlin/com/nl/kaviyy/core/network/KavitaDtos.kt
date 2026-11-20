@@ -421,3 +421,16 @@ data class BookmarkDto(
     val chapterId: Int,
     val imageOffset: Int = 0,
 )
+
+/** Read position. `pageNum` = pages read; sending the page count marks the chapter read. */
+@Serializable
+data class ProgressDto(
+    val volumeId: Int,
+    val chapterId: Int,
+    val pageNum: Int,
+    val seriesId: Int,
+    val libraryId: Int,
+    val bookScrollId: String? = null,
+    /** ISO-8601 UTC. */
+    val lastModifiedUtc: String? = null,
+)

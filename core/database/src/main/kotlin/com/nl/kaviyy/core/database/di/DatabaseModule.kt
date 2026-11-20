@@ -7,6 +7,7 @@ import com.nl.kaviyy.core.database.DashboardDao
 import com.nl.kaviyy.core.database.KaviyyDatabase
 import com.nl.kaviyy.core.database.LibraryDao
 import com.nl.kaviyy.core.database.OutboxDao
+import com.nl.kaviyy.core.database.ProgressDao
 import com.nl.kaviyy.core.database.ReadingProfileDao
 import com.nl.kaviyy.core.database.RecentSearchDao
 import com.nl.kaviyy.core.database.SeriesDao
@@ -47,6 +48,9 @@ object DatabaseModule {
 
     @Provides
     fun bookmarkDao(db: KaviyyDatabase): BookmarkDao = db.bookmarkDao()
+
+    @Provides
+    fun progressDao(db: KaviyyDatabase): ProgressDao = db.progressDao()
 
     @Provides
     fun dashboardDao(db: KaviyyDatabase): DashboardDao = db.dashboardDao()

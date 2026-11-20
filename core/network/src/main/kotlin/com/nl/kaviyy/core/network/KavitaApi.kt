@@ -291,6 +291,16 @@ interface KavitaApi {
         @Query("currentChapterId") chapterId: Int,
     ): Int
 
+    @GET("api/Reader/get-progress")
+    suspend fun progress(
+        @Query("chapterId") chapterId: Int,
+    ): ProgressDto
+
+    @POST("api/Reader/progress")
+    suspend fun saveProgress(
+        @Body body: ProgressDto,
+    )
+
     @GET("api/Reader/chapter-bookmarks")
     suspend fun chapterBookmarks(
         @Query("chapterId") chapterId: Int,

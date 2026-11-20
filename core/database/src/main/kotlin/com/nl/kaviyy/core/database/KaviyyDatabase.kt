@@ -56,5 +56,7 @@ abstract class KaviyyDatabase : RoomDatabase() {
 
     abstract fun bookmarkDao(): BookmarkDao
 
+    abstract fun progressDao(): ProgressDao
+
     abstract fun dashboardDao(): DashboardDao
 }

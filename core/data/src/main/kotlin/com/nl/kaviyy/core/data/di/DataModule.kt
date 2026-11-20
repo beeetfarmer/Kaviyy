@@ -17,9 +17,11 @@ import com.nl.kaviyy.core.data.NetworkMonitor
 import com.nl.kaviyy.core.data.OfflineFirstBookmarkRepository
 import com.nl.kaviyy.core.data.OfflineFirstCatalogRepository
 import com.nl.kaviyy.core.data.OfflineFirstHomeRepository
+import com.nl.kaviyy.core.data.OfflineFirstProgressRepository
 import com.nl.kaviyy.core.data.OfflineFirstReadStateRepository
 import com.nl.kaviyy.core.data.OfflineFirstReaderSettingsRepository
 import com.nl.kaviyy.core.data.PersonRepository
+import com.nl.kaviyy.core.data.ProgressRepository
 import com.nl.kaviyy.core.data.ReadStateRepository
 import com.nl.kaviyy.core.data.ReaderSettingsRepository
 import com.nl.kaviyy.core.data.ReviewRepository
@@ -54,6 +56,9 @@ internal interface DataModule {
 
     @Binds
     fun bookmarks(repository: OfflineFirstBookmarkRepository): BookmarkRepository
+
+    @Binds
+    fun progress(repository: OfflineFirstProgressRepository): ProgressRepository
 
     @Binds
     fun search(repository: KavitaSearchRepository): SearchRepository

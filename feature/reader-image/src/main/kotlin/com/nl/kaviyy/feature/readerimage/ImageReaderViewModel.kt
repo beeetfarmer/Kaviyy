@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.BookmarkRepository
 import com.nl.kaviyy.core.data.ImageReaderRepository
+import com.nl.kaviyy.core.data.ProgressRepository
 import com.nl.kaviyy.core.data.ReaderChapter
 import com.nl.kaviyy.core.data.ReaderSettingsRepository
 import com.nl.kaviyy.core.model.result.AppError
@@ -17,6 +18,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -97,11 +99,13 @@ class ImageReaderViewModel
         private val repository: ImageReaderRepository,
         private val settingsRepository: ReaderSettingsRepository,
         private val bookmarkRepository: BookmarkRepository,
+        private val progressRepository: ProgressRepository,
         private val saved: SavedStateHandle,
     ) : ViewModel() {
         private val seriesId: Int = checkNotNull(saved.get<Int>(READER_SERIES_ARG)) { "missing $READER_SERIES_ARG" }
         private val session = MutableStateFlow(Session(page = saved[KEY_PAGE] ?: 0))
         private var loadJob: Job? = null
+        private var pushJob: Job? = null
 
         private val settings =
             auth.activeServer.flatMapLatest { s ->
@@ -144,7 +148,8 @@ class ImageReaderViewModel
             val start =
                 saved.get<Int>(KEY_CHAPTER)
                     ?: checkNotNull(saved.get<Int>(READER_CHAPTER_ARG)) { "missing $READER_CHAPTER_ARG" }
-            open(start, page = session.value.page)
+            // After process death the saved page wins; a fresh open resumes from the read progress.
+            open(start, page = saved[KEY_PAGE] ?: RESUME)
         }
 
         fun retry() = session.value.let { open(it.chapter?.id ?: saved[KEY_CHAPTER] ?: return, it.page) }
@@ -153,10 +158,32 @@ class ImageReaderViewModel
 
         /** From the pager, the scrubber or a tap zone. */
         fun goTo(page: Int) {
+            val before = session.value.page
+            val p = show(page)
+            if (p != before) record(p)
+        }
+
+        private fun show(page: Int): Int {
             val last = (session.value.chapter?.pages ?: 1) - 1
             val p = page.coerceIn(0, last.coerceAtLeast(0))
             saved[KEY_PAGE] = p
             session.update { it.copy(page = p) }
+            return p
+        }
+
+        /** Room now; the server after a pause in paging (the outbox keeps it if the reader closes first). */
+        private fun record(page: Int) {
+            val chapter = session.value.chapter ?: return
+            // A double spread counts as read up to its right-hand page.
+            val reached = state.value.spreads.let { it.getOrNull(it.indexOfPage(page))?.last() } ?: page
+            pushJob?.cancel()
+            pushJob =
+                viewModelScope.launch {
+                    val s = auth.activeServer.first() ?: return@launch
+                    progressRepository.record(s, chapter, maxOf(page, reached))
+                    delay(PUSH_DEBOUNCE_MS)
+                    progressRepository.push(s, chapter.id)
+                }
         }
 
         /** Next page (spread in double page mode), or the next chapter after the last one. */
@@ -220,6 +247,11 @@ class ImageReaderViewModel
             page: Int,
         ) {
             loadJob?.cancel()
+            // Leaving a chapter: send its position now rather than after the debounce.
+            session.value.chapter?.takeIf { it.id != chapterId }?.let { left ->
+                pushJob = null
+                viewModelScope.launch { auth.activeServer.first()?.let { progressRepository.push(it, left.id) } }
+            }
             saved[KEY_CHAPTER] = chapterId
             session.update { it.copy(loading = true, error = null) }
             loadJob =
@@ -234,9 +266,14 @@ class ImageReaderViewModel
                             val chapter = r.value
                             val next = async { repository.next(s, chapter).getOrNull() }
                             val previous = async { repository.previous(s, chapter).getOrNull() }
-                            val start = if (page == LAST_PAGE) chapter.pages - 1 else page
+                            val start =
+                                when (page) {
+                                    LAST_PAGE -> chapter.pages - 1
+                                    RESUME -> progressRepository.resume(s, chapter)
+                                    else -> page
+                                }
                             session.update { it.copy(chapter = chapter, loading = false, next = null, previous = null) }
-                            goTo(start)
+                            show(start)
                             session.update { it.copy(next = next.await(), previous = previous.await()) }
                             settingsRepository.refresh(s, chapter.libraryId, seriesId)
                             bookmarkRepository.refresh(s, chapter.id)
@@ -247,5 +284,7 @@ class ImageReaderViewModel
 
         private companion object {
             const val LAST_PAGE = -1
+            const val RESUME = -2
+            const val PUSH_DEBOUNCE_MS = 1_500L
         }
     }

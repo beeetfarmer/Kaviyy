@@ -75,6 +75,7 @@ internal const val OUTBOX_MARK_READ = "markRead"
 internal const val OUTBOX_WANT_TO_READ = "wantToRead"
 internal const val OUTBOX_RATING = "rating"
 internal const val OUTBOX_BOOKMARK = "bookmark"
+internal const val OUTBOX_PROGRESS = "progress"
 private const val MAX_RATING = 5f
 
 class OfflineFirstReadStateRepository
