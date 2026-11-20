@@ -58,5 +58,7 @@ abstract class KaviyyDatabase : RoomDatabase() {
 
     abstract fun progressDao(): ProgressDao
 
+    abstract fun annotationDao(): AnnotationDao
+
     abstract fun dashboardDao(): DashboardDao
 }

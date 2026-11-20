@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nl.kaviyy.core.data.Highlight
 import com.nl.kaviyy.core.designsystem.component.CircleIconButton
 import com.nl.kaviyy.core.designsystem.component.ReaderWindowEffects
 import com.nl.kaviyy.core.designsystem.component.SecondaryButton
@@ -57,6 +58,12 @@ data class EpubReaderActions(
     val onPrevious: () -> Unit = {},
     val onShowToc: (Boolean) -> Unit = {},
     val onGo: (TocEntry) -> Unit = {},
+    val onGoHighlight: (Highlight) -> Unit = {},
+    val onPickColor: (Int) -> Unit = {},
+    val onNote: () -> Unit = {},
+    val onDismissHighlight: () -> Unit = {},
+    val onSaveNote: (String) -> Unit = {},
+    val onCloseNote: () -> Unit = {},
 )
 
 @Composable
@@ -81,16 +88,39 @@ fun EpubReaderRoute(
                 viewModel.showToc(false)
                 handle.go(entry.link)
             },
+            onGoHighlight = { h ->
+                viewModel.showToc(false)
+                state.publication?.locatorOf(h)?.let(handle::go)
+            },
+            onPickColor = { color ->
+                handle.clearSelection()
+                viewModel.pickColor(color)
+            },
+            onNote = {
+                handle.clearSelection()
+                viewModel.editNote()
+            },
+            onDismissHighlight = {
+                handle.clearSelection()
+                viewModel.dismissHighlight()
+            },
+            onSaveNote = viewModel::saveNote,
+            onCloseNote = viewModel::closeNote,
         ),
     ) {
         state.publication?.let { book ->
+            val decorations = remember(book, state.highlights) { book.decorations(state.highlights) }
             EpubNavigator(
                 book,
                 state.settings,
                 state.locator,
                 handle,
-                viewModel::toggleChrome,
+                {
+                    // A tap away from the toolbar dismisses it rather than toggling the chrome.
+                    if (state.highlightTarget != null) viewModel.dismissHighlight() else viewModel.toggleChrome()
+                },
                 viewModel::onLocator,
+                HighlightCallbacks(decorations, viewModel::onSelection, viewModel::onHighlightTapped),
                 Modifier.fillMaxSize(),
             )
         }
@@ -125,7 +155,10 @@ fun EpubReaderScreen(
                 }
 
                 else -> {
-                    Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) { book() }
+                    Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+                        book()
+                        state.highlightTarget?.let { HighlightOverlay(it, actions) }
+                    }
                 }
             }
             ReaderWindowEffects(
@@ -136,6 +169,7 @@ fun EpubReaderScreen(
             if (state.chromeVisible) Chrome(state, actions)
             if (state.settingsOpen) BookSettingsSheet(state.settings, actions)
             if (state.tocOpen) TocSheet(state, actions)
+            state.noteEditor?.let { NoteSheet(it, actions) }
         }
     }
 }

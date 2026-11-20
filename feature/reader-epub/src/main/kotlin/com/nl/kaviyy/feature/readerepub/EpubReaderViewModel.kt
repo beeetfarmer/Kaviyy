@@ -3,8 +3,10 @@ package com.nl.kaviyy.feature.readerepub
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nl.kaviyy.core.data.AnnotationRepository
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.BookFileRepository
+import com.nl.kaviyy.core.data.Highlight
 import com.nl.kaviyy.core.data.ImageReaderRepository
 import com.nl.kaviyy.core.data.ProgressRepository
 import com.nl.kaviyy.core.data.ReaderChapter
@@ -60,6 +62,10 @@ data class EpubReaderUiState(
     val locator: Locator? = null,
     val toc: List<TocEntry> = emptyList(),
     val tocOpen: Boolean = false,
+    val highlights: List<Highlight> = emptyList(),
+    /** Selection or highlight the toolbar is shown for. */
+    val highlightTarget: HighlightTarget? = null,
+    val noteEditor: NoteEditor? = null,
 )
 
 private data class Session(
@@ -73,6 +79,8 @@ private data class Session(
     val locator: Locator? = null,
     val positions: Int = 0,
     val toc: List<TocEntry> = emptyList(),
+    val highlightTarget: HighlightTarget? = null,
+    val noteEditor: NoteEditor? = null,
 )
 
 /** Screen 07. The original EPUB is fetched into the book cache (Download role) and opened with Readium. */
@@ -88,6 +96,7 @@ class EpubReaderViewModel
         private val settingsRepository: ReaderSettingsRepository,
         private val displayRepository: ReaderDisplayRepository,
         private val progressRepository: ProgressRepository,
+        private val annotationRepository: AnnotationRepository,
         saved: SavedStateHandle,
     ) : ViewModel() {
         private val seriesId: Int = checkNotNull(saved.get<Int>(EPUB_SERIES_ARG)) { "missing $EPUB_SERIES_ARG" }
@@ -110,8 +119,13 @@ class EpubReaderViewModel
                 }
             }
 
+        private val highlights =
+            auth.activeServer.flatMapLatest { s ->
+                if (s == null) flowOf(emptyList()) else annotationRepository.annotations(s, chapterId)
+            }
+
         val state: StateFlow<EpubReaderUiState> =
-            combine(session, profile, displayRepository.display) { st, prefs, device ->
+            combine(session, profile, displayRepository.display, highlights) { st, prefs, device, marks ->
                 EpubReaderUiState(
                     chapter = st.chapter,
                     publication = st.publication,
@@ -131,6 +145,9 @@ class EpubReaderViewModel
                     locator = st.locator,
                     toc = st.toc,
                     tocOpen = st.tocOpen,
+                    highlights = marks,
+                    highlightTarget = st.highlightTarget,
+                    noteEditor = st.noteEditor,
                 )
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), EpubReaderUiState())
 
@@ -166,6 +183,88 @@ class EpubReaderViewModel
                     delay(PUSH_DEBOUNCE_MS)
                     progressRepository.push(s, chapter.id)
                 }
+        }
+
+        /** Text was selected in the book. */
+        fun onSelection(
+            locator: Locator,
+            top: Float,
+            bottom: Float,
+        ) {
+            val text =
+                locator.text.highlight
+                    ?.trim()
+                    .orEmpty()
+            if (text.isNotEmpty()) {
+                session.update { it.copy(highlightTarget = HighlightTarget(text, top, bottom, locator = locator)) }
+            }
+        }
+
+        /** An existing highlight was tapped. */
+        fun onHighlightTapped(
+            uuid: String,
+            top: Float,
+            bottom: Float,
+        ) {
+            val h = state.value.highlights.firstOrNull { it.uuid == uuid } ?: return
+            session.update { it.copy(highlightTarget = HighlightTarget(h.text, top, bottom, uuid, h.color, h.note)) }
+        }
+
+        fun dismissHighlight() = session.update { it.copy(highlightTarget = null) }
+
+        /** New selection: highlight in [color]. Existing: recolour, or remove when its own colour is picked again. */
+        fun pickColor(color: Int) {
+            val target = session.value.highlightTarget ?: return
+            session.update { it.copy(highlightTarget = null) }
+            withServer { s, chapter ->
+                val uuid = target.uuid
+                when {
+                    uuid == null -> draftOf(target, color)?.let { annotationRepository.create(s, chapter, it) }
+                    color == target.color -> annotationRepository.delete(s, uuid)
+                    else -> annotationRepository.update(s, chapter, uuid, color, target.note)
+                }
+            }
+        }
+
+        fun editNote() {
+            val target = session.value.highlightTarget ?: return
+            val uuid = target.uuid
+            val editor =
+                if (uuid != null) {
+                    NoteEditor(target.note.orEmpty(), uuid, target.color ?: 0)
+                } else {
+                    draftOf(target, 0)?.let { NoteEditor("", draft = it) }
+                }
+            session.update { it.copy(highlightTarget = null, noteEditor = editor) }
+        }
+
+        fun saveNote(text: String) {
+            val editor = session.value.noteEditor ?: return
+            session.update { it.copy(noteEditor = null) }
+            val note = text.trim().takeIf { it.isNotEmpty() }
+            withServer { s, chapter ->
+                val uuid = editor.uuid
+                if (uuid != null) {
+                    annotationRepository.update(s, chapter, uuid, editor.color, note)
+                } else {
+                    editor.draft?.let { annotationRepository.create(s, chapter, it.copy(note = note)) }
+                }
+            }
+        }
+
+        fun closeNote() = session.update { it.copy(noteEditor = null) }
+
+        private fun draftOf(
+            target: HighlightTarget,
+            color: Int,
+        ) = target.locator?.let { session.value.publication?.draft(it, color) }
+
+        private fun withServer(block: suspend (Server, ReaderChapter) -> Unit) {
+            viewModelScope.launch {
+                val s = auth.activeServer.first()
+                val chapter = session.value.chapter
+                if (s != null && chapter != null) block(s, chapter)
+            }
         }
 
         fun updateSettings(new: BookSettings) {
@@ -210,6 +309,7 @@ class EpubReaderViewModel
                         session.value.locator
                             ?: chapter?.let { publication.startLocator(progressRepository.resume(server, it)) }
                     opened = start
+                    viewModelScope.launch { annotationRepository.refresh(server, chapterId) }
                     session.update {
                         it.copy(
                             publication = publication,

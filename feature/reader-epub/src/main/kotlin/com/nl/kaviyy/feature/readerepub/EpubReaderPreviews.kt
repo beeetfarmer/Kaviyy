@@ -11,6 +11,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nl.kaviyy.core.data.Highlight
 import com.nl.kaviyy.core.data.ReaderChapter
 import com.nl.kaviyy.core.designsystem.theme.Literata
 import org.readium.r2.shared.publication.Manifest
@@ -71,3 +72,38 @@ private fun BookPaperPreview() = BookPreview()
 @Preview(widthDp = 412, heightDp = 915)
 @Composable
 private fun BookNightPreview() = BookPreview(previewBook.copy(settings = BookSettings(theme = BookTheme.Night)))
+
+internal val previewHighlights =
+    listOf(
+        Highlight("a", 0, "The lantern never went out.", 0, null),
+        Highlight("b", 0, "every message she delivered changed the road behind her", 2, "The theme of the whole book."),
+    )
+
+@Preview(widthDp = 412, heightDp = 915)
+@Composable
+private fun BookHighlightPreview() =
+    BookPreview(
+        previewBook.copy(
+            chromeVisible = false,
+            highlights = previewHighlights,
+            highlightTarget =
+                HighlightTarget(
+                    previewHighlights[0].text,
+                    top = 420f,
+                    bottom = 480f,
+                    uuid = "a",
+                    color = 0,
+                ),
+        ),
+    )
+
+@Preview(widthDp = 412, heightDp = 915)
+@Composable
+private fun BookHighlightNightPreview() =
+    BookPreview(
+        previewBook.copy(
+            settings = BookSettings(theme = BookTheme.Night),
+            chromeVisible = false,
+            highlightTarget = HighlightTarget(previewHighlights[0].text, top = 420f, bottom = 480f),
+        ),
+    )

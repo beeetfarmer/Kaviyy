@@ -2,8 +2,11 @@ package com.nl.kaviyy.feature.readerepub
 
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
+import com.nl.kaviyy.core.data.AnnotationDraft
+import com.nl.kaviyy.core.data.AnnotationRepository
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.BookFileRepository
+import com.nl.kaviyy.core.data.Highlight
 import com.nl.kaviyy.core.data.ImageReaderRepository
 import com.nl.kaviyy.core.data.ProgressRepository
 import com.nl.kaviyy.core.data.ReaderChapter
@@ -28,6 +31,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.robolectric.RobolectricTestRunner
 import java.io.File
@@ -171,6 +175,49 @@ class EpubReaderViewModelTest {
             }
         }
 
+    private val marks = MutableStateFlow(emptyList<Highlight>())
+    private val annotationCalls = mutableListOf<String>()
+    private val annotations =
+        object : AnnotationRepository {
+            override fun annotations(
+                server: Server,
+                chapterId: Int,
+            ) = marks
+
+            override suspend fun refresh(
+                server: Server,
+                chapterId: Int,
+            ): AppResult<Unit> = AppResult.Success(Unit)
+
+            override suspend fun create(
+                server: Server,
+                chapter: ReaderChapter,
+                draft: AnnotationDraft,
+            ): AppResult<Unit> {
+                annotationCalls += "create ${draft.page} ${draft.text} ${draft.color} ${draft.note}"
+                return AppResult.Success(Unit)
+            }
+
+            override suspend fun update(
+                server: Server,
+                chapter: ReaderChapter,
+                uuid: String,
+                color: Int,
+                note: String?,
+            ): AppResult<Unit> {
+                annotationCalls += "update $uuid $color $note"
+                return AppResult.Success(Unit)
+            }
+
+            override suspend fun delete(
+                server: Server,
+                uuid: String,
+            ): AppResult<Unit> {
+                annotationCalls += "delete $uuid"
+                return AppResult.Success(Unit)
+            }
+        }
+
     private fun vm() =
         EpubReaderViewModel(
             session,
@@ -180,6 +227,7 @@ class EpubReaderViewModelTest {
             settings,
             displayRepo,
             progress,
+            annotations,
             SavedStateHandle(mapOf(EPUB_SERIES_ARG to 9, EPUB_CHAPTER_ARG to 201)),
         )
 
@@ -216,6 +264,50 @@ class EpubReaderViewModelTest {
                 advanceTimeBy(2_000)
                 runCurrent()
                 assertEquals(listOf(201), pushed)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun selectionsAndHighlightsGoThroughTheToolbar() =
+        runTest {
+            marks.value = listOf(Highlight("h1", 0, "One", 1, "old"))
+            val vm = vm()
+            vm.state.test {
+                runCurrent()
+                val selected = at("ch2.xhtml", 0.5).copy(text = Locator.Text(highlight = " a phrase "))
+                vm.onSelection(selected, 300f, 340f)
+                assertEquals("a phrase", expectMostRecentItem().highlightTarget?.text)
+                vm.pickColor(2)
+                runCurrent()
+                assertEquals(null, expectMostRecentItem().highlightTarget)
+                vm.onHighlightTapped("h1", 10f, 40f)
+                assertEquals(1, expectMostRecentItem().highlightTarget?.color)
+                vm.pickColor(3) // recolour keeps the note
+                runCurrent()
+                vm.onHighlightTapped("h1", 10f, 40f)
+                vm.pickColor(1) // its own colour again: remove
+                runCurrent()
+                vm.onSelection(selected, 300f, 340f)
+                vm.editNote()
+                assertEquals("", expectMostRecentItem().noteEditor?.initial)
+                vm.saveNote("  why  ")
+                runCurrent()
+                vm.onHighlightTapped("h1", 10f, 40f)
+                vm.editNote()
+                assertEquals("old", expectMostRecentItem().noteEditor?.initial)
+                vm.saveNote(" ") // blank removes the note
+                runCurrent()
+                assertEquals(
+                    listOf(
+                        "create 1 a phrase 2 null",
+                        "update h1 3 old",
+                        "delete h1",
+                        "create 1 a phrase 0 why",
+                        "update h1 1 null",
+                    ),
+                    annotationCalls,
+                )
                 cancelAndIgnoreRemainingEvents()
             }
         }

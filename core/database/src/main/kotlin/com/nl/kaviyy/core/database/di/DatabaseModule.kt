@@ -2,6 +2,7 @@ package com.nl.kaviyy.core.database.di
 
 import android.content.Context
 import androidx.room.Room
+import com.nl.kaviyy.core.database.AnnotationDao
 import com.nl.kaviyy.core.database.BookmarkDao
 import com.nl.kaviyy.core.database.DashboardDao
 import com.nl.kaviyy.core.database.KaviyyDatabase
@@ -51,6 +52,9 @@ object DatabaseModule {
 
     @Provides
     fun progressDao(db: KaviyyDatabase): ProgressDao = db.progressDao()
+
+    @Provides
+    fun annotationDao(db: KaviyyDatabase): AnnotationDao = db.annotationDao()
 
     @Provides
     fun dashboardDao(db: KaviyyDatabase): DashboardDao = db.dashboardDao()

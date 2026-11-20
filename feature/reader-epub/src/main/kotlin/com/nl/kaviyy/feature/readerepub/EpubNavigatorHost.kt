@@ -2,6 +2,9 @@ package com.nl.kaviyy.feature.readerepub
 
 import android.content.Context
 import android.content.ContextWrapper
+import android.view.ActionMode
+import android.view.Menu
+import android.view.MenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -9,6 +12,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -18,6 +22,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentFactory
 import androidx.fragment.compose.AndroidFragment
+import kotlinx.coroutines.launch
+import org.readium.r2.navigator.DecorableNavigator
+import org.readium.r2.navigator.Decoration
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
@@ -54,7 +61,50 @@ class EpubNavigatorHandle {
     fun go(link: Link) {
         fragment?.go(link)
     }
+
+    fun go(locator: Locator) {
+        fragment?.go(locator)
+    }
+
+    fun clearSelection() {
+        fragment?.clearSelection()
+    }
 }
+
+/**
+ * Replaces the system text-selection menu: no menu items (so no floating bar), and reports the selection so our
+ * HighlightToolbar can be shown instead.
+ */
+private class SelectionCallback(
+    private val onStart: () -> Unit,
+) : ActionMode.Callback {
+    override fun onCreateActionMode(
+        mode: ActionMode,
+        menu: Menu,
+    ): Boolean {
+        onStart()
+        return true
+    }
+
+    override fun onPrepareActionMode(
+        mode: ActionMode,
+        menu: Menu,
+    ) = false
+
+    override fun onActionItemClicked(
+        mode: ActionMode,
+        item: MenuItem,
+    ) = false
+
+    override fun onDestroyActionMode(mode: ActionMode) = Unit
+}
+
+/** Highlight wiring between the navigator and the view model. [decorations] are drawn; the callbacks report back. */
+internal data class HighlightCallbacks(
+    val decorations: List<Decoration> = emptyList(),
+    val onSelection: (Locator, Float, Float) -> Unit = { _, _, _ -> },
+    val onTapped: (String, Float, Float) -> Unit = { _, _, _ -> },
+)
 
 @OptIn(ExperimentalReadiumApi::class)
 internal fun BookSettings.toPreferences() =
@@ -105,11 +155,14 @@ internal fun EpubNavigator(
     handle: EpubNavigatorHandle,
     onTap: () -> Unit,
     onLocator: (Locator) -> Unit,
+    highlights: HighlightCallbacks,
     modifier: Modifier = Modifier,
 ) {
     val activity = LocalContext.current.fragmentActivity() ?: return
     val tap by rememberUpdatedState(onTap)
     val locate by rememberUpdatedState(onLocator)
+    val marks by rememberUpdatedState(highlights)
+    val scope = rememberCoroutineScope()
     val factory =
         remember(publication) {
             TrackingFactory(
@@ -135,6 +188,15 @@ internal fun EpubNavigator(
                                 }
                             }
                             addFontFamilyDeclaration(INTER) { addFontFace { addSource("inter.ttf") } }
+                            selectionActionModeCallback =
+                                SelectionCallback {
+                                    scope.launch {
+                                        handle.fragment?.currentSelection()?.let { sel ->
+                                            val rect = sel.rect
+                                            marks.onSelection(sel.locator, rect?.top ?: 0f, rect?.bottom ?: 0f)
+                                        }
+                                    }
+                                }
                         },
                 ),
             ).also {
@@ -163,8 +225,22 @@ internal fun EpubNavigator(
                 }
             },
         )
+        current.addDecorationListener(
+            HIGHLIGHT_GROUP,
+            object : DecorableNavigator.Listener {
+                override fun onDecorationActivated(event: DecorableNavigator.OnActivatedEvent): Boolean {
+                    val rect = event.rect
+                    marks.onTapped(event.decoration.id, rect?.top ?: 0f, rect?.bottom ?: 0f)
+                    return true
+                }
+            },
+        )
         current.currentLocator.collect { locate(it) }
     }
+    LaunchedEffect(
+        current,
+        highlights.decorations,
+    ) { current.applyDecorations(highlights.decorations, HIGHLIGHT_GROUP) }
     LaunchedEffect(current, settings) { current.submitPreferences(settings.toPreferences()) }
 }
 

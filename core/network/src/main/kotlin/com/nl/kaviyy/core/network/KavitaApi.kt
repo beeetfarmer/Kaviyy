@@ -300,6 +300,26 @@ interface KavitaApi {
         @Query("chapterId") chapterId: Int,
     ): ResponseBody
 
+    @GET("api/Annotation/all")
+    suspend fun annotations(
+        @Query("chapterId") chapterId: Int,
+    ): List<AnnotationDto>
+
+    @POST("api/Annotation/create")
+    suspend fun createAnnotation(
+        @Body body: AnnotationDto,
+    ): AnnotationDto
+
+    @POST("api/Annotation/update")
+    suspend fun updateAnnotation(
+        @Body body: AnnotationDto,
+    ): AnnotationDto
+
+    @DELETE("api/Annotation")
+    suspend fun deleteAnnotation(
+        @Query("annotationId") annotationId: Int,
+    )
+
     @GET("api/Reader/get-progress")
     suspend fun progress(
         @Query("chapterId") chapterId: Int,

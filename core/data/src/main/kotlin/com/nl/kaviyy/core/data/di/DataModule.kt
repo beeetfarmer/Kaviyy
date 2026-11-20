@@ -1,6 +1,7 @@
 package com.nl.kaviyy.core.data.di
 
 import com.nl.kaviyy.core.data.AdminRepository
+import com.nl.kaviyy.core.data.AnnotationRepository
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.BookFileRepository
 import com.nl.kaviyy.core.data.BookmarkRepository
@@ -16,6 +17,7 @@ import com.nl.kaviyy.core.data.KavitaReviewRepository
 import com.nl.kaviyy.core.data.KavitaSearchRepository
 import com.nl.kaviyy.core.data.KavitaSmartFilterRepository
 import com.nl.kaviyy.core.data.NetworkMonitor
+import com.nl.kaviyy.core.data.OfflineFirstAnnotationRepository
 import com.nl.kaviyy.core.data.OfflineFirstBookmarkRepository
 import com.nl.kaviyy.core.data.OfflineFirstCatalogRepository
 import com.nl.kaviyy.core.data.OfflineFirstHomeRepository
@@ -63,6 +65,9 @@ internal interface DataModule {
 
     @Binds
     fun progress(repository: OfflineFirstProgressRepository): ProgressRepository
+
+    @Binds
+    fun annotations(repository: OfflineFirstAnnotationRepository): AnnotationRepository
 
     @Binds
     fun bookFiles(repository: CachedBookFileRepository): BookFileRepository

@@ -33,4 +33,15 @@
     <string name="epub_brightness">Brightness</string>
     <string name="epub_toc">Contents</string>
     <string name="epub_untitled">Untitled section</string>
+    <string name="epub_highlights">Highlights</string>
+    <string name="epub_no_highlights">No highlights yet. Select text in the book to highlight it.</string>
+    <string name="epub_note">Note</string>
+    <string name="epub_note_hint">Add a note…</string>
+    <string name="epub_copy">Copy</string>
+    <string name="epub_save">Save</string>
+    <string name="epub_cancel">Cancel</string>
+    <string name="epub_color_yellow">Yellow</string>
+    <string name="epub_color_green">Green</string>
+    <string name="epub_color_blue">Blue</string>
+    <string name="epub_color_pink">Pink</string>
 </resources>

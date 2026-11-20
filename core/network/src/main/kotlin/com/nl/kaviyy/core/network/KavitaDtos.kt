@@ -434,3 +434,27 @@ data class ProgressDto(
     /** ISO-8601 UTC. */
     val lastModifiedUtc: String? = null,
 )
+
+/** EPUB highlight / note. Request fields without defaults are always sent. */
+@Serializable
+data class AnnotationDto(
+    val id: Int,
+    val xPath: String,
+    val endingXPath: String?,
+    val selectedText: String?,
+    val comment: String?,
+    val context: String?,
+    val highlightCount: Int,
+    val containsSpoiler: Boolean,
+    val pageNumber: Int,
+    val selectedSlotIndex: Int,
+    val chapterId: Int,
+    val volumeId: Int,
+    val seriesId: Int,
+    val libraryId: Int,
+    // TODO(api): the spec requires it; Kavita takes the owner from the token, so 0 is sent. Verify on a server.
+    val ownerUserId: Int,
+    val chapterTitle: String? = null,
+    val createdUtc: String? = null,
+    val lastModifiedUtc: String? = null,
+)

@@ -1,5 +1,6 @@
 package com.nl.kaviyy.core.data
 
+import com.nl.kaviyy.core.network.AnnotationDto
 import com.nl.kaviyy.core.network.BookmarkDto
 import com.nl.kaviyy.core.network.ChapterDto
 import com.nl.kaviyy.core.network.ChapterInfoDto
@@ -108,6 +109,14 @@ open class FakeKavitaApi : KavitaApi {
     ): Int = error("unused")
 
     override suspend fun downloadChapter(chapterId: Int): okhttp3.ResponseBody = error("unused")
+
+    override suspend fun annotations(chapterId: Int): List<AnnotationDto> = error("unused")
+
+    override suspend fun createAnnotation(body: AnnotationDto): AnnotationDto = error("unused")
+
+    override suspend fun updateAnnotation(body: AnnotationDto): AnnotationDto = error("unused")
+
+    override suspend fun deleteAnnotation(annotationId: Int): Unit = error("unused")
 
     override suspend fun progress(chapterId: Int): ProgressDto = error("unused")
 
