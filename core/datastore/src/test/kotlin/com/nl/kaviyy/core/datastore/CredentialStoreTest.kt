@@ -50,6 +50,9 @@ class CredentialStoreTest {
             assertEquals(jwt, store.credentials(ServerId(1)).first())
             assertEquals(Credentials.AuthKey("api-secret"), store.credentials(ServerId(2)).first())
             assertNull(store.credentials(ServerId(3)).first())
+            val withKey = jwt.copy(apiKey = "user-api-key")
+            store.save(ServerId(4), withKey)
+            assertEquals(withKey, store.credentials(ServerId(4)).first())
         }
 
     @Test

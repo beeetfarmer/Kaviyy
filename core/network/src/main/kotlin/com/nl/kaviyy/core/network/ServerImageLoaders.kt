@@ -52,8 +52,7 @@ internal object CredentialFreeCacheKeys : Interceptor {
 /**
  * One Coil [ImageLoader] per server (N6): images go through that server's authenticated [OkHttpClient], so they get
  * the same TLS/pin/cleartext policy and host-scoped auth. Disk cache per server, deleted with the server.
- * TODO(api): confirm v0.9.0.2 image endpoints accept header auth; if they require `apiKey`, add it on the wire in an
- * OkHttp interceptor for image paths (cache keys are already credential-free either way).
+ * The `apiKey` image parameter is added on the wire by AuthInterceptor, so request data and cache keys stay clean.
  */
 object ServerImageLoaders {
     fun cacheDir(

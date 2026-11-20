@@ -73,6 +73,17 @@ class AuthTest {
     }
 
     @Test
+    fun imageEndpointsGetApiKeyOnTheWireOnly() {
+        repeat(3) { mock.enqueue(ok()) }
+        call(FakeSource(jwt.copy(apiKey = "user-key")), "/api/Image/series-cover?seriesId=4")
+        call(FakeSource(Credentials.AuthKey("auth-key")), "/api/Reader/image?chapterId=1&page=0")
+        call(FakeSource(jwt.copy(apiKey = "user-key")), "/api/Library")
+        assertEquals("user-key", mock.takeRequest().url.queryParameter(API_KEY_PARAM))
+        assertEquals("auth-key", mock.takeRequest().url.queryParameter(API_KEY_PARAM))
+        assertNull(mock.takeRequest().url.queryParameter(API_KEY_PARAM))
+    }
+
+    @Test
     fun refreshesOnceOn401AndRetriesWithNewToken() {
         mock.enqueue(MockResponse(code = 401))
         mock.enqueue(ok("""{"token":"new-token","refreshToken":"new-refresh"}"""))
@@ -183,15 +194,21 @@ class AuthTest {
             )
         val target = elsewhere.url("/").toString().replace("localhost", "127.0.0.1")
         listOf(jwt, Credentials.AuthKey("the-key")).forEach { creds ->
-            origin.enqueue(MockResponse(code = 302, headers = headersOf("Location", target)))
+            // A hostile Location that echoes the key back must not carry it to the other host.
+            origin.enqueue(MockResponse(code = 302, headers = headersOf("Location", "$target?apiKey=echoed")))
             elsewhere.enqueue(ok())
             val client = ServerHttpClients(baseHttpClient()).create(pinned, FakeSource(creds))
-            client.newCall(Request.Builder().url(origin.url("/api/x")).build()).execute().close()
+            client
+                .newCall(
+                    Request.Builder().url(origin.url("/api/Image/series-cover?seriesId=1")).build(),
+                ).execute()
+                .close()
             val sent = origin.takeRequest().headers
             assertTrue(sent[AUTHORIZATION] != null || sent[API_KEY] != null)
-            val leaked = elsewhere.takeRequest().headers
-            assertNull(leaked[AUTHORIZATION])
-            assertNull(leaked[API_KEY])
+            val leaked = elsewhere.takeRequest()
+            assertNull(leaked.headers[AUTHORIZATION])
+            assertNull(leaked.headers[API_KEY])
+            assertNull(leaked.url.queryParameter(API_KEY_PARAM))
         }
     }
 }

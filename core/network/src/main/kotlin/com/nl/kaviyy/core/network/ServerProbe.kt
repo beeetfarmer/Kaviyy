@@ -12,6 +12,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.Request
+import java.net.HttpURLConnection.HTTP_FORBIDDEN
+import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 import javax.inject.Inject
 
 /** `GET api/Server/server-info-slim` (ServerInfoSlimDto, required: installId, kavitaVersion). */
@@ -21,7 +23,10 @@ internal data class ServerInfoSlimDto(
     val kavitaVersion: String? = null,
 )
 
-/** @property version null when the server reports something unparseable (treated as unsupported → warn). */
+/**
+ * @property version null when unknown: unparseable, or the server requires sign-in for this endpoint. The Connect
+ * screen shows "version unknown" (and re-checks after sign-in) rather than blocking.
+ */
 data class ServerInfo(
     val version: KavitaVersion?,
 ) {
@@ -47,7 +52,10 @@ class ServerProbe
 
                     is AppResult.Success -> {
                         response.value.use { r ->
-                            if (!r.isSuccessful) {
+                            if (r.code == HTTP_UNAUTHORIZED || r.code == HTTP_FORBIDDEN) {
+                                // Reached a server that wants auth for this call: reachable, version unknown.
+                                AppResult.Success(ServerInfo(version = null))
+                            } else if (!r.isSuccessful) {
                                 AppResult.Failure(AppError.fromHttpCode(r.code))
                             } else {
                                 appResult {

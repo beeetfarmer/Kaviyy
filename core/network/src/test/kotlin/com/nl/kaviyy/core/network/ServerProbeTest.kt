@@ -67,6 +67,13 @@ class ServerProbeTest {
     }
 
     @Test
+    fun authRequiredMeansReachableWithUnknownVersion() {
+        val info = (probe(code = 401) as AppResult.Success).value
+        assertEquals(null, info.version)
+        assertFalse(info.isSupported)
+    }
+
+    @Test
     fun unreachableServerIsANetworkError() {
         mock.close()
         assertEquals(AppResult.Failure(AppError.Network), probe())

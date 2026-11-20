@@ -106,9 +106,9 @@ internal class TransportPolicyInterceptor(
             } else {
                 request
                     .newBuilder()
-                    .removeHeader(
-                        AUTHORIZATION,
-                    ).removeHeader(API_KEY)
+                    .url(url.newBuilder().removeAllQueryParameters(API_KEY_PARAM).build())
+                    .removeHeader(AUTHORIZATION)
+                    .removeHeader(API_KEY)
                     .build()
             }
         return chain.proceed(outgoing)

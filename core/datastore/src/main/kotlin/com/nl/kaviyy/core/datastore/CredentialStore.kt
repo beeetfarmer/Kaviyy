@@ -22,7 +22,7 @@ import java.security.GeneralSecurityException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** On-disk shape (protobuf). Exactly one of jwt/apiKey fields is set per entry. Field numbers are a wire format. */
+/** On-disk shape (protobuf). A non-empty token means JWT (apiKey optional); otherwise apiKey alone is an Auth Key. */
 @Suppress("MagicNumber")
 @Serializable
 data class CredentialFile(
@@ -98,13 +98,13 @@ class CredentialStore
 
 private fun Credentials.toEntry() =
     when (this) {
-        is Credentials.Jwt -> CredentialFile.Entry(username = username, token = token, refreshToken = refreshToken)
+        is Credentials.Jwt -> CredentialFile.Entry(username, token, refreshToken, apiKey.orEmpty())
         is Credentials.AuthKey -> CredentialFile.Entry(apiKey = apiKey)
     }
 
 private fun CredentialFile.Entry.toCredentials(): Credentials? =
     when {
+        token.isNotEmpty() -> Credentials.Jwt(username, token, refreshToken, apiKey.ifEmpty { null })
         apiKey.isNotEmpty() -> Credentials.AuthKey(apiKey)
-        token.isNotEmpty() -> Credentials.Jwt(username, token, refreshToken)
         else -> null
     }

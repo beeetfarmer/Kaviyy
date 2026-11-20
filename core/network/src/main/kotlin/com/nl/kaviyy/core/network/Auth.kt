@@ -33,6 +33,7 @@ interface CredentialSource {
 
 internal const val AUTHORIZATION = "Authorization"
 internal const val API_KEY = "x-api-key"
+internal const val API_KEY_PARAM = "apiKey"
 
 /** Same host and effective port as the configured server (N6 host scoping). */
 internal fun HttpUrl.isServer(server: Server) =
@@ -46,8 +47,18 @@ private fun Request.Builder.auth(credentials: Credentials?) =
     }
 
 /**
- * Adds auth to requests for the configured server. Redirect hops to other hosts have it stripped again by
- * [TransportPolicyInterceptor], which runs on every hop.
+ * Kavita's image endpoints are built for `<img>` tags, so they take the key as `apiKey` in the query string (as the
+ * Kavita web UI does) rather than relying on headers. Covers `api/Image/...` and `api/Reader/image`.
+ */
+internal fun HttpUrl.isImageEndpoint(server: Server): Boolean {
+    val path = encodedPath.removePrefix(server.url.path)
+    return path.startsWith("/api/Image/", ignoreCase = true) || path.equals("/api/Reader/image", ignoreCase = true)
+}
+
+/**
+ * Adds auth to requests for the configured server: headers always, plus `apiKey` on the wire for image endpoints.
+ * The key is added here, after Coil computed its cache key, so cache keys never contain it. Redirect hops to other
+ * hosts have all of it stripped again by [TransportPolicyInterceptor], which runs on every hop.
  */
 internal class AuthInterceptor(
     private val server: Server,
@@ -55,8 +66,23 @@ internal class AuthInterceptor(
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val authed = if (request.url.isServer(server)) request.newBuilder().auth(source.current()).build() else request
-        return chain.proceed(authed)
+        if (!request.url.isServer(server)) return chain.proceed(request)
+        val credentials = source.current()
+        val key = credentials?.imageApiKey?.takeIf { request.url.isImageEndpoint(server) }
+        val url =
+            key?.let {
+                request.url
+                    .newBuilder()
+                    .setQueryParameter(API_KEY_PARAM, it)
+                    .build()
+            } ?: request.url
+        return chain.proceed(
+            request
+                .newBuilder()
+                .url(url)
+                .auth(credentials)
+                .build(),
+        )
     }
 }
 
