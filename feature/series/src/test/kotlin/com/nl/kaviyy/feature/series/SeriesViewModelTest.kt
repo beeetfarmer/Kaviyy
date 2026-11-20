@@ -1,5 +1,6 @@
 package com.nl.kaviyy.feature.series
 
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.SavedStateHandle
 import androidx.paging.PagingData
 import app.cash.turbine.test
@@ -11,9 +12,12 @@ import com.nl.kaviyy.core.data.ReadStateRepository
 import com.nl.kaviyy.core.data.ReadTarget
 import com.nl.kaviyy.core.data.RelatedSeries
 import com.nl.kaviyy.core.data.Relation
+import com.nl.kaviyy.core.data.Review
+import com.nl.kaviyy.core.data.ReviewRepository
 import com.nl.kaviyy.core.data.RuleValue
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.SeriesMetadata
+import com.nl.kaviyy.core.data.SeriesReviews
 import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.database.SeriesEntity
@@ -47,6 +51,26 @@ class SeriesViewModelTest {
     private var relatedCalls = 0
     private val marks = mutableListOf<String>()
     private var pushResult: AppResult<Unit> = AppResult.Success(Unit)
+    private val savedReviews = mutableListOf<String>()
+    private val reviews =
+        object : ReviewRepository {
+            override suspend fun reviews(
+                server: Server,
+                seriesId: Int,
+                libraryType: Int,
+            ) = AppResult.Success(
+                SeriesReviews(listOf(Review("Mira", null, "Loved it", 4f, 0, 0, null, mine = true))),
+            )
+
+            override suspend fun saveReview(
+                server: Server,
+                seriesId: Int,
+                body: String,
+            ): AppResult<Unit> {
+                savedReviews += body
+                return AppResult.Success(Unit)
+            }
+        }
     private val readState =
         object : ReadStateRepository {
             override suspend fun setRead(
@@ -55,6 +79,15 @@ class SeriesViewModelTest {
                 read: Boolean,
             ): AppResult<Unit> {
                 marks += "${target.key} $read"
+                return pushResult
+            }
+
+            override suspend fun setRating(
+                server: Server,
+                seriesId: Int,
+                rating: Float,
+            ): AppResult<Unit> {
+                marks += "rate $seriesId $rating"
                 return pushResult
             }
 
@@ -135,7 +168,7 @@ class SeriesViewModelTest {
     @Test
     fun showsCachedDetailWithLibraryAndContinuePointAndRefreshes() =
         runTest {
-            val vm = SeriesViewModel(session, repo, readState, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            val vm = SeriesViewModel(session, repo, readState, reviews, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
             vm.state.test {
                 runCurrent()
                 assertEquals(listOf(7), refreshed)
@@ -159,7 +192,7 @@ class SeriesViewModelTest {
     fun refreshFailureIsReportedAndRetryCallsAgain() =
         runTest {
             refreshResult = AppResult.Failure(AppError.Network)
-            val vm = SeriesViewModel(session, repo, readState, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            val vm = SeriesViewModel(session, repo, readState, reviews, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
             vm.state.test {
                 runCurrent()
                 assertEquals(AppError.Network, expectMostRecentItem().error)
@@ -174,7 +207,7 @@ class SeriesViewModelTest {
     @Test
     fun relatedLoadsOnFirstOpenRetriesAfterFailureAndSheetsOpen() =
         runTest {
-            val vm = SeriesViewModel(session, repo, readState, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            val vm = SeriesViewModel(session, repo, readState, reviews, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
             vm.state.test {
                 runCurrent()
                 vm.selectTab(SeriesTab.Related)
@@ -202,7 +235,7 @@ class SeriesViewModelTest {
     @Test
     fun marksPushAndRefreshOrReportPendingSync() =
         runTest {
-            val vm = SeriesViewModel(session, repo, readState, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            val vm = SeriesViewModel(session, repo, readState, reviews, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
             vm.state.test {
                 runCurrent()
                 detail.value = detail.value.copy(metadata = SeriesMetadata(wantToRead = true))
@@ -219,6 +252,26 @@ class SeriesViewModelTest {
                 runCurrent()
                 assertEquals(true, expectMostRecentItem().syncPending)
                 assertEquals(listOf(7, 7), refreshed)
+            }
+        }
+
+    @Test
+    fun reviewsSheetLoadsPrefillsMyReviewAndSaves() =
+        runTest {
+            val vm = SeriesViewModel(session, repo, readState, reviews, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+            vm.state.test {
+                runCurrent()
+                vm.showSheet(SeriesSheet.Reviews)
+                runCurrent()
+                assertEquals(true, expectMostRecentItem().reviews is ReviewsState.Loaded)
+                assertEquals("Loved it", vm.reviewText.text.toString())
+                vm.reviewText.setTextAndPlaceCursorAtEnd("Even better")
+                vm.saveReview()
+                vm.setRating(4f)
+                runCurrent()
+                assertEquals(listOf("Even better"), savedReviews)
+                assertEquals("rate 7 4.0", marks.last())
+                cancelAndIgnoreRemainingEvents()
             }
         }
 }

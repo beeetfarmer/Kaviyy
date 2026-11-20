@@ -272,3 +272,48 @@ data class MarkVolumesReadDto(
 data class UpdateWantToReadDto(
     val seriesIds: List<Int>,
 )
+
+/** `POST api/Rating/series` (0–5; 0 clears). */
+@Serializable
+data class UpdateRatingDto(
+    val seriesId: Int,
+    val userRating: Float,
+)
+
+/** `POST api/Review/series`. */
+@Serializable
+data class UpdateUserReviewDto(
+    val seriesId: Int,
+    val body: String,
+)
+
+/** A community score (Kavita+). [provider] = Kavita `ScrobbleProvider`. */
+@Serializable
+data class RatingDto(
+    val averageScore: Int = 0,
+    val favoriteCount: Int = 0,
+    val provider: Int = 0,
+    val providerUrl: String? = null,
+)
+
+@Serializable
+data class UserReviewDto(
+    val seriesId: Int = 0,
+    val tagline: String? = null,
+    /** HTML; prefer [bodyJustText]. */
+    val body: String? = null,
+    val bodyJustText: String? = null,
+    val username: String? = null,
+    val rating: Float = 0f,
+    val score: Int = 0,
+    val provider: Int = 0,
+    val isExternal: Boolean = false,
+    val siteUrl: String? = null,
+)
+
+/** `GET api/Metadata/series-detail-plus` (reviews + Kavita+ ratings; null/empty without data). */
+@Serializable
+data class SeriesDetailPlusDto(
+    val reviews: List<UserReviewDto>? = null,
+    val ratings: List<RatingDto>? = null,
+)

@@ -20,9 +20,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,6 +74,8 @@ data class SeriesActions(
     val onOpenSeries: (seriesId: Int) -> Unit = {},
     val onWantToRead: () -> Unit = {},
     val onMark: (ReadTarget, read: Boolean) -> Unit = { _, _ -> },
+    val onRate: (Float) -> Unit = {},
+    val onSaveReview: () -> Unit = {},
 )
 
 @Composable
@@ -93,7 +97,10 @@ fun SeriesRoute(
             onOpenSeries = onOpenSeries,
             onWantToRead = viewModel::toggleWantToRead,
             onMark = viewModel::setRead,
+            onRate = viewModel::setRating,
+            onSaveReview = viewModel::saveReview,
         ),
+        reviewText = viewModel.reviewText,
     )
 }
 
@@ -103,6 +110,7 @@ fun SeriesScreen(
     state: SeriesUiState,
     actions: SeriesActions,
     modifier: Modifier = Modifier,
+    reviewText: TextFieldState = remember { TextFieldState() },
 ) {
     val series = state.detail?.series
     val heroColor = series?.heroColor() ?: Kavita.colors.fillSegmented
@@ -118,7 +126,8 @@ fun SeriesScreen(
         }
         TopBar(series, state, actions)
         val detail = state.detail
-        if (state.sheet != null && detail != null) SeriesDetailSheet(state.sheet, detail, state.server, actions)
+        val sheet = state.sheet
+        if (sheet != null && detail != null) SeriesDetailSheet(sheet, state, detail, reviewText, actions)
     }
 }
 
@@ -227,7 +236,7 @@ private fun Body(
                 )
             }
         }
-        Chips(series, state)
+        Chips(series, state) { actions.onSheet(SeriesSheet.Reviews) }
         ActionRow(series, state, actions)
         if (state.syncPending) {
             Text(
@@ -252,22 +261,33 @@ private fun Body(
 private fun Chips(
     series: SeriesEntity,
     state: SeriesUiState,
+    onReviews: () -> Unit,
 ) {
     val meta = state.detail?.metadata ?: return
     FlowRow(
+        itemVerticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         StatusChip(stringResource(publicationStatusLabel(meta.publicationStatus)), style = StatusChipStyle.Accent)
         if (meta.releaseYear > 0) StatusChip(meta.releaseYear.toString())
         ageRatingLabel(meta.ageRating)?.let { StatusChip(stringResource(it)) }
-        if (series.userRating > 0f) {
-            StatusChip(
-                stringResource(R.string.series_rating, series.userRating),
-                leadingIcon = KavitaIcons.Star,
-                leadingIconTint = Kavita.colors.rating,
-            )
-        }
+        // Opens Ratings & Reviews; 48dp hit area around the 26dp chip.
+        StatusChip(
+            if (series.userRating >
+                0f
+            ) {
+                stringResource(R.string.series_rating, series.userRating)
+            } else {
+                stringResource(R.string.series_rate)
+            },
+            Modifier
+                .minimumInteractiveComponentSize()
+                .clip(KavitaShapes.pill)
+                .clickable(role = Role.Button) { onReviews() },
+            leadingIcon = KavitaIcons.Star,
+            leadingIconTint = if (series.userRating > 0f) Kavita.colors.rating else Kavita.colors.labelTertiary,
+        )
         if (series.pagesRead < series.pages || series.pages == 0) {
             when (val h = hoursLeft(meta.hoursLeft)) {
                 null -> Unit

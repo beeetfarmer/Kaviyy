@@ -16,6 +16,7 @@ import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.MarkReadDto
 import com.nl.kaviyy.core.network.MarkVolumeReadDto
 import com.nl.kaviyy.core.network.MarkVolumesReadDto
+import com.nl.kaviyy.core.network.UpdateRatingDto
 import com.nl.kaviyy.core.network.UpdateWantToReadDto
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -67,6 +68,8 @@ class ReadStateRepositoryTest {
             override suspend fun addWantToRead(body: UpdateWantToReadDto) = log("wtr+ ${body.seriesIds}")
 
             override suspend fun removeWantToRead(body: UpdateWantToReadDto) = log("wtr- ${body.seriesIds}")
+
+            override suspend fun rateSeries(body: UpdateRatingDto) = log("rate ${body.seriesId} ${body.userRating}")
         }
 
     private val repo = OfflineFirstReadStateRepository({ api }, dao, outbox)
@@ -137,5 +140,18 @@ class ReadStateRepositoryTest {
             offline = false
             repo.setRead(server, ReadTarget.Series(7), read = true)
             assertEquals(listOf(OUTBOX_WANT_TO_READ), outbox.pending(serverId).map { it.type })
+        }
+
+    @Test
+    fun ratingIsClampedStoredAndQueuedWhenOffline() =
+        runTest {
+            seed()
+            repo.setRating(server, 7, 9f)
+            assertEquals(5f, detail().series?.userRating)
+            assertEquals("rate 7 5.0", calls.last())
+            offline = true
+            repo.setRating(server, 7, 0f)
+            assertEquals(0f, detail().series?.userRating)
+            assertEquals(listOf(OUTBOX_RATING to "series:7"), outbox.pending(serverId).map { it.type to it.entityKey })
         }
 }

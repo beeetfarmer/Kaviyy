@@ -9,6 +9,7 @@ import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.MarkReadDto
 import com.nl.kaviyy.core.network.MarkVolumeReadDto
 import com.nl.kaviyy.core.network.MarkVolumesReadDto
+import com.nl.kaviyy.core.network.UpdateRatingDto
 import com.nl.kaviyy.core.network.UpdateWantToReadDto
 import com.nl.kaviyy.core.network.apiCall
 import kotlinx.serialization.json.buildJsonObject
@@ -61,10 +62,19 @@ interface ReadStateRepository {
         seriesId: Int,
         on: Boolean,
     ): AppResult<Unit>
+
+    /** 0–5 stars; 0 clears. */
+    suspend fun setRating(
+        server: Server,
+        seriesId: Int,
+        rating: Float,
+    ): AppResult<Unit>
 }
 
 internal const val OUTBOX_MARK_READ = "markRead"
 internal const val OUTBOX_WANT_TO_READ = "wantToRead"
+internal const val OUTBOX_RATING = "rating"
+private const val MAX_RATING = 5f
 
 class OfflineFirstReadStateRepository
     @Inject
@@ -110,6 +120,26 @@ class OfflineFirstReadStateRepository
                 val body = UpdateWantToReadDto(listOf(seriesId))
                 if (on) api.addWantToRead(body) else api.removeWantToRead(body)
             }
+        }
+
+        override suspend fun setRating(
+            server: Server,
+            seriesId: Int,
+            rating: Float,
+        ): AppResult<Unit> {
+            val stars = rating.coerceIn(0f, MAX_RATING)
+            series.setUserRating(server.id.value, seriesId, stars)
+            val payload =
+                buildJsonObject {
+                    put("seriesId", seriesId)
+                    put("userRating", stars)
+                }.toString()
+            return push(
+                server,
+                OUTBOX_RATING,
+                "series:$seriesId",
+                payload,
+            ) { api -> api.rateSeries(UpdateRatingDto(seriesId, stars)) }
         }
 
         private suspend fun push(

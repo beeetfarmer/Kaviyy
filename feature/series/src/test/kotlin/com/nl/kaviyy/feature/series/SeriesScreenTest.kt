@@ -123,6 +123,25 @@ class SeriesScreenTest {
     }
 
     @Test
+    fun reviewsSheetRatesAndListsCommunityReviewsAndLinks() {
+        var rated: Float? = null
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) {
+                SeriesScreen(previewReviews, SeriesActions(onRate = { rated = it }))
+            }
+        }
+        compose.onNodeWithContentDescription("4 stars").performClick()
+        assertEquals(4f, rated)
+        compose.onNodeWithContentDescription("5 stars").performClick() // current rating: clears
+        assertEquals(0f, rated)
+        compose.onNodeWithText("AniList").assertExists()
+        compose.onNodeWithText("anilist.co").assertExists()
+    }
+
+    @Test
+    fun screenshotReviews() = shot("series_reviews_light") { SeriesPreview(Appearance.Light, previewReviews) }
+
+    @Test
     fun failedFirstLoadOffersRetry() {
         var retried = 0
         compose.setContent {

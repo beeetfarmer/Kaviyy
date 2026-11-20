@@ -86,4 +86,22 @@
     <string name="series_mark_series_unread">Mark Series as Unread</string>
     <string name="series_mark_read">Mark as Read</string>
     <string name="series_mark_unread">Mark as Unread</string>
+    <string name="series_reviews_title">Ratings &amp; Reviews</string>
+    <string name="series_rate">Rate</string>
+    <string name="series_your_rating">Your rating</string>
+    <string name="series_rate_stars">%1$d stars</string>
+    <string name="series_your_review">Your review</string>
+    <string name="series_review_hint">What did you think?</string>
+    <string name="series_review_save">Save Review</string>
+    <string name="series_review_failed">Couldn\'t save your review. Reviews need a connection.</string>
+    <string name="series_reviews_failed">Couldn\'t load reviews.</string>
+    <string name="series_community">Community</string>
+    <string name="series_reviews">Reviews</string>
+    <string name="series_review_open">Read on site</string>
+    <string name="series_links">Links</string>
+    <string name="provider_kavita">Kavita</string>
+    <string name="provider_anilist">AniList</string>
+    <string name="provider_mal">MyAnimeList</string>
+    <string name="provider_cbr">Comic Book Roundup</string>
+    <string name="provider_hardcover">Hardcover</string>
 </resources>

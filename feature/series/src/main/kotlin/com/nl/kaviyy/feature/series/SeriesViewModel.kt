@@ -1,5 +1,7 @@
 package com.nl.kaviyy.feature.series
 
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,7 +10,9 @@ import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.ReadStateRepository
 import com.nl.kaviyy.core.data.ReadTarget
 import com.nl.kaviyy.core.data.RelatedSeries
+import com.nl.kaviyy.core.data.ReviewRepository
 import com.nl.kaviyy.core.data.SeriesDetail
+import com.nl.kaviyy.core.data.SeriesReviews
 import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
@@ -42,6 +46,9 @@ data class SeriesUiState(
     val related: RelatedState = RelatedState.Idle,
     /** A change was saved locally but not pushed yet (offline); it syncs later. */
     val syncPending: Boolean = false,
+    val reviews: ReviewsState = ReviewsState.Loading,
+    /** Saving the review failed (reviews are online only). */
+    val reviewError: AppError? = null,
 ) {
     /** The server's continue point, when it's among the cached chapters. */
     val continueChapter: ChapterEntity?
@@ -60,6 +67,21 @@ sealed interface SeriesSheet {
 
     /** The top bar's "more" menu. */
     data object Actions : SeriesSheet
+
+    /** Your rating and review, community ratings, others' reviews, links. */
+    data object Reviews : SeriesSheet
+}
+
+sealed interface ReviewsState {
+    data object Loading : ReviewsState
+
+    data class Loaded(
+        val value: SeriesReviews,
+    ) : ReviewsState
+
+    data class Failed(
+        val error: AppError,
+    ) : ReviewsState
 }
 
 /** Related tab: fetched on first open (network only). */
@@ -83,6 +105,8 @@ private data class Status(
     val tab: SeriesTab = SeriesTab.Volumes,
     val sheet: SeriesSheet? = null,
     val syncPending: Boolean = false,
+    val reviews: ReviewsState = ReviewsState.Loading,
+    val reviewError: AppError? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -93,8 +117,12 @@ class SeriesViewModel
         private val session: AuthSession,
         private val repository: CatalogRepository,
         private val readState: ReadStateRepository,
+        private val reviewRepository: ReviewRepository,
         saved: SavedStateHandle,
     ) : ViewModel() {
+        /** The user's review draft (Reviews sheet). */
+        val reviewText = TextFieldState()
+        private var libraryType = 0
         val seriesId: Int = checkNotNull(saved.get<Int>(SERIES_ID_ARG)) { "missing $SERIES_ID_ARG" }
         private val status = MutableStateFlow(Status())
         private val relatedState = MutableStateFlow<RelatedState>(RelatedState.Idle)
@@ -111,8 +139,21 @@ class SeriesViewModel
                             status,
                             relatedState,
                         ) { d, libs, st, rel ->
-                            val name = libs.firstOrNull { it.id == d.series?.libraryId }?.name
-                            SeriesUiState(s, d, name, st.refreshing, st.error, st.tab, st.sheet, rel, st.syncPending)
+                            val library = libs.firstOrNull { it.id == d.series?.libraryId }
+                            libraryType = library?.type ?: 0
+                            SeriesUiState(
+                                s,
+                                d,
+                                library?.name,
+                                st.refreshing,
+                                st.error,
+                                st.tab,
+                                st.sheet,
+                                rel,
+                                st.syncPending,
+                                st.reviews,
+                                st.reviewError,
+                            )
                         }
                     }
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), SeriesUiState())
@@ -126,7 +167,38 @@ class SeriesViewModel
             if (tab == SeriesTab.Related) loadRelated()
         }
 
-        fun showSheet(sheet: SeriesSheet?) = status.update { it.copy(sheet = sheet) }
+        fun showSheet(sheet: SeriesSheet?) {
+            status.update { it.copy(sheet = sheet, reviewError = null) }
+            if (sheet == SeriesSheet.Reviews) loadReviews()
+        }
+
+        fun setRating(stars: Float) = push { s -> readState.setRating(s, seriesId, stars) }
+
+        /** Blank deletes; the list reloads afterwards. */
+        fun saveReview() {
+            viewModelScope.launch {
+                val s = session.activeServer.first() ?: return@launch
+                val result = reviewRepository.saveReview(s, seriesId, reviewText.text.toString())
+                status.update { it.copy(reviewError = (result as? AppResult.Failure)?.error) }
+                if (result is AppResult.Success) loadReviews()
+            }
+        }
+
+        private fun loadReviews() {
+            status.update { it.copy(reviews = ReviewsState.Loading) }
+            viewModelScope.launch {
+                val s = session.activeServer.first() ?: return@launch
+                val loaded =
+                    when (val r = reviewRepository.reviews(s, seriesId, libraryType)) {
+                        is AppResult.Success -> ReviewsState.Loaded(r.value)
+                        is AppResult.Failure -> ReviewsState.Failed(r.error)
+                    }
+                (loaded as? ReviewsState.Loaded)?.value?.reviews?.firstOrNull { it.mine }?.let { mine ->
+                    if (reviewText.text.isEmpty()) reviewText.setTextAndPlaceCursorAtEnd(mine.body)
+                }
+                status.update { it.copy(reviews = loaded) }
+            }
+        }
 
         fun toggleWantToRead() {
             val on =

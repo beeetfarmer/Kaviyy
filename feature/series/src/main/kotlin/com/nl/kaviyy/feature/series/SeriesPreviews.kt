@@ -2,9 +2,12 @@ package com.nl.kaviyy.feature.series
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import com.nl.kaviyy.core.data.CommunityRating
 import com.nl.kaviyy.core.data.NamedRef
+import com.nl.kaviyy.core.data.Review
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.SeriesMetadata
+import com.nl.kaviyy.core.data.SeriesReviews
 import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.database.VolumeEntity
@@ -103,6 +106,35 @@ internal val previewSeries =
             ),
         libraryName = "Manga",
         refreshing = false,
+    )
+
+internal val previewReviews =
+    previewSeries.copy(
+        sheet = SeriesSheet.Reviews,
+        detail =
+            previewSeries.detail?.copy(
+                series = previewSeries.detail.series?.copy(userRating = 5f),
+                metadata = previewSeries.detail.metadata?.copy(webLinks = listOf("https://anilist.co/manga/1")),
+            ),
+        reviews =
+            ReviewsState.Loaded(
+                SeriesReviews(
+                    reviews =
+                        listOf(
+                            Review(
+                                "Tomas",
+                                "A slow burn",
+                                "The lantern chapters are the best thing in the genre.",
+                                4.5f,
+                                0,
+                                0,
+                                null,
+                                mine = false,
+                            ),
+                        ),
+                    ratings = listOf(CommunityRating(1, 82, null)),
+                ),
+            ),
     )
 
 @Composable

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -44,12 +45,21 @@ import java.time.format.FormatStyle
 @Composable
 internal fun SeriesDetailSheet(
     sheet: SeriesSheet,
+    state: SeriesUiState,
     detail: SeriesDetail,
-    server: Server?,
+    reviewText: TextFieldState,
     actions: SeriesActions,
 ) {
     val close = { actions.onSheet(null) }
+    val server = state.server
     when (sheet) {
+        SeriesSheet.Reviews -> {
+            SheetFrame(
+                stringResource(R.string.series_reviews_title),
+                close,
+            ) { ReviewsContent(state, reviewText, actions) }
+        }
+
         is SeriesSheet.Volume -> {
             val volume = detail.volumes.firstOrNull { it.id == sheet.id } ?: return
             val chapters = detail.chapters.filter { it.volumeId == volume.id }

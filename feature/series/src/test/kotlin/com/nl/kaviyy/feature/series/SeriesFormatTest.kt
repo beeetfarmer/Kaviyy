@@ -70,6 +70,16 @@ class SeriesFormatTest {
     }
 
     @Test
+    fun onlyWebLinksLeaveTheApp() {
+        assertEquals("https://anilist.co/manga/1", webUrl(" https://anilist.co/manga/1 "))
+        assertEquals("HTTP://x.example", webUrl("HTTP://x.example"))
+        assertNull(webUrl("javascript:alert(1)"))
+        assertNull(webUrl("intent://x#Intent;end"))
+        assertNull(webUrl("file:///data/data/x"))
+        assertNull(webUrl(null))
+    }
+
+    @Test
     fun labelsAndHours() {
         assertNull(ageRatingLabel(0))
         assertNull(ageRatingLabel(-1))

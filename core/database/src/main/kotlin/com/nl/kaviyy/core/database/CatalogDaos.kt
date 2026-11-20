@@ -125,6 +125,13 @@ interface SeriesDao {
         recountSeries(serverId, seriesId)
     }
 
+    @Query("UPDATE series SET userRating = :rating WHERE serverId = :serverId AND id = :seriesId")
+    suspend fun setUserRating(
+        serverId: Long,
+        seriesId: Int,
+        rating: Float,
+    )
+
     @Query("UPDATE series_metadata SET wantToRead = :on WHERE serverId = :serverId AND seriesId = :seriesId")
     suspend fun setWantToRead(
         serverId: Long,

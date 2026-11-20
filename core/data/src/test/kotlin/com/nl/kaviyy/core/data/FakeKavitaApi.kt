@@ -17,13 +17,18 @@ import com.nl.kaviyy.core.network.MetadataValueDto
 import com.nl.kaviyy.core.network.PersonDto
 import com.nl.kaviyy.core.network.RelatedSeriesDto
 import com.nl.kaviyy.core.network.SeriesDetailDto
+import com.nl.kaviyy.core.network.SeriesDetailPlusDto
 import com.nl.kaviyy.core.network.SeriesDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
 import com.nl.kaviyy.core.network.SeriesMetadataDto
 import com.nl.kaviyy.core.network.SideNavStreamDto
 import com.nl.kaviyy.core.network.SmartFilterDto
+import com.nl.kaviyy.core.network.UpdateRatingDto
+import com.nl.kaviyy.core.network.UpdateUserReviewDto
 import com.nl.kaviyy.core.network.UpdateWantToReadDto
+import com.nl.kaviyy.core.network.UserReviewDto
 import kotlinx.serialization.json.JsonObject
+import retrofit2.Response
 
 /** Base fake: every call fails loudly unless a test overrides it. */
 open class FakeKavitaApi : KavitaApi {
@@ -77,6 +82,17 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun seriesMetadata(seriesId: Int): SeriesMetadataDto = SeriesMetadataDto()
 
     override suspend fun allRelated(seriesId: Int): RelatedSeriesDto = error("unused")
+
+    override suspend fun rateSeries(body: UpdateRatingDto): Unit = error("unused")
+
+    override suspend fun saveSeriesReview(body: UpdateUserReviewDto): UserReviewDto = error("unused")
+
+    override suspend fun deleteSeriesReview(seriesId: Int): Unit = error("unused")
+
+    override suspend fun seriesDetailPlus(
+        seriesId: Int,
+        libraryType: Int,
+    ): Response<SeriesDetailPlusDto> = error("unused")
 
     override suspend fun markSeriesRead(body: MarkReadDto): Unit = error("unused")
 

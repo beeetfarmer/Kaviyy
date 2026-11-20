@@ -9,6 +9,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import okhttp3.MediaType.Companion.toMediaType
 import retrofit2.HttpException
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.http.Body
@@ -197,6 +198,28 @@ interface KavitaApi {
     suspend fun removeWantToRead(
         @Body body: UpdateWantToReadDto,
     )
+
+    @POST("api/Rating/series")
+    suspend fun rateSeries(
+        @Body body: UpdateRatingDto,
+    )
+
+    @POST("api/Review/series")
+    suspend fun saveSeriesReview(
+        @Body body: UpdateUserReviewDto,
+    ): UserReviewDto
+
+    @DELETE("api/Review/series")
+    suspend fun deleteSeriesReview(
+        @Query("seriesId") seriesId: Int,
+    )
+
+    /** May answer 204 (no Kavita+ data), hence [Response]. */
+    @GET("api/Metadata/series-detail-plus")
+    suspend fun seriesDetailPlus(
+        @Query("seriesId") seriesId: Int,
+        @Query("libraryType") libraryType: Int,
+    ): Response<SeriesDetailPlusDto>
 
     @GET("api/Series/all-related")
     suspend fun allRelated(
