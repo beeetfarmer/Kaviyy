@@ -142,7 +142,7 @@ internal object PrivateHosts {
     private val ipv6Chars = Regex("^[0-9a-z:.%]+$")
 
     fun isPrivate(host: String): Boolean =
-        privateSuffixes.any { host.endsWith(it) } || (ipv4Private(host) ?: ipv6Private(host))
+        host == "localhost" || privateSuffixes.any { host.endsWith(it) } || (ipv4Private(host) ?: ipv6Private(host))
 
     /** null when [host] is not an IPv4 literal. */
     @Suppress("MagicNumber")

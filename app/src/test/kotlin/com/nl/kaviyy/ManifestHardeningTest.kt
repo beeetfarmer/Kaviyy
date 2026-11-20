@@ -51,9 +51,13 @@ class ManifestHardeningTest {
     }
 
     @Test
-    fun networkSecurityConfigBlocksCleartextAndUserCas() {
-        val base = parse(File(res, "network_security_config.xml")).children("base-config").single()
-        assertEquals("false", base.getAttribute("cleartextTrafficPermitted"))
+    fun networkSecurityConfigTrustsSystemCasOnly() {
+        val config = parse(File(res, "network_security_config.xml"))
+        val base = config.children("base-config").single()
+        // N2: cleartext is enforced per server in OkHttp (see core:network ServerHttpClients), not here.
+        assertEquals("true", base.getAttribute("cleartextTrafficPermitted"))
+        assertTrue(config.children("domain-config").isEmpty(), "no per-domain overrides")
+        assertTrue(config.children("debug-overrides").isEmpty(), "no debug CA overrides")
         val anchors = base.children("certificates").map { it.getAttribute("src") }
         assertEquals(listOf("system"), anchors)
     }

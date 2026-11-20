@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- MASVS N1: no cleartext, system CAs only (no user CAs). Per-server TOFU pins are added in the
-     OkHttp client (N3), not here. LAN-only HTTP opt-in (N2) is revisited in M2. -->
-<network-security-config>
-    <base-config cleartextTrafficPermitted="false">
+<!-- MASVS N1: system CAs only (no user CAs). Per-server TOFU pins live in the OkHttp client (N3).
+     N2 trade-off (user-approved, see docs/security/REVIEW_LOG.md M2.2): the platform cannot express
+     "private IP ranges" here, so cleartext is permitted at this layer and enforced per request by the
+     per-server OkHttp client instead: no CLEARTEXT ConnectionSpec unless the user opted in for that
+     server AND its host is private, plus TransportPolicyInterceptor on every hop (incl. redirects).
+     The app has no other HTTP stack (checklist: "no new HTTP clients"). -->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <!-- Intentional, user-approved (N2); see the comment above. -->
+    <base-config cleartextTrafficPermitted="true" tools:ignore="InsecureBaseConfiguration">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
