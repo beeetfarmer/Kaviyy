@@ -144,7 +144,7 @@ enum class AccentPreset(
             ),
     ),
     Ember(
-        light = AccentColors(Color(0xFFB84A12), Color(0xFF93390C), Color(0xFFFBE8DC), Color(0xFF93390C), Color.White),
+        light = AccentColors(Color(0xFFAA4310), Color(0xFF93390C), Color(0xFFFBE8DC), Color(0xFF93390C), Color.White),
         dark =
             AccentColors(
                 Color(0xFFF08A4B),
