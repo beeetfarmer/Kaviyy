@@ -4,12 +4,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTouchInput
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
 import org.junit.Test
@@ -134,6 +136,18 @@ class ImageReaderScreenTest {
     @Test
     fun screenshotWebtoon() =
         shot("reader_webtoon") { ReaderPreview(previewReader.copy(layout = ReaderLayout.Webtoon)) }
+
+    @Test
+    fun tapInTheMiddleOfAZoomablePageTogglesTheChrome() {
+        var toggles = 0
+        compose.setContent {
+            ReaderPreview(previewReader.copy(chromeVisible = false), ImageReaderActions(onToggleChrome = { toggles++ }))
+        }
+        compose.onRoot().performTouchInput { click(center) }
+        // A single tap fires once the double-tap window has passed.
+        compose.mainClock.advanceTimeBy(1_000)
+        assertEquals(1, toggles)
+    }
 
     @Test
     fun screenshotRtl() = shot("reader_rtl") { ReaderPreview() }

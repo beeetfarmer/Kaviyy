@@ -49,6 +49,11 @@ data class ImageReaderUiState(
     val layout: ReaderLayout = ReaderLayout.Single,
     /** Double page: swap the two pages of a pair (Kavita "Double (Manga)"). */
     val reversedPairs: Boolean = false,
+    /** Kavita `ScalingOption`: 0 fit height, 1 fit width, 2 original, 3 automatic. */
+    val scaling: Int = SCALING_AUTOMATIC,
+    val keepScreenOn: Boolean = true,
+    /** 0..1 window brightness; null follows the system. Set from the settings sheet (M10.6). */
+    val brightness: Float? = null,
     val chromeVisible: Boolean = true,
     val loading: Boolean = true,
     val error: AppError? = null,
@@ -112,6 +117,7 @@ class ImageReaderViewModel
                     rightToLeft = prefs.readingDirection == DIRECTION_RTL,
                     layout = prefs.layout,
                     reversedPairs = prefs.reversedPairs,
+                    scaling = prefs.scalingOption,
                     chromeVisible = st.chromeVisible,
                     loading = st.loading,
                     error = st.error,

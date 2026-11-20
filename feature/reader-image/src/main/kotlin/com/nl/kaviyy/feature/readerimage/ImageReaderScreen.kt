@@ -88,6 +88,8 @@ fun ImageReaderScreen(
             chapter != null -> PagedSpreads(chapter, state, actions)
             state.error != null -> Message(stringResource(R.string.reader_load_failed), actions.onRetry)
         }
+        if (chapter?.isImage == true) Prefetch(state)
+        ReaderWindowEffects(state.keepScreenOn, state.brightness, immersive = !state.chromeVisible)
         if (state.chromeVisible) ReaderChrome(state, actions)
     }
 }

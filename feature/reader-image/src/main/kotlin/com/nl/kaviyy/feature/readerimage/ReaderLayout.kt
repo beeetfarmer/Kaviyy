@@ -58,5 +58,21 @@ internal fun spreads(
     return out
 }
 
+const val SCALING_FIT_HEIGHT = 0
+const val SCALING_FIT_WIDTH = 1
+const val SCALING_ORIGINAL = 2
+const val SCALING_AUTOMATIC = 3
+
+private const val PREFETCH_PAGES = 3
+
+/** (chapterId, page) to warm the image cache with: the next pages, spilling into the next chapter. */
+internal fun ImageReaderUiState.prefetch(): List<Pair<Int, Int>> {
+    val chapter = chapter ?: return emptyList()
+    val after = spreads.getOrNull(spreads.indexOfPage(page))?.last() ?: page
+    val here = (after + 1 until pages).take(PREFETCH_PAGES).map { chapter.id to it }
+    val spill = nextChapterId?.let { next -> List(PREFETCH_PAGES - here.size) { next to it } }.orEmpty()
+    return here + spill
+}
+
 /** Index of the spread that shows [page]. */
 internal fun List<List<Int>>.indexOfPage(page: Int): Int = indexOfFirst { page in it }.coerceAtLeast(0)
