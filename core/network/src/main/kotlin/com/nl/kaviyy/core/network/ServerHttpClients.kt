@@ -49,6 +49,7 @@ class ServerHttpClients
     constructor(
         private val base: OkHttpClient,
     ) {
+        /** Unauthenticated client (server probe, login, token refresh). */
         fun create(server: Server): OkHttpClient =
             base
                 .newBuilder()
@@ -72,6 +73,19 @@ class ServerHttpClients
                         sslSocketFactory(trust.sslSocketFactory(), trust.trustManager)
                     }
                 }.build()
+
+        /** Authenticated client: auth headers for the server's own host only; stripped on any other hop. */
+        fun create(
+            server: Server,
+            credentials: CredentialSource,
+        ): OkHttpClient {
+            val plain = create(server)
+            return plain
+                .newBuilder()
+                .addInterceptor(AuthInterceptor(server, credentials))
+                .authenticator(TokenAuthenticator(server, credentials, plain))
+                .build()
+        }
     }
 
 /** Runs on every network hop, redirects included, before the request is written. */
@@ -79,12 +93,25 @@ internal class TransportPolicyInterceptor(
     private val server: Server,
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val url = chain.request().url
-        val sameHost = url.host == server.url.host
+        val request = chain.request()
+        val url = request.url
+        val sameHost = url.isServer(server)
         if (!url.isHttps && !(sameHost && server.cleartextPermitted)) throw CleartextNotPermittedException(url.host)
         val pin = server.pinnedCertificate?.takeIf { url.isHttps && sameHost }
         if (pin != null && !chain.connection()?.handshake().containsPin(pin)) throw PinMismatchException(url.host)
-        return chain.proceed(chain.request())
+        // N5/N6: credentials never follow a redirect to another host (OkHttp only strips Authorization itself).
+        val outgoing =
+            if (sameHost) {
+                request
+            } else {
+                request
+                    .newBuilder()
+                    .removeHeader(
+                        AUTHORIZATION,
+                    ).removeHeader(API_KEY)
+                    .build()
+            }
+        return chain.proceed(outgoing)
     }
 }
 

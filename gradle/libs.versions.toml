@@ -36,6 +36,7 @@ okhttp-tls = { group = "com.squareup.okhttp3", name = "okhttp-tls", version.ref 
 okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver3", version.ref = "okhttp" }
 androidx-datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastore" }
 tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-protobuf = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-protobuf", version.ref = "kotlinxSerialization" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
