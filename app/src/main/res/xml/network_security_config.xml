@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MASVS N1: no cleartext, system CAs only (no user CAs). Per-server TOFU pins are added in the
+     OkHttp client (N3), not here. LAN-only HTTP opt-in (N2) is revisited in M2. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
