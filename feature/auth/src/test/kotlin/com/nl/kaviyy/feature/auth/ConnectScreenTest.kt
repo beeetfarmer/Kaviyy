@@ -45,6 +45,24 @@ class ConnectScreenTest {
     }
 
     @Test
+    fun authKeySheetShowsHelpAndWrongKeyError() {
+        compose.setContent {
+            KavitaTheme {
+                androidx.compose.foundation.layout.Column {
+                    AuthKeySheetContent(
+                        ConnectUiState(authKeySheetOpen = true, signInError = AppError.Unauthorized),
+                        TextFieldState(),
+                        {},
+                        {},
+                    )
+                }
+            }
+        }
+        compose.onNodeWithText("Paste your key").assertExists()
+        compose.onNodeWithText("That key wasn’t accepted. Check it or create a new one.").assertExists()
+    }
+
+    @Test
     fun screenshotLight() =
         captureRoboImage("src/test/screenshots/connect_light.png") { ConnectPreview(Appearance.Light) }
 

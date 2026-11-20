@@ -15,6 +15,12 @@
     <string name="auth_error_wrong_credentials">Incorrect username or password.</string>
     <string name="auth_continue_sso">Continue with SSO</string>
     <string name="auth_use_auth_key">Use Auth Key</string>
+    <string name="auth_key_title">Auth Key</string>
+    <string name="auth_key_label">Key</string>
+    <string name="auth_key_placeholder">Paste your key</string>
+    <string name="auth_key_help">For single sign-on accounts. Create a key in Kavita under Settings › Account › Auth Keys, copy it, and paste it here.</string>
+    <string name="auth_cancel">Cancel</string>
+    <string name="auth_error_wrong_key">That key wasn’t accepted. Check it or create a new one.</string>
     <string name="auth_footnote">Self-hosted. Your library never leaves your server.</string>
     <string name="auth_reachable">Server reachable</string>
     <string name="auth_checking">Checking…</string>

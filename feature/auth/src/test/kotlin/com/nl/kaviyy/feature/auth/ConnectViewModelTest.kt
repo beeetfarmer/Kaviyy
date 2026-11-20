@@ -11,6 +11,7 @@ import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlError
 import com.nl.kaviyy.core.model.server.ServerUrlResult
+import com.nl.kaviyy.core.network.LoginMethod
 import com.nl.kaviyy.core.network.ServerInfo
 import com.nl.kaviyy.core.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.emptyFlow
@@ -41,11 +42,10 @@ class ConnectViewModelTest {
             override suspend fun signIn(
                 url: ServerUrl,
                 version: String?,
-                username: String,
-                password: String,
+                method: LoginMethod,
                 staySignedIn: Boolean,
             ): AppResult<Server> {
-                signIns += listOf(url.value, version, username, password, staySignedIn)
+                signIns += listOf(url.value, version, method, staySignedIn)
                 return loginResult
             }
 
@@ -156,7 +156,10 @@ class ConnectViewModelTest {
             vm.setStaySignedIn(false)
             vm.signIn()
             runCurrent()
-            assertEquals(listOf<Any?>("https://k.example", "0.9.0.2", "aarav", "hunter2", false), signIns.single())
+            assertEquals(
+                listOf<Any?>("https://k.example", "0.9.0.2", LoginMethod.Password("aarav", "hunter2"), false),
+                signIns.single(),
+            )
             assertEquals(AppError.Unauthorized, vm.state.value.signInError)
             assertFalse(vm.state.value.signingIn)
             assertEquals("hunter2", vm.password.text.toString())
@@ -172,6 +175,35 @@ class ConnectViewModelTest {
             runCurrent()
             assertEquals("", vm.password.text.toString())
             assertEquals(null, vm.state.value.signInError)
+        }
+
+    @Test
+    fun authKeySheetSignsInWithTrimmedKeyAndCloses() =
+        runTest {
+            val vm = readyToSignIn()
+            val url = (ServerUrl.parse("https://k.example") as ServerUrlResult.Valid).url
+            loginResult = AppResult.Success(Server(ServerId(1), "k", url))
+            vm.openAuthKey()
+            assertTrue(vm.state.value.authKeySheetOpen)
+            vm.authKey.setTextAndPlaceCursorAtEnd("  pasted-key\n")
+            vm.signInWithAuthKey()
+            runCurrent()
+            assertEquals(LoginMethod.AuthKey("pasted-key"), signIns.single()[2])
+            assertFalse(vm.state.value.authKeySheetOpen)
+            assertEquals("", vm.authKey.text.toString())
+        }
+
+    @Test
+    fun authKeyNeedsAFoundServerAndANonEmptyKey() =
+        runTest {
+            val vm = viewModel()
+            vm.openAuthKey()
+            assertFalse(vm.state.value.authKeySheetOpen)
+            val ready = readyToSignIn()
+            ready.openAuthKey()
+            ready.signInWithAuthKey()
+            runCurrent()
+            assertTrue(signIns.isEmpty())
         }
 
     @Test

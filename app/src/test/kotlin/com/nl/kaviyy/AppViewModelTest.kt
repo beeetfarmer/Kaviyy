@@ -7,6 +7,7 @@ import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
+import com.nl.kaviyy.core.network.LoginMethod
 import com.nl.kaviyy.core.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
@@ -26,8 +27,7 @@ class AppViewModelTest {
             override suspend fun signIn(
                 url: ServerUrl,
                 version: String?,
-                username: String,
-                password: String,
+                method: LoginMethod,
                 staySignedIn: Boolean,
             ): AppResult<Server> = error("unused")
 

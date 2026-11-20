@@ -19,9 +19,27 @@ import javax.inject.Inject
 /** `POST api/Account/login` body (LoginDto). */
 @Serializable
 internal data class LoginDto(
-    val username: String,
-    val password: String,
+    val username: String? = null,
+    val password: String? = null,
+    val apiKey: String? = null,
 )
+
+/** How the user signs in. */
+sealed interface LoginMethod {
+    data class Password(
+        val username: String,
+        val password: String,
+    ) : LoginMethod {
+        override fun toString() = "Password(username=$username, password=<redacted>)"
+    }
+
+    /** Kavita Auth Key (SSO users). Validated via login, then used as `x-api-key` (no expiry, no refresh). */
+    data class AuthKey(
+        val key: String,
+    ) : LoginMethod {
+        override fun toString() = "AuthKey(<redacted>)"
+    }
+}
 
 /** The UserDto fields we use. */
 @Serializable
@@ -34,7 +52,7 @@ internal data class UserDto(
 )
 
 data class LoginResult(
-    val credentials: Credentials.Jwt,
+    val credentials: Credentials,
     /** Server roles, e.g. "Download" gates offline downloads. */
     val roles: Set<String>,
 )
@@ -42,8 +60,7 @@ data class LoginResult(
 fun interface AccountApi {
     suspend fun login(
         server: Server,
-        username: String,
-        password: String,
+        method: LoginMethod,
     ): AppResult<LoginResult>
 }
 
@@ -55,11 +72,15 @@ class KavitaAccountApi
     ) : AccountApi {
         override suspend fun login(
             server: Server,
-            username: String,
-            password: String,
+            method: LoginMethod,
         ): AppResult<LoginResult> =
             withContext(io) {
-                val body = json.encodeToString(LoginDto(username, password)).toRequestBody(JSON)
+                val dto =
+                    when (method) {
+                        is LoginMethod.Password -> LoginDto(username = method.username, password = method.password)
+                        is LoginMethod.AuthKey -> LoginDto(apiKey = method.key)
+                    }
+                val body = json.encodeToString(dto).toRequestBody(JSON)
                 val request =
                     Request
                         .Builder()
@@ -73,16 +94,32 @@ class KavitaAccountApi
                     appResult {
                         val user = json.decodeFromString<UserDto>(r.body.string())
                         val token = requireNotNull(user.token) { "No token in login response" }
-                        LoginResult(
-                            Credentials.Jwt(user.username ?: username, token, user.refreshToken.orEmpty(), user.apiKey),
-                            user.roles.orEmpty().toSet(),
-                        )
+                        val credentials =
+                            when (method) {
+                                is LoginMethod.Password -> {
+                                    Credentials.Jwt(
+                                        user.username ?: method.username,
+                                        token,
+                                        user.refreshToken.orEmpty(),
+                                        user.apiKey,
+                                    )
+                                }
+
+                                is LoginMethod.AuthKey -> {
+                                    Credentials.AuthKey(method.key)
+                                }
+                            }
+                        LoginResult(credentials, user.roles.orEmpty().toSet())
                     }
                 }
             }
 
         private companion object {
             val JSON = "application/json".toMediaType()
-            val json = Json { ignoreUnknownKeys = true }
+            val json =
+                Json {
+                    ignoreUnknownKeys = true
+                    explicitNulls = false
+                }
         }
     }

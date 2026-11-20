@@ -40,9 +40,11 @@ import com.nl.kaviyy.core.designsystem.component.ButtonSize
 import com.nl.kaviyy.core.designsystem.component.GroupedInputRow
 import com.nl.kaviyy.core.designsystem.component.GroupedList
 import com.nl.kaviyy.core.designsystem.component.GroupedSwitchRow
+import com.nl.kaviyy.core.designsystem.component.KavitaBottomSheet
 import com.nl.kaviyy.core.designsystem.component.PrimaryButton
 import com.nl.kaviyy.core.designsystem.component.SecondaryButton
 import com.nl.kaviyy.core.designsystem.component.SectionHeader
+import com.nl.kaviyy.core.designsystem.component.SheetHeader
 import com.nl.kaviyy.core.designsystem.component.cssShadow
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Appearance
@@ -60,7 +62,6 @@ private val AddressKeyboard =
 @Composable
 fun ConnectRoute(
     onSso: () -> Unit,
-    onAuthKey: () -> Unit,
     modifier: Modifier = Modifier,
     onLogoLongPress: (() -> Unit)? = null,
     viewModel: ConnectViewModel = hiltViewModel(),
@@ -74,10 +75,18 @@ fun ConnectRoute(
         onStaySignedIn = viewModel::setStaySignedIn,
         onSignIn = viewModel::signIn,
         onSso = onSso,
-        onAuthKey = onAuthKey,
+        onAuthKey = viewModel::openAuthKey,
         modifier = modifier,
         onLogoLongPress = onLogoLongPress,
     )
+    if (state.authKeySheetOpen) {
+        AuthKeySheet(
+            state,
+            viewModel.authKey,
+            onSubmit = viewModel::signInWithAuthKey,
+            onDismiss = viewModel::closeAuthKey,
+        )
+    }
 }
 
 /** Screen 01 (DESIGN.md §7). */
@@ -140,7 +149,7 @@ fun ConnectScreen(
             GroupedList {
                 GroupedSwitchRow(stringResource(R.string.auth_stay_signed_in), state.staySignedIn, onStaySignedIn)
             }
-            state.signInError?.let { error ->
+            state.signInError?.takeUnless { state.authKeySheetOpen }?.let { error ->
                 Text(
                     stringResource(
                         if (error ==
@@ -178,6 +187,7 @@ fun ConnectScreen(
                 onAuthKey,
                 Modifier.fillMaxWidth(),
                 size = ButtonSize.Medium,
+                enabled = state.canUseAuthKey,
             )
             Text(
                 stringResource(R.string.auth_footnote),

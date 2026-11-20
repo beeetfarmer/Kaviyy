@@ -10,6 +10,7 @@ import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
+import com.nl.kaviyy.core.network.LoginMethod
 import com.nl.kaviyy.core.network.LoginResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,13 +49,14 @@ class SessionRepositoryTest {
     private val store = CredentialStore(disk)
     private val jwt = Credentials.Jwt("aarav", "t", "r", "k")
     private var login: AppResult<LoginResult> = AppResult.Success(LoginResult(jwt, setOf("Download")))
-    private val session = SessionRepository(db.serverDao(), store) { _, _, _ -> login }
+    private val session = SessionRepository(db.serverDao(), store) { _, _ -> login }
     private val url = (ServerUrl.parse("https://kavita.home.lan:5000") as ServerUrlResult.Valid).url
 
     @After
     fun tearDown() = db.close()
 
-    private suspend fun signIn(stay: Boolean = true) = session.signIn(url, "0.9.0.2", "aarav", "pw", stay)
+    private suspend fun signIn(stay: Boolean = true) =
+        session.signIn(url, "0.9.0.2", LoginMethod.Password("aarav", "pw"), stay)
 
     @Test
     fun signInSavesServerAndCredentials() =
@@ -109,6 +111,14 @@ class SessionRepositoryTest {
                     .first()
                     .size,
             )
+        }
+
+    @Test
+    fun authKeySignInStoresTheKey() =
+        runTest {
+            login = AppResult.Success(LoginResult(Credentials.AuthKey("pasted"), emptySet()))
+            val server = (session.signIn(url, null, LoginMethod.AuthKey("pasted"), true) as AppResult.Success).value
+            assertEquals(Credentials.AuthKey("pasted"), store.credentials(server.id).first())
         }
 
     @Test

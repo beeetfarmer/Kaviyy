@@ -11,6 +11,7 @@ import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.network.AccountApi
 import com.nl.kaviyy.core.network.CredentialSource
+import com.nl.kaviyy.core.network.LoginMethod
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -27,14 +28,14 @@ interface AuthSession {
     val activeServer: Flow<Server?>
 
     /**
-     * Signs in and remembers the server. With [staySignedIn] false the credentials are kept in memory only,
+     * Signs in (password or Auth Key) and remembers the server.
+     * With [staySignedIn] false the credentials are kept in memory only,
      * so the user is signed out when the process dies.
      */
     suspend fun signIn(
         url: ServerUrl,
         version: String?,
-        username: String,
-        password: String,
+        method: LoginMethod,
         staySignedIn: Boolean,
     ): AppResult<Server>
 
@@ -62,14 +63,13 @@ class SessionRepository
         override suspend fun signIn(
             url: ServerUrl,
             version: String?,
-            username: String,
-            password: String,
+            method: LoginMethod,
             staySignedIn: Boolean,
         ): AppResult<Server> {
             val existing = servers.byUrl(url.value)
             // Keep an existing pin / HTTP opt-in for this address; a new server starts strict.
             val probe = existing?.toModel() ?: Server(ServerId(0), url.host, url, version)
-            return when (val result = accounts.login(probe, username, password)) {
+            return when (val result = accounts.login(probe, method)) {
                 is AppResult.Failure -> {
                     result
                 }

@@ -26,7 +26,10 @@ class AccountApiTest {
     @After
     fun tearDown() = mock.close()
 
-    private fun login() = runBlocking { api.login(server, "aarav", "hunter2") }
+    private fun login(method: LoginMethod = LoginMethod.Password("aarav", "hunter2")) =
+        runBlocking {
+            api.login(server, method)
+        }
 
     @Test
     fun successReturnsJwtApiKeyAndRoles() {
@@ -44,6 +47,26 @@ class AccountApiTest {
         assertEquals("POST", sent.method)
         assertTrue("hunter2" in sent.body?.utf8().orEmpty())
         assertEquals(null, sent.url.query, "password never in the URL")
+    }
+
+    @Test
+    fun authKeyIsValidatedByLoginAndKeptAsAuthKey() {
+        mock.enqueue(MockResponse(body = """{"username":"sso-user","token":"t","refreshToken":"r","roles":[]}"""))
+        val result = (login(LoginMethod.AuthKey("pasted-key")) as AppResult.Success).value
+        assertEquals(Credentials.AuthKey("pasted-key"), result.credentials)
+        val body =
+            mock
+                .takeRequest()
+                .body
+                ?.utf8()
+                .orEmpty()
+        assertEquals("""{"apiKey":"pasted-key"}""", body)
+    }
+
+    @Test
+    fun loginMethodsNeverPrintSecrets() {
+        assertTrue("hunter2" !in LoginMethod.Password("a", "hunter2").toString())
+        assertTrue("k" !in LoginMethod.AuthKey("k").toString().removePrefix("AuthKey"))
     }
 
     @Test

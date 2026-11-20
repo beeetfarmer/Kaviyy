@@ -13,6 +13,7 @@ import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlError
 import com.nl.kaviyy.core.model.server.ServerUrlResult
+import com.nl.kaviyy.core.network.LoginMethod
 import com.nl.kaviyy.core.network.ServerProber
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
@@ -58,8 +59,10 @@ data class ConnectUiState(
     val credentialsEntered: Boolean = false,
     val signingIn: Boolean = false,
     val signInError: AppError? = null,
+    val authKeySheetOpen: Boolean = false,
 ) {
-    val canSignIn: Boolean get() = reachability is Reachability.Found && credentialsEntered && !signingIn
+    val canUseAuthKey: Boolean get() = reachability is Reachability.Found && !signingIn
+    val canSignIn: Boolean get() = canUseAuthKey && credentialsEntered
 }
 
 internal const val ADDRESS_DEBOUNCE_MS = 600L
@@ -75,6 +78,7 @@ class ConnectViewModel
         val address = TextFieldState()
         val username = TextFieldState()
         val password = TextFieldState()
+        val authKey = TextFieldState()
 
         private val _state = MutableStateFlow(ConnectUiState())
         val state: StateFlow<ConnectUiState> = _state.asStateFlow()
@@ -100,21 +104,39 @@ class ConnectViewModel
 
         /** On success [AuthSession.activeServer] changes and the app leaves this screen. */
         fun signIn() {
-            val current = _state.value
-            val found = current.reachability as? Reachability.Found
-            if (!current.canSignIn || found == null) return
+            if (_state.value.canSignIn) {
+                submit(
+                    LoginMethod.Password(username.text.toString().trim(), password.text.toString()),
+                ) { password.clearText() }
+            }
+        }
+
+        /** Auth Key sign-in (SSO users): paste only; QR scanning deferred by the user. */
+        fun openAuthKey() {
+            if (_state.value.canUseAuthKey) _state.update { it.copy(authKeySheetOpen = true, signInError = null) }
+        }
+
+        fun closeAuthKey() {
+            authKey.clearText()
+            _state.update { it.copy(authKeySheetOpen = false, signInError = null) }
+        }
+
+        fun signInWithAuthKey() {
+            val key = authKey.text.toString().trim()
+            if (key.isNotEmpty() && _state.value.canUseAuthKey) submit(LoginMethod.AuthKey(key)) { closeAuthKey() }
+        }
+
+        private fun submit(
+            method: LoginMethod,
+            onSuccess: () -> Unit,
+        ) {
+            val found = _state.value.reachability as? Reachability.Found ?: return
+            val stay = _state.value.staySignedIn
             _state.update { it.copy(signingIn = true, signInError = null) }
             viewModelScope.launch {
-                val result =
-                    session.signIn(
-                        found.url,
-                        found.version,
-                        username.text.toString().trim(),
-                        password.text.toString(),
-                        current.staySignedIn,
-                    )
-                if (result is AppResult.Success) password.clearText()
+                val result = session.signIn(found.url, found.version, method, stay)
                 _state.update { it.copy(signingIn = false, signInError = (result as? AppResult.Failure)?.error) }
+                if (result is AppResult.Success) onSuccess()
             }
         }
 
