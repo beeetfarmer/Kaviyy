@@ -3,6 +3,8 @@ package com.nl.kaviyy.core.database.di
 import android.content.Context
 import androidx.room.Room
 import com.nl.kaviyy.core.database.KaviyyDatabase
+import com.nl.kaviyy.core.database.LibraryDao
+import com.nl.kaviyy.core.database.SeriesDao
 import com.nl.kaviyy.core.database.ServerDao
 import dagger.Module
 import dagger.Provides
@@ -22,4 +24,10 @@ object DatabaseModule {
 
     @Provides
     fun serverDao(db: KaviyyDatabase): ServerDao = db.serverDao()
+
+    @Provides
+    fun libraryDao(db: KaviyyDatabase): LibraryDao = db.libraryDao()
+
+    @Provides
+    fun seriesDao(db: KaviyyDatabase): SeriesDao = db.seriesDao()
 }

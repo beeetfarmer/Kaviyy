@@ -9,6 +9,8 @@ dependencies {
     api(libs.okhttp)
     implementation(libs.okhttp.tls)
     implementation(libs.kotlinx.serialization.json)
+    api(libs.retrofit)
+    implementation(libs.retrofit.kotlinx.serialization)
     api(libs.coil)
     implementation(libs.coil.network.okhttp)
     testImplementation(libs.okhttp.mockwebserver)

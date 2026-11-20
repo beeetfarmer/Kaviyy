@@ -20,6 +20,7 @@ extensions.configure<com.android.build.api.dsl.LibraryExtension> {
 dependencies {
     api(projects.core.model)
     api(libs.androidx.room.runtime)
+    api(libs.androidx.room.paging)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.room.testing)

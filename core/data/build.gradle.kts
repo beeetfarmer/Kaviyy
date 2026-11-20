@@ -7,5 +7,6 @@ dependencies {
     api(projects.core.network)
     api(projects.core.datastore)
     api(projects.core.database)
+    api(libs.androidx.paging.common)
     testImplementation(libs.robolectric)
 }

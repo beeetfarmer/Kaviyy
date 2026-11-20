@@ -30,4 +30,8 @@ import androidx.room.RoomDatabase
 )
 abstract class KaviyyDatabase : RoomDatabase() {
     abstract fun serverDao(): ServerDao
+
+    abstract fun libraryDao(): LibraryDao
+
+    abstract fun seriesDao(): SeriesDao
 }
