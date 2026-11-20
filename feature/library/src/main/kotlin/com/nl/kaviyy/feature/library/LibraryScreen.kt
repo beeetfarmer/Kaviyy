@@ -4,14 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -28,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -43,7 +39,6 @@ import com.nl.kaviyy.core.designsystem.component.CoverCard
 import com.nl.kaviyy.core.designsystem.component.CoverCardSize
 import com.nl.kaviyy.core.designsystem.component.CoverImage
 import com.nl.kaviyy.core.designsystem.component.LargeTitleHeader
-import com.nl.kaviyy.core.designsystem.component.PrimaryButton
 import com.nl.kaviyy.core.designsystem.component.SecondaryButton
 import com.nl.kaviyy.core.designsystem.component.SegmentedControl
 import com.nl.kaviyy.core.designsystem.component.coverColorFor
@@ -78,6 +73,7 @@ fun LibraryRoute(
             onSort = viewModel::setSort,
             onPick = viewModel::pick,
             onOpenFilter = { onOpenFilter(state.selectedId) },
+            onOpenPinned = viewModel::openPinned,
         )
     LibraryScreen(state, series, actions, modifier)
     LibrarySheets(state, actions)
@@ -93,6 +89,7 @@ data class LibraryActions(
     val onSort: (com.nl.kaviyy.core.data.SeriesSort) -> Unit = {},
     val onPick: (com.nl.kaviyy.core.data.RuleValue?) -> Unit = {},
     val onOpenFilter: () -> Unit = {},
+    val onOpenPinned: (com.nl.kaviyy.core.data.SavedFilter) -> Unit = {},
 )
 
 /** Screen 03 (DESIGN.md §7). TODO(api): the count line needs a total; the list endpoint returns none in the spec. */
@@ -136,7 +133,7 @@ fun LibraryScreen(
                 if (libraries.size > 1) {
                     fullWidth("libraries") { Libraries(state, actions.onSelect) }
                 }
-                fullWidth("chips") { QuickChips(state.filter, actions) }
+                fullWidth("chips") { QuickChips(state.filter, actions, state.pinned) }
                 seriesItems(series, state.grid, coverUrl, actions.onOpenSeries)
             }
         }

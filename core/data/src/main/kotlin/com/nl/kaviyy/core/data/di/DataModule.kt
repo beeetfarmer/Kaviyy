@@ -4,11 +4,13 @@ import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.ConnectivityNetworkMonitor
 import com.nl.kaviyy.core.data.HomeRepository
+import com.nl.kaviyy.core.data.KavitaSmartFilterRepository
 import com.nl.kaviyy.core.data.NetworkMonitor
 import com.nl.kaviyy.core.data.OfflineFirstCatalogRepository
 import com.nl.kaviyy.core.data.OfflineFirstHomeRepository
 import com.nl.kaviyy.core.data.ServerApis
 import com.nl.kaviyy.core.data.SessionRepository
+import com.nl.kaviyy.core.data.SmartFilterRepository
 import com.nl.kaviyy.core.network.KavitaApis
 import dagger.Binds
 import dagger.Module
@@ -27,6 +29,9 @@ internal interface DataModule {
 
     @Binds
     fun catalog(repository: OfflineFirstCatalogRepository): CatalogRepository
+
+    @Binds
+    fun smartFilters(repository: KavitaSmartFilterRepository): SmartFilterRepository
 
     @Binds
     fun network(monitor: ConnectivityNetworkMonitor): NetworkMonitor

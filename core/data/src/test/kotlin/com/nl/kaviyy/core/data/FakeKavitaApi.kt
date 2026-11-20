@@ -14,6 +14,8 @@ import com.nl.kaviyy.core.network.PersonDto
 import com.nl.kaviyy.core.network.SeriesDetailDto
 import com.nl.kaviyy.core.network.SeriesDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
+import com.nl.kaviyy.core.network.SideNavStreamDto
+import com.nl.kaviyy.core.network.SmartFilterDto
 import kotlinx.serialization.json.JsonObject
 
 /** Base fake: every call fails loudly unless a test overrides it. */
@@ -62,6 +64,22 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun peopleByRole(role: Int): List<PersonDto> = error("unused")
 
     override suspend fun collections(): List<CollectionDto> = error("unused")
+
+    override suspend fun smartFilters(): List<SmartFilterDto> = error("unused")
+
+    override suspend fun saveSmartFilter(filter: SeriesFilterV2Dto): Unit = error("unused")
+
+    override suspend fun deleteSmartFilter(filterId: Int): Unit = error("unused")
+
+    override suspend fun sideNav(visibleOnly: Boolean): List<SideNavStreamDto> = error("unused")
+
+    override suspend fun addDashboardStream(smartFilterId: Int): DashboardStreamDto = error("unused")
+
+    override suspend fun removeDashboardStream(dashboardStreamId: Int): Unit = error("unused")
+
+    override suspend fun addSideNavStream(smartFilterId: Int): SideNavStreamDto = error("unused")
+
+    override suspend fun removeSideNavStream(sideNavStreamId: Int): Unit = error("unused")
 
     override suspend fun decodeFilter(body: DecodeFilterDto): JsonObject = error("unused")
 

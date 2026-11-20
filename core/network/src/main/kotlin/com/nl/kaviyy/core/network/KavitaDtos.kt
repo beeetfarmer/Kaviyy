@@ -103,6 +103,26 @@ data class DashboardStreamDto(
     val streamType: Int = 0,
     val visible: Boolean = true,
     val smartFilterEncoded: String? = null,
+    val smartFilterId: Int? = null,
+)
+
+/** `GET api/Stream/sidenav` item (only what pinning needs). */
+@Serializable
+data class SideNavStreamDto(
+    val id: Int,
+    val name: String? = null,
+    val visible: Boolean = true,
+    val smartFilterId: Int? = null,
+)
+
+/** `GET api/Filter` item. [filter] is Kavita's encoded filter string. */
+@Serializable
+data class SmartFilterDto(
+    val id: Int,
+    val name: String? = null,
+    val filter: String? = null,
+    /** Kavita `FilterEntityType`: 0 = Series. */
+    val entityType: Int = 0,
 )
 
 /** `GET api/Metadata/genres` / `tags` item (GenreTagDto / TagDto: id + title). */
@@ -161,6 +181,9 @@ data class SeriesSortOptionDto(
 /** `POST api/Series/v2` body. */
 @Serializable
 data class SeriesFilterV2Dto(
+    /** Set (with [name]) only when saving a smart filter. */
+    val id: Int = 0,
+    val name: String? = null,
     val statements: List<SeriesFilterStatementDto> = emptyList(),
     /** Kavita `FilterCombination`: 1 = And. */
     val combination: Int = 1,

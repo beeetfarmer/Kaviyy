@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -122,15 +123,18 @@ fun GroupedInputRow(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     onKeyboardAction: KeyboardActionHandler? = null,
     divider: Boolean = false,
+    /** Right-aligned value, as in form rows like "Name". */
+    alignEnd: Boolean = false,
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
     val colors = Kavita.colors
     val fieldModifier = Modifier.fillMaxWidth().semantics { contentDescription = label }
-    val textStyle = Kavita.type.bodyRegular.copy(color = colors.label)
+    val textStyle =
+        Kavita.type.bodyRegular.copy(color = colors.label, textAlign = if (alignEnd) TextAlign.End else TextAlign.Start)
     val cursor = SolidColor(colors.accent)
     val decorator =
         TextFieldDecorator { field ->
-            Box(contentAlignment = Alignment.CenterStart) {
+            Box(contentAlignment = if (alignEnd) Alignment.CenterEnd else Alignment.CenterStart) {
                 if (state.text.isEmpty() && placeholder != null) {
                     Text(placeholder, style = Kavita.type.bodyRegular, color = colors.placeholder)
                 }

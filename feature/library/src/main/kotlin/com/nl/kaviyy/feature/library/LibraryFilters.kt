@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nl.kaviyy.core.data.FilterField
 import com.nl.kaviyy.core.data.RuleValue
+import com.nl.kaviyy.core.data.SavedFilter
 import com.nl.kaviyy.core.data.SeriesFilter
 import com.nl.kaviyy.core.data.SeriesSort
 import com.nl.kaviyy.core.designsystem.component.FilterChip
@@ -46,6 +47,7 @@ internal fun sortLabel(sort: SeriesSort): String =
 internal fun QuickChips(
     filter: SeriesFilter,
     actions: LibraryActions,
+    pinned: List<SavedFilter> = emptyList(),
 ) {
     val edge = KavitaSpacing.screenHorizontal
     Row(
@@ -87,6 +89,7 @@ internal fun QuickChips(
             { actions.onShowSheet(LibrarySheet.Status) },
             dropdown = true,
         )
+        pinned.forEach { FilterChip(it.name, false, { actions.onOpenPinned(it) }) }
     }
 }
 

@@ -92,4 +92,17 @@
     <string name="filter_sort_release_year">Release year ↓</string>
     <string name="filter_sort_read_progress">Read progress ↓</string>
     <string name="filter_sort_user_rating">My rating ↓</string>
+    <string name="filter_save_header">Save as smart filter</string>
+    <string name="filter_save_name">Name</string>
+    <string name="filter_save_name_hint">Optional</string>
+    <string name="filter_show_on_home">Show on Home</string>
+    <string name="filter_pin_in_library">Pin in Library</string>
+    <string name="filter_save_footnote">Named filters are saved to your Kavita server when you apply, and appear on the web too. Saving under an existing name updates it.</string>
+    <string name="filter_saved_row">Saved filters</string>
+    <string name="filter_saved_title">Saved Filters</string>
+    <string name="filter_saved_empty">No saved filters yet.</string>
+    <string name="filter_delete_saved">Delete %1$s</string>
+    <string name="filter_error_network">Can\'t reach the server. Try again.</string>
+    <string name="filter_error_forbidden">Your account can\'t change smart filters.</string>
+    <string name="filter_error_other">Something went wrong. Try again.</string>
 </resources>

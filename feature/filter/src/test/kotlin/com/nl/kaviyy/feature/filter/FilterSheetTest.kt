@@ -35,7 +35,7 @@ class FilterSheetTest {
                     FilterContent(
                         previewFilter,
                         previewLibraries,
-                        TextFieldState(),
+                        FilterFields(TextFieldState(), TextFieldState()),
                         FilterActions(
                             onRemoveRule = { removed = it },
                             onAddRule = { added++ },

@@ -6,14 +6,17 @@ import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.Comparison
 import com.nl.kaviyy.core.data.FilterField
+import com.nl.kaviyy.core.data.FilterPlacement
 import com.nl.kaviyy.core.data.FilterRule
 import com.nl.kaviyy.core.data.LibraryFilterStore
 import com.nl.kaviyy.core.data.LibraryQuery
 import com.nl.kaviyy.core.data.OptionSource
 import com.nl.kaviyy.core.data.RuleValue
+import com.nl.kaviyy.core.data.SavedFilter
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.SeriesFilter
 import com.nl.kaviyy.core.data.SeriesSort
+import com.nl.kaviyy.core.data.SmartFilterRepository
 import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.model.result.AppError
@@ -100,12 +103,101 @@ class FilterViewModelTest {
             ): AppResult<Unit> = error("unused")
         }
 
+    private var saveResult: AppResult<SavedFilter> = AppResult.Success(SavedFilter(5, "Fantasy", "e"))
+    private val saves = mutableListOf<Pair<String, FilterPlacement>>()
+    private val deleted = mutableListOf<Int>()
+    private val loadedFilter =
+        SeriesFilter(rules = listOf(FilterRule(FilterField.Genres, Comparison.Contains, listOf(DRAMA))))
+
+    private val smart =
+        object : SmartFilterRepository {
+            override suspend fun list(server: Server) = AppResult.Success(listOf(SavedFilter(5, "Fantasy", "e")))
+
+            override suspend fun pinned(server: Server): AppResult<List<SavedFilter>> = error("unused")
+
+            override suspend fun load(
+                server: Server,
+                saved: SavedFilter,
+            ) = AppResult.Success(loadedFilter)
+
+            override suspend fun placement(
+                server: Server,
+                filterId: Int,
+            ) = AppResult.Success(FilterPlacement(onHome = true))
+
+            override suspend fun save(
+                server: Server,
+                name: String,
+                filter: SeriesFilter,
+                scope: List<Int>,
+                placement: FilterPlacement,
+            ): AppResult<SavedFilter> {
+                saves += name to placement
+                return saveResult
+            }
+
+            override suspend fun delete(
+                server: Server,
+                filterId: Int,
+            ): AppResult<Unit> {
+                deleted += filterId
+                return AppResult.Success(Unit)
+            }
+        }
+
+    @Test
+    fun namedApplySavesWithPlacementAndFailureKeepsTheSheetOpen() =
+        runTest {
+            val vm = FilterViewModel(session, store, repo, smart)
+            vm.open(10)
+            runCurrent()
+            vm.setMatchAll(false)
+            vm.nameText.setTextAndPlaceCursorAtEnd("Fantasy")
+            vm.setPinInLibrary(true)
+            saveResult = AppResult.Failure(AppError.Forbidden)
+            vm.apply()
+            runCurrent()
+            assertEquals(AppError.Forbidden, vm.state.value.error)
+            assertEquals(false, vm.state.value.done)
+            assertEquals(true, store.current(server.id).matchAll) // nothing applied
+            saveResult = AppResult.Success(SavedFilter(5, "Fantasy", "e"))
+            vm.apply()
+            runCurrent()
+            assertEquals("Fantasy" to FilterPlacement(inLibrary = true), saves.last())
+            assertEquals(true, vm.state.value.done)
+            assertEquals(false, store.current(server.id).matchAll)
+        }
+
+    @Test
+    fun savedFiltersOpenForEditingAndDelete() =
+        runTest {
+            val vm = FilterViewModel(session, store, repo, smart)
+            vm.open(10)
+            runCurrent()
+            vm.show(FilterPage.Saved)
+            runCurrent()
+            val saved =
+                vm.state.value.saved
+                    .orEmpty()
+                    .single()
+            vm.openSaved(saved)
+            runCurrent()
+            assertEquals(FilterPage.Main, vm.state.value.page)
+            assertEquals(loadedFilter, vm.state.value.draft)
+            assertEquals(FilterPlacement(onHome = true), vm.state.value.placement)
+            assertEquals("Fantasy", vm.nameText.text.toString())
+            vm.deleteSaved(saved)
+            runCurrent()
+            assertEquals(listOf(5), deleted)
+            assertEquals(emptyList(), vm.state.value.saved)
+        }
+
     @Test
     fun editsADraftAndOnlyApplyChangesTheGrid() =
         runTest {
             val unread = FilterRule(FilterField.ReadProgress, Comparison.LessThan, listOf(RuleValue("100")))
             store.update(server.id) { SeriesFilter(rules = listOf(unread)) }
-            val vm = FilterViewModel(session, store, repo)
+            val vm = FilterViewModel(session, store, repo, smart)
             vm.open(currentLibrary = 10)
             runCurrent()
             assertEquals(listOf(unread), vm.state.value.draft.rules)
@@ -136,7 +228,7 @@ class FilterViewModelTest {
     @Test
     fun editReplacesRemoveDeletesAndBadValuesAreRejected() =
         runTest {
-            val vm = FilterViewModel(session, store, repo)
+            val vm = FilterViewModel(session, store, repo, smart)
             vm.open(10)
             runCurrent()
             vm.pickField(FilterField.ReleaseYear)
@@ -163,7 +255,7 @@ class FilterViewModelTest {
     fun libraryScopeAndOptionFailures() =
         runTest {
             options = AppResult.Failure(AppError.Network)
-            val vm = FilterViewModel(session, store, repo)
+            val vm = FilterViewModel(session, store, repo, smart)
             vm.open(10)
             runCurrent()
             vm.toggleLibrary(20)

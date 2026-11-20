@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.nl.kaviyy.core.data.Comparison
 import com.nl.kaviyy.core.data.FilterField
+import com.nl.kaviyy.core.data.FilterPlacement
 import com.nl.kaviyy.core.data.FilterRule
 import com.nl.kaviyy.core.data.RuleValue
 import com.nl.kaviyy.core.data.SeriesFilter
@@ -39,6 +40,7 @@ internal val previewFilter =
                 libraryIds = listOf(1, 2),
             ),
         currentLibrary = 1,
+        placement = FilterPlacement(onHome = true),
     )
 
 internal val previewLibraries =
@@ -51,7 +53,12 @@ internal fun FilterPreview(
     state: FilterUiState = previewFilter,
 ) = KavitaTheme(appearance = appearance) {
     Column(Modifier.fillMaxSize().background(Kavita.colors.background)) {
-        FilterContent(state, previewLibraries, remember { TextFieldState() }, FilterActions())
+        FilterContent(
+            state,
+            previewLibraries,
+            remember { FilterFields(TextFieldState(), TextFieldState("Fantasy picks")) },
+            FilterActions(),
+        )
     }
 }
 

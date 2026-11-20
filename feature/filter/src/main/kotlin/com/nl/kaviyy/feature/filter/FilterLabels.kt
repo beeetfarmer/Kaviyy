@@ -9,6 +9,7 @@ import com.nl.kaviyy.core.data.FilterField
 import com.nl.kaviyy.core.data.FilterRule
 import com.nl.kaviyy.core.data.RuleValue
 import com.nl.kaviyy.core.data.SeriesSort
+import com.nl.kaviyy.core.model.result.AppError
 
 @StringRes
 internal fun FilterField.label(): Int =
@@ -119,4 +120,11 @@ internal fun DraftError.label(): Int =
         DraftError.NotANumber -> R.string.filter_error_number
         DraftError.OutOfRange -> R.string.filter_error_range
         DraftError.NotADate -> R.string.filter_error_date
+    }
+
+internal fun AppError.label(): Int =
+    when (this) {
+        AppError.Network -> R.string.filter_error_network
+        AppError.Forbidden -> R.string.filter_error_forbidden
+        else -> R.string.filter_error_other
     }

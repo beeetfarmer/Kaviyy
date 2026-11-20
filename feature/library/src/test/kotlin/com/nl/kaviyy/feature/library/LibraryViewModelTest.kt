@@ -7,14 +7,17 @@ import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.Comparison
 import com.nl.kaviyy.core.data.FilterField
+import com.nl.kaviyy.core.data.FilterPlacement
 import com.nl.kaviyy.core.data.FilterRule
 import com.nl.kaviyy.core.data.LibraryFilterStore
 import com.nl.kaviyy.core.data.LibraryQuery
 import com.nl.kaviyy.core.data.OptionSource
 import com.nl.kaviyy.core.data.RuleValue
+import com.nl.kaviyy.core.data.SavedFilter
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.SeriesFilter
 import com.nl.kaviyy.core.data.SeriesSort
+import com.nl.kaviyy.core.data.SmartFilterRepository
 import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.model.result.AppError
@@ -50,6 +53,36 @@ class LibraryViewModelTest {
     private val queries = mutableListOf<LibraryQuery>()
     private var genreResult: AppResult<List<RuleValue>> = AppResult.Success(listOf(DRAMA))
     private val store = LibraryFilterStore()
+    private val pinnedFilter = SavedFilter(4, "Fantasy", "e")
+    private val smart =
+        object : SmartFilterRepository {
+            override suspend fun list(server: Server): AppResult<List<SavedFilter>> = error("unused")
+
+            override suspend fun pinned(server: Server) = AppResult.Success(listOf(pinnedFilter))
+
+            override suspend fun load(
+                server: Server,
+                saved: SavedFilter,
+            ) = AppResult.Success(SeriesFilter(sort = SeriesSort.ReleaseYear))
+
+            override suspend fun placement(
+                server: Server,
+                filterId: Int,
+            ): AppResult<FilterPlacement> = error("unused")
+
+            override suspend fun save(
+                server: Server,
+                name: String,
+                filter: SeriesFilter,
+                scope: List<Int>,
+                placement: FilterPlacement,
+            ): AppResult<SavedFilter> = error("unused")
+
+            override suspend fun delete(
+                server: Server,
+                filterId: Int,
+            ): AppResult<Unit> = error("unused")
+        }
 
     private val session =
         object : AuthSession {
@@ -110,7 +143,7 @@ class LibraryViewModelTest {
     @Test
     fun selectsFirstLibraryThenTheChosenOneAndFallsBackWhenItDisappears() =
         runTest {
-            val vm = LibraryViewModel(session, repo, store, SavedStateHandle())
+            val vm = LibraryViewModel(session, repo, store, smart, SavedStateHandle())
             backgroundScope.launch { vm.series.collect {} }
             vm.state.test {
                 runCurrent()
@@ -129,7 +162,7 @@ class LibraryViewModelTest {
     fun chipsEditTheSharedFilterAndItSurvivesRecreation() =
         runTest {
             val saved = SavedStateHandle()
-            val vm = LibraryViewModel(session, repo, store, saved)
+            val vm = LibraryViewModel(session, repo, store, smart, saved)
             backgroundScope.launch { vm.series.collect {} }
             vm.state.test {
                 runCurrent()
@@ -151,7 +184,7 @@ class LibraryViewModelTest {
                 assertEquals(listOf(genreRule), expectMostRecentItem().filter.rules)
             }
             // Process death: a fresh store + ViewModel on the same SavedStateHandle restores the filter.
-            val restored = LibraryViewModel(session, repo, LibraryFilterStore(), saved)
+            val restored = LibraryViewModel(session, repo, LibraryFilterStore(), smart, saved)
             restored.state.test {
                 runCurrent()
                 assertEquals(SeriesSort.Title, expectMostRecentItem().filter.sort)
@@ -159,10 +192,23 @@ class LibraryViewModelTest {
         }
 
     @Test
+    fun pinnedFiltersShowAsChipsAndReplaceTheFilter() =
+        runTest {
+            val vm = LibraryViewModel(session, repo, store, smart, SavedStateHandle())
+            vm.state.test {
+                runCurrent()
+                assertEquals(listOf(pinnedFilter), expectMostRecentItem().pinned)
+                vm.openPinned(pinnedFilter)
+                runCurrent()
+                assertEquals(SeriesSort.ReleaseYear, expectMostRecentItem().filter.sort)
+            }
+        }
+
+    @Test
     fun genreSheetFailureIsShown() =
         runTest {
             genreResult = AppResult.Failure(AppError.Network)
-            val vm = LibraryViewModel(session, repo, store, SavedStateHandle())
+            val vm = LibraryViewModel(session, repo, store, smart, SavedStateHandle())
             vm.state.test {
                 runCurrent()
                 vm.showSheet(LibrarySheet.Genre)
@@ -175,7 +221,7 @@ class LibraryViewModelTest {
     fun layoutToggleAndRefreshError() =
         runTest {
             refreshResult = AppResult.Failure(AppError.Network)
-            val vm = LibraryViewModel(session, repo, store, SavedStateHandle())
+            val vm = LibraryViewModel(session, repo, store, smart, SavedStateHandle())
             vm.state.test {
                 runCurrent()
                 val s = expectMostRecentItem()

@@ -77,3 +77,9 @@ inline fun <T, R> AppResult<T>.map(transform: (T) -> R): AppResult<R> =
     }
 
 fun <T> AppResult<T>.getOrNull(): T? = (this as? AppResult.Success)?.value
+
+/** Runs [action] on success; returns this result unchanged. */
+inline fun <T> AppResult<T>.onSuccess(action: (T) -> Unit): AppResult<T> {
+    if (this is AppResult.Success) action(value)
+    return this
+}

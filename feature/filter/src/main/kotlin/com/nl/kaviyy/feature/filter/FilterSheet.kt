@@ -56,14 +56,12 @@ fun FilterSheet(
 ) {
     LaunchedEffect(Unit) { viewModel.open(currentLibrary) }
     val state by viewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(state.done) { if (state.done) onDismiss() }
     val libraries by viewModel.libraries.collectAsStateWithLifecycle()
     val actions =
         FilterActions(
             onCancel = onDismiss,
-            onApply = {
-                viewModel.apply()
-                onDismiss()
-            },
+            onApply = viewModel::apply,
             onMatchAll = viewModel::setMatchAll,
             onRemoveRule = viewModel::removeRule,
             onEditRule = viewModel::editRule,
@@ -75,61 +73,38 @@ fun FilterSheet(
             onComparison = viewModel::setComparison,
             onToggleValue = viewModel::toggleValue,
             onCommitRule = viewModel::commitRule,
+            onShowOnHome = viewModel::setShowOnHome,
+            onPinInLibrary = viewModel::setPinInLibrary,
+            onOpenSaved = viewModel::openSaved,
+            onDeleteSaved = viewModel::deleteSaved,
         )
-    KavitaBottomSheet(onDismiss = onDismiss) { FilterContent(state, libraries, viewModel.valueText, actions) }
+    KavitaBottomSheet(onDismiss = onDismiss) {
+        FilterContent(state, libraries, FilterFields(viewModel.valueText, viewModel.nameText), actions)
+    }
 }
 
 @Composable
 fun ColumnScope.FilterContent(
     state: FilterUiState,
     libraries: List<LibraryEntity>,
-    valueText: TextFieldState,
+    fields: FilterFields,
     actions: FilterActions,
 ) {
-    val back = { actions.onShow(FilterPage.Main) }
-    when (state.page) {
-        FilterPage.Main -> {
-            SheetHeader(
-                stringResource(R.string.filter_title),
-                stringResource(R.string.filter_cancel),
-                actions.onCancel,
-                applyLabel = stringResource(R.string.filter_apply),
-                onApply = actions.onApply,
-            )
-        }
-
-        FilterPage.Fields -> {
-            SheetHeader(stringResource(R.string.filter_field_title), stringResource(R.string.filter_back), back)
-        }
-
-        FilterPage.Rule -> {
-            SheetHeader(
-                state.rule
-                    ?.field
-                    ?.let { stringResource(it.label()) }
-                    .orEmpty(),
-                stringResource(R.string.filter_back),
-                back,
-                applyLabel = stringResource(R.string.filter_done),
-                onApply = actions.onCommitRule,
-            )
-        }
-
-        FilterPage.Sort -> {
-            SheetHeader(stringResource(R.string.filter_sort_by), stringResource(R.string.filter_back), back)
-        }
-
-        FilterPage.Libraries -> {
-            SheetHeader(stringResource(R.string.filter_libraries), stringResource(R.string.filter_done), back)
-        }
-    }
+    FilterHeader(state, actions)
     Column(
         Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 32.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        state.error?.let {
+            Text(stringResource(it.label()), style = Kavita.type.footnote, color = Kavita.colors.destructive)
+        }
         when (state.page) {
             FilterPage.Main -> {
-                MainPage(state, libraries, actions)
+                MainPage(state, libraries, fields.name, actions)
+            }
+
+            FilterPage.Saved -> {
+                SavedPage(state.saved, actions)
             }
 
             FilterPage.Fields -> {
@@ -141,7 +116,7 @@ fun ColumnScope.FilterContent(
             }
 
             FilterPage.Rule -> {
-                state.rule?.let { RulePage(it, state, valueText, actions) }
+                state.rule?.let { RulePage(it, state, fields.value, actions) }
             }
 
             FilterPage.Sort -> {
@@ -164,6 +139,7 @@ fun ColumnScope.FilterContent(
 private fun MainPage(
     state: FilterUiState,
     libraries: List<LibraryEntity>,
+    name: TextFieldState,
     actions: FilterActions,
 ) {
     val f = state.draft
@@ -237,6 +213,7 @@ private fun MainPage(
             onClick = { actions.onShow(FilterPage.Libraries) },
         )
     }
+    SaveSection(state, name, actions)
 }
 
 @Composable
@@ -377,5 +354,53 @@ private fun Divider() =
     )
 
 @Composable
-private fun Hint(text: String) =
+internal fun Hint(text: String) =
     Text(text, style = Kavita.type.callout, color = Kavita.colors.labelSecondary, modifier = Modifier.padding(8.dp))
+
+@Composable
+private fun FilterHeader(
+    state: FilterUiState,
+    actions: FilterActions,
+) {
+    val back = { actions.onShow(FilterPage.Main) }
+    when (state.page) {
+        FilterPage.Main -> {
+            SheetHeader(
+                stringResource(R.string.filter_title),
+                stringResource(R.string.filter_cancel),
+                actions.onCancel,
+                applyLabel = stringResource(R.string.filter_apply),
+                onApply = { if (!state.busy) actions.onApply() },
+            )
+        }
+
+        FilterPage.Saved -> {
+            SheetHeader(stringResource(R.string.filter_saved_title), stringResource(R.string.filter_back), back)
+        }
+
+        FilterPage.Fields -> {
+            SheetHeader(stringResource(R.string.filter_field_title), stringResource(R.string.filter_back), back)
+        }
+
+        FilterPage.Rule -> {
+            SheetHeader(
+                state.rule
+                    ?.field
+                    ?.let { stringResource(it.label()) }
+                    .orEmpty(),
+                stringResource(R.string.filter_back),
+                back,
+                applyLabel = stringResource(R.string.filter_done),
+                onApply = actions.onCommitRule,
+            )
+        }
+
+        FilterPage.Sort -> {
+            SheetHeader(stringResource(R.string.filter_sort_by), stringResource(R.string.filter_back), back)
+        }
+
+        FilterPage.Libraries -> {
+            SheetHeader(stringResource(R.string.filter_libraries), stringResource(R.string.filter_done), back)
+        }
+    }
+}

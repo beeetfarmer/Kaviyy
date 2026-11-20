@@ -14,12 +14,15 @@ import com.nl.kaviyy.core.data.LibraryFilterStore
 import com.nl.kaviyy.core.data.LibraryQuery
 import com.nl.kaviyy.core.data.OptionSource
 import com.nl.kaviyy.core.data.RuleValue
+import com.nl.kaviyy.core.data.SavedFilter
 import com.nl.kaviyy.core.data.SeriesFilter
 import com.nl.kaviyy.core.data.SeriesSort
+import com.nl.kaviyy.core.data.SmartFilterRepository
 import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
+import com.nl.kaviyy.core.model.result.getOrNull
 import com.nl.kaviyy.core.model.server.Server
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -92,6 +95,8 @@ data class LibraryUiState(
     val filter: SeriesFilter = SeriesFilter(),
     val sheet: LibrarySheet? = null,
     val options: SheetOptions = SheetOptions.Loading,
+    /** Smart filters pinned in Library ("Pin in Library"), shown as chips. */
+    val pinned: List<SavedFilter> = emptyList(),
 ) {
     val selectedIndex: Int get() = libraries.orEmpty().indexOfFirst { it.id == selectedId }.coerceAtLeast(0)
 
@@ -104,6 +109,7 @@ private data class Local(
     val grid: Boolean = true,
     val sheet: LibrarySheet? = null,
     val options: SheetOptions = SheetOptions.Loading,
+    val pinned: List<SavedFilter> = emptyList(),
 )
 
 private const val STOP_TIMEOUT_MS = 5_000L
@@ -119,6 +125,7 @@ class LibraryViewModel
         session: AuthSession,
         private val repository: CatalogRepository,
         private val store: LibraryFilterStore,
+        private val smartFilters: SmartFilterRepository,
         private val saved: SavedStateHandle,
     ) : ViewModel() {
         private val server = session.activeServer.stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -135,7 +142,7 @@ class LibraryViewModel
             combine(server, libraries, local, error, filter) { s, libs, l, e, f ->
                 // A library removed on the server (or a server switch) falls back to the first one.
                 val selected = libs?.firstOrNull { it.id == l.picked }?.id ?: libs?.firstOrNull()?.id
-                LibraryUiState(s, libs, selected, l.grid, e, f, l.sheet, l.options)
+                LibraryUiState(s, libs, selected, l.grid, e, f, l.sheet, l.options, l.pinned)
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), LibraryUiState())
 
         /** The current query's series; empty until there is a library. */
@@ -154,6 +161,20 @@ class LibraryViewModel
                 }
             }
             viewModelScope.launch { filter.collect { saved[KEY_FILTER] = it.encode() } }
+            // ponytail: re-reads pins on every filter change (the sheet may have pinned one); cheap GETs.
+            viewModelScope.launch {
+                server.filterNotNull().collectLatest { s ->
+                    filter.collectLatest {
+                        smartFilters.pinned(s).getOrNull()?.let { list -> local.update { l -> l.copy(pinned = list) } }
+                    }
+                }
+            }
+        }
+
+        /** A pinned chip replaces the filter with the saved one. */
+        fun openPinned(pinned: SavedFilter) {
+            val s = server.value ?: return
+            viewModelScope.launch { smartFilters.load(s, pinned).getOrNull()?.let { f -> store.update(s.id) { f } } }
         }
 
         fun select(libraryId: Int) = change { it.copy(picked = libraryId) }

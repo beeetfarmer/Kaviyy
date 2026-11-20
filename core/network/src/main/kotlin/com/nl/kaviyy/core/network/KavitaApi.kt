@@ -12,6 +12,7 @@ import retrofit2.HttpException
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -74,6 +75,46 @@ interface KavitaApi {
     /** Collections the user can see (own + promoted). */
     @GET("api/Collection")
     suspend fun collections(): List<CollectionDto>
+
+    /** The user's saved smart filters. */
+    @GET("api/Filter")
+    suspend fun smartFilters(): List<SmartFilterDto>
+
+    /** Creates or updates (by [SeriesFilterV2Dto.id]/name) a series smart filter. */
+    @POST("api/Filter/update/series")
+    suspend fun saveSmartFilter(
+        @Body filter: SeriesFilterV2Dto,
+    )
+
+    @DELETE("api/Filter")
+    suspend fun deleteSmartFilter(
+        @Query("filterId") filterId: Int,
+    )
+
+    @GET("api/Stream/sidenav")
+    suspend fun sideNav(
+        @Query("visibleOnly") visibleOnly: Boolean = true,
+    ): List<SideNavStreamDto>
+
+    @POST("api/Stream/add-dashboard-stream")
+    suspend fun addDashboardStream(
+        @Query("smartFilterId") smartFilterId: Int,
+    ): DashboardStreamDto
+
+    @DELETE("api/Stream/smart-filter-dashboard-stream")
+    suspend fun removeDashboardStream(
+        @Query("dashboardStreamId") dashboardStreamId: Int,
+    )
+
+    @POST("api/Stream/add-sidenav-stream")
+    suspend fun addSideNavStream(
+        @Query("smartFilterId") smartFilterId: Int,
+    ): SideNavStreamDto
+
+    @DELETE("api/Stream/smart-filter-side-nav-stream")
+    suspend fun removeSideNavStream(
+        @Query("sideNavStreamId") sideNavStreamId: Int,
+    )
 
     /** The user's Home layout. */
     @GET("api/Stream/dashboard")

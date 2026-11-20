@@ -44,7 +44,7 @@ class KavitaApiTest {
             val list =
                 api().series(
                     SeriesFilterV2Dto(
-                        listOf(SeriesFilterStatementDto(0, 19, "3")),
+                        statements = listOf(SeriesFilterStatementDto(0, 19, "3")),
                         sortOptions = SeriesSortOptionDto(1),
                     ),
                     2,
