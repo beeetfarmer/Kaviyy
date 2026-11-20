@@ -161,6 +161,28 @@ class ImageReaderViewModelTest {
         }
 
     @Test
+    fun doublePageTurnsBySpreadAndLayoutIsSaved() =
+        runTest {
+            profile.value = ReadingProfileDto(layoutMode = 2)
+            val vm = vm()
+            vm.state.test {
+                runCurrent()
+                assertEquals(ReaderLayout.Double, expectMostRecentItem().layout)
+                vm.nextPage() // cover alone, then pages 1-2
+                runCurrent()
+                assertEquals(1, expectMostRecentItem().page)
+                vm.nextPage() // last spread: next chapter
+                runCurrent()
+                assertEquals(50, expectMostRecentItem().chapter?.id)
+                vm.setLayout(ReaderLayout.Webtoon)
+                runCurrent()
+                assertEquals(ReaderLayout.Webtoon, expectMostRecentItem().layout)
+                assertEquals(listOf(2), updates.map { it.readerMode })
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
     fun positionSurvivesProcessDeathAndFailuresRetry() =
         runTest {
             val saved = SavedStateHandle(mapOf(READER_SERIES_ARG to 7, READER_CHAPTER_ARG to 49))

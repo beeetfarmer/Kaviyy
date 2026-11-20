@@ -88,7 +88,10 @@ open class FakeKavitaApi : KavitaApi {
 
     override suspend fun person(name: String): PersonDto = error("unused")
 
-    override suspend fun chapterInfo(chapterId: Int): ChapterInfoDto = error("unused")
+    override suspend fun chapterInfo(
+        chapterId: Int,
+        includeDimensions: Boolean,
+    ): ChapterInfoDto = error("unused")
 
     override suspend fun nextChapter(
         seriesId: Int,

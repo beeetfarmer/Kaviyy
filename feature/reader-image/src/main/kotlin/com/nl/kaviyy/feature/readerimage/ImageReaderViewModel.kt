@@ -46,6 +46,9 @@ data class ImageReaderUiState(
     /** 0-based. */
     val page: Int = 0,
     val rightToLeft: Boolean = false,
+    val layout: ReaderLayout = ReaderLayout.Single,
+    /** Double page: swap the two pages of a pair (Kavita "Double (Manga)"). */
+    val reversedPairs: Boolean = false,
     val chromeVisible: Boolean = true,
     val loading: Boolean = true,
     val error: AppError? = null,
@@ -53,6 +56,15 @@ data class ImageReaderUiState(
     val previousChapterId: Int? = null,
 ) {
     val pages: Int get() = chapter?.pages ?: 0
+
+    /** Double page spreads; one page per spread otherwise. */
+    val spreads: List<List<Int>>
+        get() =
+            if (layout == ReaderLayout.Double) {
+                spreads(pages, chapter?.pageSizes.orEmpty())
+            } else {
+                List(pages) { listOf(it) }
+            }
 }
 
 private data class Session(
@@ -98,6 +110,8 @@ class ImageReaderViewModel
                     chapter = st.chapter,
                     page = st.page,
                     rightToLeft = prefs.readingDirection == DIRECTION_RTL,
+                    layout = prefs.layout,
+                    reversedPairs = prefs.reversedPairs,
                     chromeVisible = st.chromeVisible,
                     loading = st.loading,
                     error = st.error,
@@ -125,31 +139,49 @@ class ImageReaderViewModel
             session.update { it.copy(page = p) }
         }
 
-        /** Next page, or the next chapter after the last page. */
+        /** Next page (spread in double page mode), or the next chapter after the last one. */
         fun nextPage() {
+            val spreads = state.value.spreads
             val st = session.value
-            val pages = st.chapter?.pages ?: return
-            if (st.page < pages - 1) goTo(st.page + 1) else st.next?.let { open(it, page = 0) }
+            if (spreads.isEmpty()) return
+            val at = spreads.indexOfPage(st.page)
+            if (at < spreads.lastIndex) goTo(spreads[at + 1].first()) else st.next?.let { open(it, page = 0) }
         }
 
-        /** Previous page, or the previous chapter's last page. */
+        /** Previous page (spread), or the previous chapter's last page. */
         fun previousPage() {
+            val spreads = state.value.spreads
             val st = session.value
-            if (st.page > 0) goTo(st.page - 1) else st.previous?.let { open(it, page = LAST_PAGE) }
+            val at = spreads.indexOfPage(st.page)
+            if (at > 0) goTo(spreads[at - 1].first()) else st.previous?.let { open(it, page = LAST_PAGE) }
         }
+
+        fun setLayout(layout: ReaderLayout) = updateSettings { it.withLayout(layout) }
 
         fun nextChapter() = session.value.next?.let { open(it, page = 0) }
 
         fun previousChapter() = session.value.previous?.let { open(it, page = 0) }
 
-        fun toggleDirection() {
+        fun toggleDirection() =
+            updateSettings {
+                it.copy(
+                    readingDirection =
+                        if (it.readingDirection ==
+                            DIRECTION_RTL
+                        ) {
+                            DIRECTION_LTR
+                        } else {
+                            DIRECTION_RTL
+                        },
+                )
+            }
+
+        /** Local first; a failed push waits in the outbox (M17). */
+        private fun updateSettings(change: (ReadingProfileDto) -> ReadingProfileDto) {
             viewModelScope.launch {
                 val s = auth.activeServer.first() ?: return@launch
                 val libraryId = session.value.chapter?.libraryId ?: return@launch
-                val current = settings.first()
-                val flipped = if (current.readingDirection == DIRECTION_RTL) DIRECTION_LTR else DIRECTION_RTL
-                // Local first; a failed push waits in the outbox (M17).
-                settingsRepository.update(s, libraryId, seriesId, current.copy(readingDirection = flipped))
+                settingsRepository.update(s, libraryId, seriesId, change(settings.first()))
             }
         }
 

@@ -19,4 +19,7 @@
     <string name="reader_load_failed">Couldn\'t open this chapter.</string>
     <string name="reader_retry">Try Again</string>
     <string name="reader_unsupported">This book opens in the EPUB/PDF reader, which isn\'t available yet.</string>
+    <string name="reader_layout_single">Single</string>
+    <string name="reader_layout_double">Double</string>
+    <string name="reader_layout_webtoon">Webtoon</string>
 </resources>

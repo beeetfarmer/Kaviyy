@@ -21,9 +21,18 @@ data class ReaderChapter(
     val pages: Int,
     /** Kavita `MangaFormat`: EPUB (3) and PDF (4) need their own readers. */
     val format: Int,
+    /** Per page (index = page); null when the server sent none for it. */
+    val pageSizes: List<PageSize?> = emptyList(),
 ) {
     val isImage: Boolean get() = format != FORMAT_EPUB && format != FORMAT_PDF
 }
+
+data class PageSize(
+    val width: Int,
+    val height: Int,
+    /** A two-page spread: shown alone in double page mode. */
+    val isWide: Boolean,
+)
 
 private const val FORMAT_EPUB = 3
 private const val FORMAT_PDF = 4
@@ -98,4 +107,13 @@ internal fun ChapterInfoDto.toReaderChapter(id: Int) =
         isSpecial = isSpecial,
         pages = pages,
         format = seriesFormat,
+        pageSizes =
+            pageDimensions.orEmpty().associateBy { it.pageNumber }.let { byPage ->
+                List(pages) { i ->
+                    byPage[i]
+                        ?.takeIf {
+                            it.width > 0 && it.height > 0
+                        }?.let { PageSize(it.width, it.height, it.isWide) }
+                }
+            },
     )

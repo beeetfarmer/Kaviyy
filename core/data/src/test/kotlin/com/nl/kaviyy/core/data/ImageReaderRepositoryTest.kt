@@ -6,6 +6,7 @@ import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.ChapterInfoDto
+import com.nl.kaviyy.core.network.FileDimensionDto
 import com.nl.kaviyy.core.network.pageUrl
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -18,15 +19,18 @@ class ImageReaderRepositoryTest {
     private val server = Server(ServerId(1), "s", (ServerUrl.parse("https://s.lan") as ServerUrlResult.Valid).url)
     private val api =
         object : FakeKavitaApi() {
-            override suspend fun chapterInfo(chapterId: Int) =
-                ChapterInfoDto(
-                    seriesId = 7,
-                    volumeId = 5,
-                    seriesName = "Ember Road",
-                    volumeNumber = "-100000",
-                    chapterNumber = "49",
-                    pages = 32,
-                )
+            override suspend fun chapterInfo(
+                chapterId: Int,
+                includeDimensions: Boolean,
+            ) = ChapterInfoDto(
+                seriesId = 7,
+                volumeId = 5,
+                seriesName = "Ember Road",
+                volumeNumber = "-100000",
+                chapterNumber = "49",
+                pages = 3,
+                pageDimensions = listOf(FileDimensionDto(1, 1600, 1200, isWide = true), FileDimensionDto(0, 800, 1200)),
+            )
 
             override suspend fun nextChapter(
                 seriesId: Int,
@@ -48,6 +52,7 @@ class ImageReaderRepositoryTest {
             val c = (repo.chapter(server, 49) as AppResult.Success).value
             assertNull(c.volumeNumber)
             assertEquals("49", c.chapterNumber)
+            assertEquals(listOf(PageSize(800, 1200, false), PageSize(1600, 1200, true), null), c.pageSizes)
             assertEquals(AppResult.Success(null), repo.next(server, c))
             assertEquals(AppResult.Success(48), repo.previous(server, c))
         }

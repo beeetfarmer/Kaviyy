@@ -46,6 +46,7 @@ data class ImageReaderActions(
     val onPreviousChapter: () -> Unit = {},
     val onToggleChrome: () -> Unit = {},
     val onToggleDirection: () -> Unit = {},
+    val onLayout: (ReaderLayout) -> Unit = {},
     val onRetry: () -> Unit = {},
 )
 
@@ -66,6 +67,7 @@ fun ImageReaderRoute(
             onPreviousChapter = viewModel::previousChapter,
             onToggleChrome = viewModel::toggleChrome,
             onToggleDirection = viewModel::toggleDirection,
+            onLayout = viewModel::setLayout,
             onRetry = viewModel::retry,
         ),
     )
@@ -82,68 +84,11 @@ fun ImageReaderScreen(
         val chapter = state.chapter
         when {
             chapter != null && !chapter.isImage -> Message(stringResource(R.string.reader_unsupported), null)
-            chapter != null -> Pages(chapter, state, actions)
+            chapter != null && state.layout == ReaderLayout.Webtoon -> WebtoonPages(chapter, state, actions)
+            chapter != null -> PagedSpreads(chapter, state, actions)
             state.error != null -> Message(stringResource(R.string.reader_load_failed), actions.onRetry)
         }
         if (state.chromeVisible) ReaderChrome(state, actions)
-    }
-}
-
-@Composable
-private fun Pages(
-    chapter: ReaderChapter,
-    state: ImageReaderUiState,
-    actions: ImageReaderActions,
-) {
-    // A new chapter gets a fresh pager.
-    key(chapter.id) {
-        val pager = rememberPagerState(initialPage = state.page) { chapter.pages }
-        val onPage by rememberUpdatedState(actions.onPage)
-        LaunchedEffect(state.page) { if (pager.currentPage != state.page) pager.scrollToPage(state.page) }
-        LaunchedEffect(pager) { snapshotFlow { pager.settledPage }.drop(1).collect { onPage(it) } }
-        val zones = TapZones(state.rightToLeft, actions)
-        val next = stringResource(R.string.reader_next_page)
-        val previous = stringResource(R.string.reader_previous_page)
-        val toggle = stringResource(R.string.reader_toggle_controls)
-        HorizontalPager(
-            pager,
-            Modifier
-                .fillMaxSize()
-                .pointerInput(zones) { detectTapGestures { zones.onTap(it.x, size.width.toFloat()) } }
-                .semantics {
-                    // Tap zones have no visible targets: expose them to TalkBack/Switch Access.
-                    customActions =
-                        listOf(
-                            CustomAccessibilityAction(next) { actions.onNextPage().let { true } },
-                            CustomAccessibilityAction(previous) { actions.onPreviousPage().let { true } },
-                            CustomAccessibilityAction(toggle) { actions.onToggleChrome().let { true } },
-                        )
-                },
-            reverseLayout = state.rightToLeft,
-            beyondViewportPageCount = 1,
-            key = { it },
-        ) { page -> Page(chapter, page, state) }
-    }
-}
-
-@Composable
-private fun Page(
-    chapter: ReaderChapter,
-    page: Int,
-    state: ImageReaderUiState,
-) {
-    val url = state.server?.pageUrl(chapter.id, page)
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        val loader = LocalCoverImageLoader.current
-        if (url != null && loader != null) {
-            AsyncImage(
-                url,
-                stringResource(R.string.reader_page_image, page + 1),
-                loader,
-                Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit,
-            )
-        }
     }
 }
 

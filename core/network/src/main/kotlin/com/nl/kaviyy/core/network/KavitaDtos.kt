@@ -399,4 +399,14 @@ data class ChapterInfoDto(
     val chapterTitle: String? = null,
     val isSpecial: Boolean = false,
     val pages: Int = 0,
+    /** With `includeDimensions=true`. */
+    val pageDimensions: List<FileDimensionDto>? = null,
+)
+
+@Serializable
+data class FileDimensionDto(
+    val pageNumber: Int = 0,
+    val width: Int = 0,
+    val height: Int = 0,
+    val isWide: Boolean = false,
 )

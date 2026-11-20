@@ -272,6 +272,7 @@ interface KavitaApi {
     @GET("api/Reader/chapter-info")
     suspend fun chapterInfo(
         @Query("chapterId") chapterId: Int,
+        @Query("includeDimensions") includeDimensions: Boolean = true,
     ): ChapterInfoDto
 
     /** -1 when there is none. */

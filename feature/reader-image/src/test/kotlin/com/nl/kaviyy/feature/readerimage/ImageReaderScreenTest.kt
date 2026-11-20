@@ -3,6 +3,7 @@ package com.nl.kaviyy.feature.readerimage
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -108,6 +109,31 @@ class ImageReaderScreenTest {
         }
         assertEquals(listOf("prev", "chrome", "next", "next", "prev"), calls)
     }
+
+    @Test
+    fun layoutGroupSelectsAndWebtoonHidesDirection() {
+        val picked = mutableListOf<ReaderLayout>()
+        compose.setContent {
+            ReaderPreview(
+                previewReader.copy(layout = ReaderLayout.Webtoon),
+                ImageReaderActions(onLayout = {
+                    picked +=
+                        it
+                }),
+            )
+        }
+        compose.onNodeWithText("Webtoon").assertIsSelected()
+        compose.onNodeWithText("Right to left").assertDoesNotExist()
+        compose.onNodeWithText("Double").performClick()
+        assertEquals(listOf(ReaderLayout.Double), picked)
+    }
+
+    @Test
+    fun screenshotDouble() = shot("reader_double") { ReaderPreview(previewReader.copy(layout = ReaderLayout.Double)) }
+
+    @Test
+    fun screenshotWebtoon() =
+        shot("reader_webtoon") { ReaderPreview(previewReader.copy(layout = ReaderLayout.Webtoon)) }
 
     @Test
     fun screenshotRtl() = shot("reader_rtl") { ReaderPreview() }

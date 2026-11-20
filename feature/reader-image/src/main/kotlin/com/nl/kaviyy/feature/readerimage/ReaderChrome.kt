@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -17,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -125,10 +128,53 @@ private fun BottomBar(
     verticalArrangement = Arrangement.spacedBy(10.dp),
     horizontalAlignment = Alignment.CenterHorizontally,
 ) {
-    // Layout radiogroup (Single · Double · Webtoon): M10.2.
-    DirectionToggle(state.rightToLeft, actions.onToggleDirection)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        LayoutGroup(state.layout, actions.onLayout)
+        // Direction has no meaning for a vertical strip.
+        if (state.layout != ReaderLayout.Webtoon) DirectionToggle(state.rightToLeft, actions.onToggleDirection)
+    }
     Scrubber(state, actions)
 }
+
+/** Canvas radiogroup: selected = white pill with black text. */
+@Composable
+private fun LayoutGroup(
+    selected: ReaderLayout,
+    onSelect: (ReaderLayout) -> Unit,
+) = Row(
+    Modifier
+        .height(40.dp)
+        .clip(KavitaShapes.pill)
+        .background(ImageReaderColors.chrome)
+        .padding(3.dp)
+        .selectableGroup(),
+) {
+    ReaderLayout.entries.forEach { layout ->
+        val on = layout == selected
+        Box(
+            Modifier
+                .fillMaxHeight()
+                .clip(KavitaShapes.pill)
+                .background(if (on) Color.White else Color.Transparent)
+                .selectable(on, role = Role.RadioButton) { onSelect(layout) }
+                .padding(horizontal = 14.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                stringResource(layout.label()),
+                style = Kavita.type.footnote.copy(fontWeight = FontWeight.SemiBold),
+                color = if (on) Color.Black else ImageReaderColors.content,
+            )
+        }
+    }
+}
+
+private fun ReaderLayout.label(): Int =
+    when (this) {
+        ReaderLayout.Single -> R.string.reader_layout_single
+        ReaderLayout.Double -> R.string.reader_layout_double
+        ReaderLayout.Webtoon -> R.string.reader_layout_webtoon
+    }
 
 @Composable
 private fun DirectionToggle(
@@ -234,7 +280,7 @@ private fun PageSlider(
     var dragging by remember { mutableFloatStateOf(-1f) }
     val fraction = (if (dragging >= 0f) dragging else state.page / last.toFloat()).coerceIn(0f, 1f)
     val label = stringResource(R.string.reader_page_slider)
-    val rtl = state.rightToLeft
+    val rtl = state.rightToLeft && state.layout != ReaderLayout.Webtoon
 
     fun fractionAt(
         x: Float,
