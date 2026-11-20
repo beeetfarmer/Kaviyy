@@ -66,4 +66,5 @@ internal fun ChapterDto.toEntity(
     fileBytes = files.sumOf { it.bytes },
     releaseDate = kavitaTime(releaseDate),
     lastModified = kavitaTime(lastModifiedUtc),
+    volumeTitle = volumeTitle?.takeIf { it.isNotBlank() },
 )

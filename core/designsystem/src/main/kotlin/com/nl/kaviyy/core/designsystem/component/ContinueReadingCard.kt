@@ -36,6 +36,7 @@ fun ContinueReadingCard(
     onResume: () -> Unit,
     modifier: Modifier = Modifier,
     coverOverline: String? = null,
+    imageUrl: String? = null,
 ) {
     val colors = Kavita.colors
     Row(
@@ -55,6 +56,7 @@ fun ContinueReadingCard(
             titleSize = 15.sp,
             titleBottomInset = 10.dp,
             sideInset = 9.dp,
+            imageUrl = imageUrl,
             modifier = Modifier.size(92.dp, 138.dp).cssShadow(KavitaShapes.coverGrid, 6.dp, 16.dp, 0.30f, coverColor),
         )
         // Grows with large font scales instead of clipping; the cover sets the minimum height.

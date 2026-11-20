@@ -79,6 +79,7 @@ class SessionRepositoryTest {
             val server = (signIn() as AppResult.Success).value
             assertEquals("kavita.home.lan", server.name)
             assertEquals("0.9.0.2", server.version)
+            assertEquals(setOf("Download"), server.roles)
             assertEquals(server, session.activeServer.first())
             assertEquals(jwt, store.credentials(server.id).first())
         }

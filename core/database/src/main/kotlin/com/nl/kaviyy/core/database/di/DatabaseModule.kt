@@ -2,6 +2,7 @@ package com.nl.kaviyy.core.database.di
 
 import android.content.Context
 import androidx.room.Room
+import com.nl.kaviyy.core.database.DashboardDao
 import com.nl.kaviyy.core.database.KaviyyDatabase
 import com.nl.kaviyy.core.database.LibraryDao
 import com.nl.kaviyy.core.database.OutboxDao
@@ -38,4 +39,7 @@ object DatabaseModule {
 
     @Provides
     fun outboxDao(db: KaviyyDatabase): OutboxDao = db.outboxDao()
+
+    @Provides
+    fun dashboardDao(db: KaviyyDatabase): DashboardDao = db.dashboardDao()
 }

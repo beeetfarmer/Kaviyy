@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_title">Home</string>
+    <string name="home_continue_reading">Continue Reading</string>
+    <string name="home_resume">Resume</string>
+    <string name="home_on_deck">On Deck</string>
+    <string name="home_recently_updated">Recently Updated</string>
+    <string name="home_recently_added">Recently Added</string>
+    <string name="home_see_all">See All</string>
+    <string name="home_volume_chapter">Volume %1$s · Chapter %2$s</string>
+    <string name="home_chapter">Chapter %1$s</string>
+    <string name="home_volume">Volume %1$s</string>
+    <string name="home_vol_overline">Vol. %1$s</string>
+    <plurals name="home_pages_left">
+        <item quantity="one">%1$d page left · about %2$d min</item>
+        <item quantity="other">%1$d pages left · about %2$d min</item>
+    </plurals>
+    <string name="home_ch_progress">Ch. %1$s · %2$d%%</string>
+    <string name="home_percent">%1$d%%</string>
+    <string name="home_unread">Unread</string>
+    <plurals name="home_new_chapters">
+        <item quantity="one">%d new chapter</item>
+        <item quantity="other">%d new chapters</item>
+    </plurals>
+    <string name="home_profile">Your profile</string>
+    <string name="home_empty_title">Nothing here yet</string>
+    <string name="home_empty_body">Start reading a series and it will show up here.</string>
+    <string name="home_error_body">Couldn’t reach your server. Check your connection and try again.</string>
+    <string name="home_retry">Try Again</string>
+    <string name="home_refresh_failed">Couldn’t update. Showing saved items.</string>
+</resources>

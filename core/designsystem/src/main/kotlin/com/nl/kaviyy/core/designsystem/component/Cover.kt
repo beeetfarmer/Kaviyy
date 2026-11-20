@@ -17,11 +17,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -32,6 +34,8 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import coil3.ImageLoader
+import coil3.compose.AsyncImage
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaShapes
@@ -58,9 +62,12 @@ private const val MAX_BADGE = 99
 
 internal fun badgeText(count: Int): String = if (count > MAX_BADGE) "$MAX_BADGE+" else count.toString()
 
+/** Image loader for the active server's covers (per-server cache + auth). Null = placeholders only. */
+val LocalCoverImageLoader = staticCompositionLocalOf<ImageLoader?> { null }
+
 /**
- * 2:3 cover. Shows placeholder art (series color, Literata title bottom-left, optional "VOL. n" overline).
- * TODO(M2): draw the server cover via Coil on top, keeping this placeholder while loading / on failure.
+ * 2:3 cover. Shows placeholder art (series color, Literata title bottom-left, optional "VOL. n" overline) and draws
+ * [imageUrl] on top once it loads; the placeholder stays while loading, offline or on failure.
  */
 @Composable
 fun CoverImage(
@@ -72,6 +79,7 @@ fun CoverImage(
     titleSize: TextUnit = 16.sp,
     titleBottomInset: Dp = 12.dp,
     sideInset: Dp = 10.dp,
+    imageUrl: String? = null,
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     Box(modifier.clip(shape).background(color)) {
@@ -94,6 +102,11 @@ fun CoverImage(
                     .align(Alignment.BottomStart)
                     .padding(start = sideInset, end = sideInset, bottom = titleBottomInset),
         )
+        val loader = LocalCoverImageLoader.current
+        if (imageUrl != null && loader != null) {
+            // Decorative: the title is announced by the card's text.
+            AsyncImage(imageUrl, null, loader, Modifier.matchParentSize(), contentScale = ContentScale.Crop)
+        }
         overlay()
     }
 }
@@ -184,6 +197,7 @@ fun CoverCard(
     progress: Float? = null,
     unreadCount: Int? = null,
     downloadedDescription: String? = null,
+    imageUrl: String? = null,
 ) {
     val colors = Kavita.colors
     val coverSize =
@@ -212,6 +226,7 @@ fun CoverCard(
             titleSize = size.coverTitle,
             titleBottomInset = titleBottom,
             sideInset = size.inset,
+            imageUrl = imageUrl,
             modifier = coverSize.cssShadow(size.shape, size.shadowY, size.shadowBlur, 0.14f),
         ) {
             if (unreadCount != null && unreadCount > 0) UnreadBadge(unreadCount, size)

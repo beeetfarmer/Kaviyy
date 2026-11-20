@@ -1,5 +1,6 @@
 package com.nl.kaviyy.core.database
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.Index
@@ -24,11 +25,23 @@ data class ServerEntity(
     val pinnedCertDerBase64: String? = null,
     val allowInsecure: Boolean = false,
     val lastUsedAt: Long = 0,
+    val username: String? = null,
+    /** Comma-separated server roles. */
+    @ColumnInfo(defaultValue = "") val roles: String = "",
 )
 
 fun ServerEntity.toModel(): Server? =
     (ServerUrl.parse(url) as? ServerUrlResult.Valid)?.let { valid ->
-        Server(ServerId(id), name, valid.url, version, pinnedCertDerBase64?.let(::PinnedCertificate), allowInsecure)
+        Server(
+            ServerId(id),
+            name,
+            valid.url,
+            version,
+            pinnedCertDerBase64?.let(::PinnedCertificate),
+            allowInsecure,
+            username,
+            roles.split(',').filter { it.isNotBlank() }.toSet(),
+        )
     }
 
 @Dao

@@ -55,6 +55,7 @@ data class LoginResult(
     val credentials: Credentials,
     /** Server roles, e.g. "Download" gates offline downloads. */
     val roles: Set<String>,
+    val username: String? = null,
 )
 
 fun interface AccountApi {
@@ -109,7 +110,8 @@ class KavitaAccountApi
                                     Credentials.AuthKey(method.key)
                                 }
                             }
-                        LoginResult(credentials, user.roles.orEmpty().toSet())
+                        val username = user.username ?: (method as? LoginMethod.Password)?.username
+                        LoginResult(credentials, user.roles.orEmpty().toSet(), username)
                     }
                 }
             }

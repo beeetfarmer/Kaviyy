@@ -71,6 +71,7 @@ data class ChapterDto(
     val files: List<MangaFileDto> = emptyList(),
     val releaseDate: String? = null,
     val lastModifiedUtc: String? = null,
+    val volumeTitle: String? = null,
 )
 
 /** `GET api/Series/series-detail`. Volumes carry their chapters; specials/chapters are flattened views of the same. */
@@ -79,6 +80,29 @@ data class SeriesDetailDto(
     val volumes: List<VolumeDto> = emptyList(),
     val specials: List<ChapterDto> = emptyList(),
     val chapters: List<ChapterDto> = emptyList(),
+)
+
+/** `POST api/Series/recently-updated-series` item: a series with [count] new chapters. */
+@Serializable
+data class GroupedSeriesDto(
+    val seriesId: Int,
+    val seriesName: String? = null,
+    val libraryId: Int = 0,
+    val format: Int = 0,
+    val chapterId: Int = 0,
+    val count: Int = 0,
+)
+
+/** `GET api/Stream/dashboard` item. */
+@Serializable
+data class DashboardStreamDto(
+    val id: Int,
+    val name: String? = null,
+    val order: Int = 0,
+    /** `DashboardStreamType`: 1 OnDeck, 2 RecentlyUpdated, 3 NewlyAdded, 4 SmartFilter. */
+    val streamType: Int = 0,
+    val visible: Boolean = true,
+    val smartFilterEncoded: String? = null,
 )
 
 @Serializable

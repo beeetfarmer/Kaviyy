@@ -97,4 +97,6 @@ data class ChapterEntity(
     val releaseDate: Long = 0,
     /** Server `lastModifiedUtc`: update detection for downloads. */
     val lastModified: Long = 0,
+    /** Parent volume's title (e.g. "5"), for "Volume 5 · Chapter 49". */
+    val volumeTitle: String? = null,
 )

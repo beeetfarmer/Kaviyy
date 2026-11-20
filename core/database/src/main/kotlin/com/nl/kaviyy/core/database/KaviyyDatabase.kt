@@ -26,9 +26,14 @@ import androidx.room.RoomDatabase
         ReadingProfileEntity::class,
         SeriesReadingProfileEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
+    autoMigrations = [
+        AutoMigration(
+            from = 1,
+            to = 2,
+        ), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4),
+    ],
 )
 abstract class KaviyyDatabase : RoomDatabase() {
     abstract fun serverDao(): ServerDao
@@ -40,4 +45,6 @@ abstract class KaviyyDatabase : RoomDatabase() {
     abstract fun readingProfileDao(): ReadingProfileDao
 
     abstract fun outboxDao(): OutboxDao
+
+    abstract fun dashboardDao(): DashboardDao
 }

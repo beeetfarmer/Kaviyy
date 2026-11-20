@@ -52,18 +52,8 @@ class ReaderSettingsRepositoryTest {
     private var offline = false
 
     private val api =
-        object : KavitaApi {
+        object : FakeKavitaApi() {
             override suspend fun libraries() = emptyList<LibraryDto>()
-
-            override suspend fun series(
-                filter: SeriesFilterV2Dto,
-                pageNumber: Int,
-                pageSize: Int,
-            ) = emptyList<SeriesDto>()
-
-            override suspend fun series(seriesId: Int) = SeriesDto(seriesId)
-
-            override suspend fun seriesDetail(seriesId: Int) = SeriesDetailDto(chapters = emptyList<ChapterDto>())
 
             override suspend fun readingProfile(
                 libraryId: Int,

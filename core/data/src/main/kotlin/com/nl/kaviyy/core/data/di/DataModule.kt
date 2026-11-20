@@ -1,6 +1,8 @@
 package com.nl.kaviyy.core.data.di
 
 import com.nl.kaviyy.core.data.AuthSession
+import com.nl.kaviyy.core.data.HomeRepository
+import com.nl.kaviyy.core.data.OfflineFirstHomeRepository
 import com.nl.kaviyy.core.data.ServerApis
 import com.nl.kaviyy.core.data.SessionRepository
 import com.nl.kaviyy.core.network.KavitaApis
@@ -15,6 +17,9 @@ import dagger.hilt.components.SingletonComponent
 internal interface DataModule {
     @Binds
     fun session(repository: SessionRepository): AuthSession
+
+    @Binds
+    fun home(repository: OfflineFirstHomeRepository): HomeRepository
 
     companion object {
         @Provides

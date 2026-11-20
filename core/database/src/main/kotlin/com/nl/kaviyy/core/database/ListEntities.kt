@@ -1,5 +1,6 @@
 package com.nl.kaviyy.core.database
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -119,4 +120,8 @@ data class DashboardItemEntity(
     val streamId: Int,
     val position: Int,
     val seriesId: Int,
+    /** Chapter to resume (On Deck / Continue Reading) or the updated chapter (Recently Updated). */
+    val chapterId: Int? = null,
+    /** Recently Updated: number of new chapters. */
+    @ColumnInfo(defaultValue = "0") val count: Int = 0,
 )

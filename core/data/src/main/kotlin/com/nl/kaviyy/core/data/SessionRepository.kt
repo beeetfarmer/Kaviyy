@@ -128,6 +128,8 @@ class SessionRepository
                             pinnedCertDerBase64 = target.pinnedCertificate?.derBase64,
                             allowInsecure = target.allowInsecure,
                             lastUsedAt = System.currentTimeMillis(),
+                            username = result.value.username,
+                            roles = result.value.roles.joinToString(","),
                         )
                     val inserted = dao.upsert(row)
                     val id = ServerId(existing?.id ?: inserted)

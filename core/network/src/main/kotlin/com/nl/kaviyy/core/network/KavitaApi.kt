@@ -37,6 +37,33 @@ interface KavitaApi {
         @Path("seriesId") seriesId: Int,
     ): SeriesDto
 
+    /** Series with reading progress, most recently read first. `libraryId` 0 = all libraries. */
+    @POST("api/Series/on-deck")
+    suspend fun onDeck(
+        @Query("PageNumber") pageNumber: Int,
+        @Query("PageSize") pageSize: Int,
+        @Query("libraryId") libraryId: Int = 0,
+    ): List<SeriesDto>
+
+    @POST("api/Series/recently-updated-series")
+    suspend fun recentlyUpdated(
+        @Query("PageNumber") pageNumber: Int,
+        @Query("PageSize") pageSize: Int,
+    ): List<GroupedSeriesDto>
+
+    @POST("api/Series/recently-added-v2")
+    suspend fun recentlyAdded(
+        @Body filter: SeriesFilterV2Dto,
+        @Query("PageNumber") pageNumber: Int,
+        @Query("PageSize") pageSize: Int,
+    ): List<SeriesDto>
+
+    /** The chapter to resume in a series. */
+    @GET("api/Reader/continue-point")
+    suspend fun continuePoint(
+        @Query("seriesId") seriesId: Int,
+    ): ChapterDto
+
     /** The profile that applies to a series (series → library → default), as raw JSON: see ReadingProfileDto. */
     @GET("api/reading-profile/{libraryId}/{seriesId}")
     suspend fun readingProfile(

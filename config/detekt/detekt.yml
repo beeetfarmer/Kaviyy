@@ -11,6 +11,8 @@ complexity:
     ignoreDefaultParameters: true
   LongMethod:
     ignoreAnnotated: ['Composable']
+  TooManyFunctions:
+    ignoreAnnotated: ['Dao'] # one function per query is the point of a DAO
 style:
   ThrowsCount:
     excludes: ['**/test/**']

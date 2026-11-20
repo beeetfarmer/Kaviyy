@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -25,7 +26,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nl.kaviyy.core.designsystem.component.PrimaryButton
+import com.nl.kaviyy.core.data.ServerImages
+import com.nl.kaviyy.core.designsystem.component.LocalCoverImageLoader
 import com.nl.kaviyy.core.designsystem.component.SecondaryButton
 import com.nl.kaviyy.core.designsystem.component.ServerPill
 import com.nl.kaviyy.core.designsystem.theme.Kavita
@@ -33,24 +35,31 @@ import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
 import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.feature.auth.ConnectRoute
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject
+    lateinit var images: ServerImages
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContent { KaviyyApp() }
+        setContent { KaviyyApp(images) }
     }
 }
 
 @Composable
-private fun KaviyyApp(viewModel: AppViewModel = hiltViewModel()) {
+private fun KaviyyApp(
+    images: ServerImages,
+    viewModel: AppViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val servers by viewModel.servers.collectAsStateWithLifecycle()
     var switcher by rememberSaveable { mutableStateOf(false) }
     // ponytail: "Add Server" reuses the activity-scoped ConnectViewModel; a NavHost entry gives it a fresh one (M4).
     var adding by rememberSaveable { mutableStateOf(false) }
-    // ponytail: no NavHost yet; Navigation Compose arrives with the tabbed Main screen (M4).
+    // ponytail: tabs are local state; Navigation Compose arrives with the first pushed screen (Series, M8).
     var catalogue by rememberSaveable { mutableStateOf(false) }
     if (catalogue) {
         BackHandler { catalogue = false }
@@ -76,11 +85,14 @@ private fun KaviyyApp(viewModel: AppViewModel = hiltViewModel()) {
             }
 
             is AppState.SignedIn -> {
-                SignedInPlaceholder(
-                    s.server,
-                    onServerPill = { switcher = true },
-                    onDeleteLocalData = viewModel::deleteAllLocalData,
-                ) { viewModel.signOut(s.server) }
+                CompositionLocalProvider(LocalCoverImageLoader provides images.loader(s.server)) {
+                    MainScreen(
+                        s.server,
+                        onServerPill = { switcher = true },
+                        onSignOut = { viewModel.signOut(s.server) },
+                        onDeleteLocalData = viewModel::deleteAllLocalData,
+                    )
+                }
                 if (switcher) {
                     ServerSwitcherSheet(
                         servers = servers,
@@ -102,40 +114,5 @@ private fun KaviyyApp(viewModel: AppViewModel = hiltViewModel()) {
                 }
             }
         }
-    }
-}
-
-/** Stand-in until Home (M4). */
-@Composable
-private fun SignedInPlaceholder(
-    server: Server,
-    onServerPill: () -> Unit,
-    onDeleteLocalData: () -> Unit,
-    onSignOut: () -> Unit,
-) {
-    var confirmWipe by rememberSaveable { mutableStateOf(false) }
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(Kavita.colors.background)
-            .safeDrawingPadding()
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        ServerPill(server.name, online = true, onClick = onServerPill)
-        Text(stringResource(R.string.signed_in_title), style = Kavita.type.largeTitle, color = Kavita.colors.label)
-        Text(
-            stringResource(R.string.signed_in_body, server.name),
-            style = Kavita.type.bodyRegular,
-            color = Kavita.colors.labelSecondary,
-        )
-        PrimaryButton(stringResource(R.string.sign_out), onSignOut, Modifier.fillMaxWidth())
-        // [derived] Final home: You › Privacy & security › Delete local data (DESIGN.md §10). Two taps.
-        SecondaryButton(
-            stringResource(if (confirmWipe) R.string.delete_local_data_confirm else R.string.delete_local_data),
-            { if (confirmWipe) onDeleteLocalData() else confirmWipe = true },
-            Modifier.fillMaxWidth(),
-        )
     }
 }

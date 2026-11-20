@@ -15,6 +15,8 @@ value class ServerId(
  * @property pinnedCertificate TOFU-accepted certificate (N3), set after the user accepts it on the trust sheet.
  * @property allowInsecure user opted in to plain HTTP; only honoured for private hosts
  *   ([ServerUrl.cleartextPermitted]).
+ * @property username the signed-in Kavita user (display only).
+ * @property roles the user's server roles from sign-in, e.g. "Download" gates offline downloads.
  */
 data class Server(
     val id: ServerId,
@@ -23,6 +25,8 @@ data class Server(
     val version: String? = null,
     val pinnedCertificate: PinnedCertificate? = null,
     val allowInsecure: Boolean = false,
+    val username: String? = null,
+    val roles: Set<String> = emptySet(),
 ) {
     init {
         require(name.isNotBlank()) { "Server name must not be blank" }

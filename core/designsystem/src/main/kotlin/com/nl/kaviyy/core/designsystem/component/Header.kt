@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -152,4 +154,39 @@ fun SectionHeader(
         color = Kavita.colors.labelSecondary,
         modifier = modifier.padding(start = 16.dp).semantics { heading() },
     )
+}
+
+/** Home rail title (22/700) with an accent "See All"-style action (15/500), baseline-aligned. */
+@Composable
+fun RailHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    actionLabel: String? = null,
+    onAction: () -> Unit = {},
+) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            title,
+            style = Kavita.type.title2,
+            color = Kavita.colors.label,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).semantics { heading() },
+        )
+        if (actionLabel != null) {
+            Text(
+                actionLabel,
+                style = Kavita.type.callout.copy(fontWeight = FontWeight.Medium),
+                color = Kavita.colors.accent,
+                // 48dp touch target around the 15sp label.
+                modifier =
+                    Modifier
+                        .clip(KavitaShapes.pill)
+                        .clickable(role = Role.Button, onClick = onAction)
+                        .heightIn(min = 48.dp)
+                        .wrapContentHeight()
+                        .padding(start = 8.dp),
+            )
+        }
+    }
 }
