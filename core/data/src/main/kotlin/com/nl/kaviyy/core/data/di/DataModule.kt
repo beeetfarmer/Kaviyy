@@ -8,6 +8,7 @@ import com.nl.kaviyy.core.data.HomeRepository
 import com.nl.kaviyy.core.data.KavitaAdminRepository
 import com.nl.kaviyy.core.data.KavitaPersonRepository
 import com.nl.kaviyy.core.data.KavitaReviewRepository
+import com.nl.kaviyy.core.data.KavitaSearchRepository
 import com.nl.kaviyy.core.data.KavitaSmartFilterRepository
 import com.nl.kaviyy.core.data.NetworkMonitor
 import com.nl.kaviyy.core.data.OfflineFirstCatalogRepository
@@ -16,6 +17,7 @@ import com.nl.kaviyy.core.data.OfflineFirstReadStateRepository
 import com.nl.kaviyy.core.data.PersonRepository
 import com.nl.kaviyy.core.data.ReadStateRepository
 import com.nl.kaviyy.core.data.ReviewRepository
+import com.nl.kaviyy.core.data.SearchRepository
 import com.nl.kaviyy.core.data.ServerApis
 import com.nl.kaviyy.core.data.SessionRepository
 import com.nl.kaviyy.core.data.SmartFilterRepository
@@ -37,6 +39,9 @@ internal interface DataModule {
 
     @Binds
     fun catalog(repository: OfflineFirstCatalogRepository): CatalogRepository
+
+    @Binds
+    fun search(repository: KavitaSearchRepository): SearchRepository
 
     @Binds
     fun admin(repository: KavitaAdminRepository): AdminRepository

@@ -248,6 +248,27 @@ interface KavitaApi {
         @Body body: JsonObject,
     )
 
+    @GET("api/Search/search")
+    suspend fun search(
+        @Query("queryString") query: String,
+        @Query("includeChapterAndFiles") includeChapterAndFiles: Boolean,
+    ): SearchResultGroupDto
+
+    @GET("api/Search/series-for-chapter")
+    suspend fun seriesForChapter(
+        @Query("chapterId") chapterId: Int,
+    ): SeriesDto
+
+    @GET("api/Search/series-for-mangafile")
+    suspend fun seriesForFile(
+        @Query("mangaFileId") fileId: Int,
+    ): SeriesDto
+
+    @GET("api/Person/roles")
+    suspend fun personRoles(
+        @Query("personId") personId: Int,
+    ): List<Int>
+
     @GET("api/Series/all-related")
     suspend fun allRelated(
         @Query("seriesId") seriesId: Int,

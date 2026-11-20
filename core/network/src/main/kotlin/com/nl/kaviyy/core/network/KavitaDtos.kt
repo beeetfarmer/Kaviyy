@@ -338,3 +338,49 @@ data class RefreshSeriesDto(
     val seriesId: Int,
     val forceUpdate: Boolean,
 )
+
+@Serializable
+data class SearchSeriesDto(
+    val seriesId: Int,
+    val name: String? = null,
+    val localizedName: String? = null,
+    val libraryName: String? = null,
+    val volumeCount: Int = 0,
+)
+
+/** A collection or reading list hit. */
+@Serializable
+data class SearchListDto(
+    val id: Int,
+    val title: String? = null,
+    val itemCount: Int = 0,
+)
+
+@Serializable
+data class SearchFileDto(
+    val id: Int,
+    /** Server path: show the file name only. */
+    val filePath: String? = null,
+)
+
+@Serializable
+data class SearchBookmarkDto(
+    val seriesId: Int,
+    val chapterId: Int = 0,
+    val seriesName: String? = null,
+    val localizedSeriesName: String? = null,
+)
+
+/** `GET api/Search/search`. */
+@Serializable
+data class SearchResultGroupDto(
+    val series: List<SearchSeriesDto> = emptyList(),
+    val collections: List<SearchListDto> = emptyList(),
+    val readingLists: List<SearchListDto> = emptyList(),
+    val persons: List<PersonDto> = emptyList(),
+    val genres: List<GenreTagDto> = emptyList(),
+    val tags: List<GenreTagDto> = emptyList(),
+    val files: List<SearchFileDto> = emptyList(),
+    val chapters: List<ChapterDto> = emptyList(),
+    val bookmarks: List<SearchBookmarkDto> = emptyList(),
+)

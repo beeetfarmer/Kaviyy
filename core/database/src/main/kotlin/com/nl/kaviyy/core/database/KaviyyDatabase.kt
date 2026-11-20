@@ -27,8 +27,9 @@ import androidx.room.RoomDatabase
         SeriesReadingProfileEntity::class,
         QueryItemEntity::class,
         SeriesMetadataEntity::class,
+        RecentSearchEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(
@@ -37,12 +38,15 @@ import androidx.room.RoomDatabase
         ), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5),
         AutoMigration(from = 5, to = 6),
+        AutoMigration(from = 6, to = 7),
     ],
 )
 abstract class KaviyyDatabase : RoomDatabase() {
     abstract fun serverDao(): ServerDao
 
     abstract fun libraryDao(): LibraryDao
+
+    abstract fun recentSearchDao(): RecentSearchDao
 
     abstract fun seriesDao(): SeriesDao
 
