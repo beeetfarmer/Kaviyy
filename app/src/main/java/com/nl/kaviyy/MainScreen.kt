@@ -34,6 +34,8 @@ import com.nl.kaviyy.feature.filter.FilterSheet
 import com.nl.kaviyy.feature.home.HomeActions
 import com.nl.kaviyy.feature.home.HomeRoute
 import com.nl.kaviyy.feature.library.LibraryRoute
+import com.nl.kaviyy.feature.series.BrowseRoute
+import com.nl.kaviyy.feature.series.BrowseTarget
 import com.nl.kaviyy.feature.series.SeriesRoute
 import kotlinx.serialization.Serializable
 
@@ -47,6 +49,14 @@ private data object TabsDestination
 @Serializable
 private data class SeriesDestination(
     val seriesId: Int,
+)
+
+/** People/genre/tag page; [field] is a `FilterField` name. */
+@Serializable
+private data class BrowseDestination(
+    val field: String,
+    val id: Int,
+    val name: String,
 )
 
 private const val NO_LIBRARY = -1
@@ -72,6 +82,7 @@ internal fun MainScreen(
         )
     val nav = rememberNavController()
     val openSeries: (Int) -> Unit = { nav.navigate(SeriesDestination(it)) }
+    val browse: (BrowseTarget) -> Unit = { nav.navigate(BrowseDestination(it.field.name, it.id, it.name)) }
     Box(Modifier.fillMaxSize().background(Kavita.colors.background)) {
         NavHost(nav, startDestination = TabsDestination) {
             composable<TabsDestination> {
@@ -82,8 +93,13 @@ internal fun MainScreen(
             }
             composable<SeriesDestination> {
                 // Readers: M10–M12.
-                SeriesRoute(onBack = { nav.popBackStack() }, onRead = { _, _ -> }, onOpenSeries = openSeries)
+                SeriesRoute(onBack = { nav.popBackStack() }, onRead = {
+                    _,
+                    _,
+                    ->
+                }, onOpenSeries = openSeries, onBrowse = browse)
             }
+            composable<BrowseDestination> { BrowseRoute(onBack = { nav.popBackStack() }, onOpenSeries = openSeries) }
         }
         filterFor?.let { id -> FilterSheet(id.takeIf { it != NO_LIBRARY }, onDismiss = { filterFor = null }) }
         FloatingTabBar(

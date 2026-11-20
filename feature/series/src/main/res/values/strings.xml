@@ -104,4 +104,23 @@
     <string name="provider_mal">MyAnimeList</string>
     <string name="provider_cbr">Comic Book Roundup</string>
     <string name="provider_hardcover">Hardcover</string>
+    <string name="series_genres_tags">Genres &amp; Tags</string>
+    <string name="series_people">People</string>
+    <string name="browse_empty">No series here yet.</string>
+    <string name="browse_failed">Couldn\'t load these series.</string>
+    <string name="browse_genre">Genre</string>
+    <string name="browse_tag">Tag</string>
+    <string name="role_writer">Writer</string>
+    <string name="role_penciller">Penciller</string>
+    <string name="role_inker">Inker</string>
+    <string name="role_colorist">Colorist</string>
+    <string name="role_letterer">Letterer</string>
+    <string name="role_cover_artist">Cover Artist</string>
+    <string name="role_editor">Editor</string>
+    <string name="role_publisher">Publisher</string>
+    <string name="role_character">Character</string>
+    <string name="role_translator">Translator</string>
+    <string name="role_imprint">Imprint</string>
+    <string name="role_team">Team</string>
+    <string name="role_location">Location</string>
 </resources>

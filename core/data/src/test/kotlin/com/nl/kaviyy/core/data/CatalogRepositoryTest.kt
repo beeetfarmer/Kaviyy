@@ -99,6 +99,8 @@ class CatalogRepositoryTest {
                     releaseYear = 2019,
                     genres = listOf(GenreTagDto(4, "Fantasy"), GenreTagDto(5)),
                     writers = listOf(PersonDto(8, "Mira Okafor")),
+                    pencillers = listOf(PersonDto(9, "Jun Arai")),
+                    locations = listOf(PersonDto(10, "Ashford")),
                     webLinks = "https://a.example, ,https://b.example",
                 )
 
@@ -248,7 +250,8 @@ class CatalogRepositoryTest {
             val meta = d.metadata
             assertEquals("<p>A courier</p>", meta?.summary)
             assertEquals(listOf(NamedRef(4, "Fantasy")), meta?.genres) // nameless refs dropped
-            assertEquals(listOf(NamedRef(8, "Mira Okafor")), meta?.writers)
+            assertEquals(listOf(NamedRef(8, "Mira Okafor", ROLE_WRITER)), meta?.writers)
+            assertEquals(listOf(ROLE_WRITER, 4, 15), meta?.people?.map { it.role })
             assertEquals(listOf("https://a.example", "https://b.example"), meta?.webLinks)
             assertEquals(38f, meta?.hoursLeft)
             assertEquals(true, meta?.wantToRead)

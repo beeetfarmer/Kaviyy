@@ -211,10 +211,11 @@ data class SeriesFilter(
 
 /** One library grid query. [key] names its cached rows. */
 data class LibraryQuery(
-    val libraryId: Int,
+    /** Null: every library the user can see (Browse). */
+    val libraryId: Int?,
     val filter: SeriesFilter = SeriesFilter(),
 ) {
     val key: String get() = "lib=$libraryId;${filter.encode()}"
 
-    fun toFilter(): SeriesFilterV2Dto = filter.toDto(listOf(libraryId))
+    fun toFilter(): SeriesFilterV2Dto = filter.toDto(listOfNotNull(libraryId))
 }

@@ -6,8 +6,10 @@ import androidx.paging.PagingData
 import app.cash.turbine.test
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
+import com.nl.kaviyy.core.data.FilterField
 import com.nl.kaviyy.core.data.LibraryQuery
 import com.nl.kaviyy.core.data.OptionSource
+import com.nl.kaviyy.core.data.PersonRepository
 import com.nl.kaviyy.core.data.ReadStateRepository
 import com.nl.kaviyy.core.data.ReadTarget
 import com.nl.kaviyy.core.data.RelatedSeries
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -100,6 +103,18 @@ class SeriesViewModelTest {
                 return pushResult
             }
         }
+    private val queries = mutableListOf<LibraryQuery>()
+    private val described = mutableListOf<String>()
+    private val people =
+        object : PersonRepository {
+            override suspend fun description(
+                server: Server,
+                name: String,
+            ): AppResult<String?> {
+                described += name
+                return AppResult.Success("<p>Bio</p>")
+            }
+        }
     private var relatedResult: AppResult<List<RelatedSeries>> = AppResult.Failure(AppError.Network)
 
     private val session =
@@ -135,7 +150,10 @@ class SeriesViewModelTest {
             override fun librarySeries(
                 server: Server,
                 query: LibraryQuery,
-            ): Flow<PagingData<SeriesEntity>> = error("unused")
+            ): Flow<PagingData<SeriesEntity>> {
+                queries += query
+                return flowOf(PagingData.empty())
+            }
 
             override suspend fun filterOptions(
                 server: Server,
@@ -273,5 +291,38 @@ class SeriesViewModelTest {
                 assertEquals("rate 7 4.0", marks.last())
                 cancelAndIgnoreRemainingEvents()
             }
+        }
+
+    private fun browse(
+        field: FilterField,
+        name: String,
+    ) = BrowseViewModel(
+        session,
+        repo,
+        people,
+        SavedStateHandle(mapOf(BROWSE_FIELD_ARG to field.name, BROWSE_ID_ARG to 8, BROWSE_NAME_ARG to name)),
+    )
+
+    @Test
+    fun browseQueriesAllLibrariesAndDescribesPeopleOnly() =
+        runTest {
+            val writer = browse(FilterField.Writers, "Mira Okafor")
+            writer.state.test {
+                runCurrent()
+                assertEquals("<p>Bio</p>", expectMostRecentItem().description)
+                cancelAndIgnoreRemainingEvents()
+            }
+            backgroundScope.launch { writer.series.collect {} }
+            val genre = browse(FilterField.Genres, "Fantasy")
+            backgroundScope.launch { genre.series.collect {} }
+            runCurrent()
+            assertEquals(listOf("Mira Okafor"), described)
+            assertEquals(listOf<Int?>(null, null), queries.map { it.libraryId })
+            val rule =
+                queries
+                    .last()
+                    .filter.rules
+                    .single()
+            assertEquals(FilterField.Genres to listOf("8"), rule.field to rule.values.map { it.code })
         }
 }

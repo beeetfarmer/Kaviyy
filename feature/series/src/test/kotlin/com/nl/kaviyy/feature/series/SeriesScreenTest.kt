@@ -7,7 +7,9 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.nl.kaviyy.core.data.FilterField
 import com.nl.kaviyy.core.data.ReadTarget
 import com.nl.kaviyy.core.designsystem.theme.Appearance
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
@@ -140,6 +142,47 @@ class SeriesScreenTest {
 
     @Test
     fun screenshotReviews() = shot("series_reviews_light") { SeriesPreview(Appearance.Light, previewReviews) }
+
+    @Test
+    fun creditsOpenBrowseForGenresAndPeople() {
+        val opened = mutableListOf<BrowseTarget>()
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) {
+                SeriesScreen(previewSeries, SeriesActions(onBrowse = { opened += it }))
+            }
+        }
+        compose.onNodeWithText("Fantasy").performScrollTo().performClick()
+        compose.onNodeWithText("Jun Arai").performScrollTo().performClick()
+        assertEquals(
+            listOf(BrowseTarget(FilterField.Genres, 1, "Fantasy"), BrowseTarget(FilterField.Penciller, 2, "Jun Arai")),
+            opened,
+        )
+        compose.onNodeWithText("Penciller").assertExists()
+    }
+
+    @Test
+    fun browseShowsTitleRoleDescriptionAndSeries() {
+        var opened = 0
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) { BrowsePreview(previewBrowse, onOpen = { opened = it }) }
+        }
+        compose.onNodeWithText("Mira Okafor").assertExists()
+        compose.onNodeWithText("Writes about roads.").assertExists()
+        compose.onNodeWithText("Ember Road").performClick()
+        assertEquals(7, opened)
+    }
+
+    @Test
+    fun screenshotBrowse() =
+        shot("browse_light") {
+            KavitaTheme(appearance = Appearance.Light) { BrowsePreview(previewBrowse) }
+        }
+
+    @Test
+    fun screenshotBrowseDark() =
+        shot("browse_dark") {
+            KavitaTheme(appearance = Appearance.Dark) { BrowsePreview(previewBrowse) }
+        }
 
     @Test
     fun failedFirstLoadOffersRetry() {

@@ -83,6 +83,8 @@ open class FakeKavitaApi : KavitaApi {
 
     override suspend fun allRelated(seriesId: Int): RelatedSeriesDto = error("unused")
 
+    override suspend fun person(name: String): PersonDto = error("unused")
+
     override suspend fun rateSeries(body: UpdateRatingDto): Unit = error("unused")
 
     override suspend fun saveSeriesReview(body: UpdateUserReviewDto): UserReviewDto = error("unused")

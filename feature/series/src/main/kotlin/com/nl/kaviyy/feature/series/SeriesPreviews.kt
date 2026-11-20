@@ -2,8 +2,12 @@ package com.nl.kaviyy.feature.series
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.paging.PagingData
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.nl.kaviyy.core.data.CommunityRating
+import com.nl.kaviyy.core.data.FilterField
 import com.nl.kaviyy.core.data.NamedRef
+import com.nl.kaviyy.core.data.ROLE_WRITER
 import com.nl.kaviyy.core.data.Review
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.SeriesMetadata
@@ -17,6 +21,7 @@ import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
+import kotlinx.coroutines.flow.flowOf
 
 /** The canvas example (Ember Road). */
 internal val previewSeries =
@@ -98,7 +103,13 @@ internal val previewSeries =
                                 "frontier, and learns every message changes the road behind her.</p>",
                         releaseYear = 2019,
                         ageRating = 8,
-                        writers = listOf(NamedRef(1, "Mira Okafor")),
+                        genres = listOf(NamedRef(1, "Fantasy"), NamedRef(2, "Adventure")),
+                        tags = listOf(NamedRef(3, "Road Trip")),
+                        people =
+                            listOf(
+                                NamedRef(1, "Mira Okafor", ROLE_WRITER),
+                                NamedRef(2, "Jun Arai", ROLE_WRITER + 1),
+                            ),
                         hoursLeft = 38f,
                         wantToRead = true,
                         continueChapterId = 49,
@@ -136,6 +147,37 @@ internal val previewReviews =
                 ),
             ),
     )
+
+internal val previewBrowse =
+    BrowseUiState(
+        target = BrowseTarget(FilterField.Writers, 1, "Mira Okafor"),
+        server = previewSeries.server,
+        description = "Writes about roads.",
+    )
+
+private val browseSeries =
+    listOf(
+        SeriesEntity(1, 7, 1, "Ember Road", "ember road", format = 0, pages = 1000, pagesRead = 620),
+        SeriesEntity(1, 8, 1, "Signal Fires", "signal fires", format = 0, pages = 300, pagesRead = 0),
+        SeriesEntity(1, 9, 1, "Ashes", "ashes", format = 0, pages = 200, pagesRead = 200),
+    )
+
+@Composable
+internal fun BrowsePreview(
+    state: BrowseUiState,
+    onOpen: (Int) -> Unit = {},
+) {
+    val items = flowOf(PagingData.from(browseSeries)).collectAsLazyPagingItems()
+    BrowseScreen(state, items, onBack = {}, onOpenSeries = onOpen)
+}
+
+@Preview(widthDp = 412, heightDp = 915)
+@Composable
+private fun BrowseLightPreview() = KavitaTheme(appearance = Appearance.Light) { BrowsePreview(previewBrowse) }
+
+@Preview(widthDp = 412, heightDp = 915)
+@Composable
+private fun BrowseDarkPreview() = KavitaTheme(appearance = Appearance.Dark) { BrowsePreview(previewBrowse) }
 
 @Composable
 internal fun SeriesPreview(

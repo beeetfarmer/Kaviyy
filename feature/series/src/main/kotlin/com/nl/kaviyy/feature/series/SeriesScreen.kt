@@ -76,6 +76,7 @@ data class SeriesActions(
     val onMark: (ReadTarget, read: Boolean) -> Unit = { _, _ -> },
     val onRate: (Float) -> Unit = {},
     val onSaveReview: () -> Unit = {},
+    val onBrowse: (BrowseTarget) -> Unit = {},
 )
 
 @Composable
@@ -83,6 +84,7 @@ fun SeriesRoute(
     onBack: () -> Unit,
     onRead: (seriesId: Int, chapterId: Int?) -> Unit,
     onOpenSeries: (seriesId: Int) -> Unit,
+    onBrowse: (BrowseTarget) -> Unit,
     viewModel: SeriesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -99,6 +101,7 @@ fun SeriesRoute(
             onMark = viewModel::setRead,
             onRate = viewModel::setRating,
             onSaveReview = viewModel::saveReview,
+            onBrowse = onBrowse,
         ),
         reviewText = viewModel.reviewText,
     )
@@ -252,6 +255,7 @@ private fun Body(
             )
         }
         Summary(plainSummary(meta?.summary))
+        meta?.let { Credits(it, actions.onBrowse) }
         state.detail?.let { SeriesTabs(it, state.server, state.tab, state.related, actions) }
     }
 }

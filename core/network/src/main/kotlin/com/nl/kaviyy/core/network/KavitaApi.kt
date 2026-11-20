@@ -221,6 +221,11 @@ interface KavitaApi {
         @Query("libraryType") libraryType: Int,
     ): Response<SeriesDetailPlusDto>
 
+    @GET("api/Person")
+    suspend fun person(
+        @Query("name") name: String,
+    ): PersonDto
+
     @GET("api/Series/all-related")
     suspend fun allRelated(
         @Query("seriesId") seriesId: Int,

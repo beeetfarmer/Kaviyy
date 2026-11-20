@@ -149,6 +149,7 @@ data class LanguageDto(
 data class PersonDto(
     val id: Int,
     val name: String? = null,
+    val description: String? = null,
 )
 
 @Serializable
@@ -213,6 +214,18 @@ data class SeriesMetadataDto(
     val genres: List<GenreTagDto> = emptyList(),
     val tags: List<GenreTagDto> = emptyList(),
     val writers: List<PersonDto> = emptyList(),
+    val pencillers: List<PersonDto> = emptyList(),
+    val inkers: List<PersonDto> = emptyList(),
+    val colorists: List<PersonDto> = emptyList(),
+    val letterers: List<PersonDto> = emptyList(),
+    val coverArtists: List<PersonDto> = emptyList(),
+    val editors: List<PersonDto> = emptyList(),
+    val publishers: List<PersonDto> = emptyList(),
+    val characters: List<PersonDto> = emptyList(),
+    val translators: List<PersonDto> = emptyList(),
+    val imprints: List<PersonDto> = emptyList(),
+    val teams: List<PersonDto> = emptyList(),
+    val locations: List<PersonDto> = emptyList(),
     /** Comma-separated URLs. */
     val webLinks: String? = null,
 )
