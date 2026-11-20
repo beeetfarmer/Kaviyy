@@ -16,8 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -27,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaShapes
@@ -51,7 +53,7 @@ fun FloatingTabBar(
     val ring = if (colors.isDark) colors.hairline else Color.Black.copy(alpha = 0.10f)
     val glass =
         Modifier
-            .cssShadow(KavitaShapes.pill, 10.dp, 30.dp, 1f, colors.tabBarShadow)
+            .cssShadow(KavitaShapes.pill, 10.dp, 30.dp, colors.tabBarShadow.alpha)
             .clip(KavitaShapes.pill)
             .background(colors.tabBar)
             .border(0.5.dp, ring, KavitaShapes.pill)
@@ -99,7 +101,14 @@ fun FloatingTabBar(
                     verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
                 ) {
                     Icon(if (selected) item.selectedIcon else item.icon, null, Modifier.size(24.dp), tint = fg)
-                    Text(item.label, style = Kavita.type.tabLabel, color = fg, maxLines = 1)
+                    // Five tabs leave ~53–61dp per label: shrink (11 → 9sp) rather than truncate "Downloads".
+                    BasicText(
+                        item.label,
+                        style = Kavita.type.tabLabel,
+                        color = { fg },
+                        maxLines = 1,
+                        autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = 11.sp, stepSize = 0.5.sp),
+                    )
                 }
             }
         }

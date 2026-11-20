@@ -11,6 +11,11 @@ class AndroidComposeConventionPlugin : Plugin<Project> {
             extensions.getByType(CommonExtension::class.java).apply {
                 buildFeatures.compose = true
                 testOptions.unitTests.isIncludeAndroidResources = true
+                testOptions.unitTests.all {
+                    // Roborazzi: real (native) graphics so fonts and drop shadows render in screenshots.
+                    it.systemProperty("robolectric.graphicsMode", "NATIVE")
+                    it.systemProperty("robolectric.pixelCopyRenderMode", "hardware")
+                }
             }
             dependencies {
                 val bom = platform(lib("androidx-compose-bom"))
