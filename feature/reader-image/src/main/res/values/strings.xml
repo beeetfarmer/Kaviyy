@@ -28,4 +28,21 @@
     <string name="reader_bookmarks">Show bookmarks</string>
     <string name="reader_bookmarks_empty">No bookmarks in this chapter</string>
     <string name="reader_bookmark_delete">Remove bookmark on page %1$d</string>
+    <string name="reader_settings">Reader settings</string>
+    <string name="reader_done">Done</string>
+    <string name="reader_fit">Fit</string>
+    <string name="reader_fit_auto">Auto</string>
+    <string name="reader_fit_width">Width</string>
+    <string name="reader_fit_height">Height</string>
+    <string name="reader_fit_original">Original</string>
+    <string name="reader_background">Background</string>
+    <string name="reader_background_black">Black</string>
+    <string name="reader_background_gray">Gray</string>
+    <string name="reader_background_white">White</string>
+    <string name="reader_swipe">Swipe to turn pages</string>
+    <string name="reader_auto_close">Hide controls when turning</string>
+    <string name="reader_keep_screen_on">Keep screen on</string>
+    <string name="reader_system_brightness">System brightness</string>
+    <string name="reader_brightness">Brightness</string>
+    <string name="reader_device_note">Keep screen on and brightness apply to this device only.</string>
 </resources>

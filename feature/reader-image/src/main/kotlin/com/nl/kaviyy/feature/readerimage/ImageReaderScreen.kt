@@ -49,6 +49,8 @@ data class ImageReaderActions(
     val onLayout: (ReaderLayout) -> Unit = {},
     /** Toggle the bookmark on a page. */
     val onBookmark: (Int) -> Unit = {},
+    val onShowSettings: (Boolean) -> Unit = {},
+    val onSettings: (ReaderSettings) -> Unit = {},
     val onRetry: () -> Unit = {},
 )
 
@@ -71,6 +73,8 @@ fun ImageReaderRoute(
             onToggleDirection = viewModel::toggleDirection,
             onLayout = viewModel::setLayout,
             onBookmark = viewModel::toggleBookmark,
+            onShowSettings = viewModel::showSettings,
+            onSettings = viewModel::updateSettings,
             onRetry = viewModel::retry,
         ),
     )
@@ -83,7 +87,7 @@ fun ImageReaderScreen(
     actions: ImageReaderActions,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier.fillMaxSize().background(ImageReaderColors.background)) {
+    Box(modifier.fillMaxSize().background(state.settings.backgroundColor())) {
         val chapter = state.chapter
         when {
             chapter != null && !chapter.isImage -> Message(stringResource(R.string.reader_unsupported), null)
@@ -92,8 +96,9 @@ fun ImageReaderScreen(
             state.error != null -> Message(stringResource(R.string.reader_load_failed), actions.onRetry)
         }
         if (chapter?.isImage == true) Prefetch(state)
-        ReaderWindowEffects(state.keepScreenOn, state.brightness, immersive = !state.chromeVisible)
+        ReaderWindowEffects(state.settings.keepScreenOn, state.settings.brightness, immersive = !state.chromeVisible)
         if (state.chromeVisible) ReaderChrome(state, actions)
+        if (state.settingsOpen) ReaderSettingsSheet(state.settings, actions)
     }
 }
 

@@ -8,6 +8,8 @@ import com.nl.kaviyy.core.data.BookmarkRepository
 import com.nl.kaviyy.core.data.ImageReaderRepository
 import com.nl.kaviyy.core.data.ProgressRepository
 import com.nl.kaviyy.core.data.ReaderChapter
+import com.nl.kaviyy.core.data.ReaderDisplay
+import com.nl.kaviyy.core.data.ReaderDisplayRepository
 import com.nl.kaviyy.core.data.ReaderSettingsRepository
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
@@ -54,11 +56,8 @@ data class ImageReaderUiState(
     val layout: ReaderLayout = ReaderLayout.Single,
     /** Double page: swap the two pages of a pair (Kavita "Double (Manga)"). */
     val reversedPairs: Boolean = false,
-    /** Kavita `ScalingOption`: 0 fit height, 1 fit width, 2 original, 3 automatic. */
-    val scaling: Int = SCALING_AUTOMATIC,
-    val keepScreenOn: Boolean = true,
-    /** 0..1 window brightness; null follows the system. Set from the settings sheet (M10.6). */
-    val brightness: Float? = null,
+    val settings: ReaderSettings = ReaderSettings(),
+    val settingsOpen: Boolean = false,
     val chromeVisible: Boolean = true,
     val loading: Boolean = true,
     val error: AppError? = null,
@@ -83,6 +82,7 @@ private data class Session(
     val chapter: ReaderChapter? = null,
     val page: Int = 0,
     val chromeVisible: Boolean = true,
+    val settingsOpen: Boolean = false,
     val loading: Boolean = true,
     val error: AppError? = null,
     val next: Int? = null,
@@ -100,6 +100,7 @@ class ImageReaderViewModel
         private val settingsRepository: ReaderSettingsRepository,
         private val bookmarkRepository: BookmarkRepository,
         private val progressRepository: ProgressRepository,
+        private val displayRepository: ReaderDisplayRepository,
         private val saved: SavedStateHandle,
     ) : ViewModel() {
         private val seriesId: Int = checkNotNull(saved.get<Int>(READER_SERIES_ARG)) { "missing $READER_SERIES_ARG" }
@@ -126,7 +127,13 @@ class ImageReaderViewModel
             }
 
         val state: StateFlow<ImageReaderUiState> =
-            combine(auth.activeServer, session, settings, bookmarks) { s, st, prefs, marks ->
+            combine(
+                auth.activeServer,
+                session,
+                settings,
+                bookmarks,
+                displayRepository.display,
+            ) { s, st, prefs, marks, device ->
                 ImageReaderUiState(
                     server = s,
                     chapter = st.chapter,
@@ -134,7 +141,16 @@ class ImageReaderViewModel
                     rightToLeft = prefs.readingDirection == DIRECTION_RTL,
                     layout = prefs.layout,
                     reversedPairs = prefs.reversedPairs,
-                    scaling = prefs.scalingOption,
+                    settings =
+                        ReaderSettings(
+                            scaling = prefs.scalingOption,
+                            background = prefs.backgroundColor,
+                            swipeToTurn = prefs.swipeToPaginate,
+                            autoCloseMenu = prefs.autoCloseMenu,
+                            keepScreenOn = device.keepScreenOn,
+                            brightness = device.brightness,
+                        ),
+                    settingsOpen = st.settingsOpen,
                     chromeVisible = st.chromeVisible,
                     loading = st.loading,
                     error = st.error,
@@ -193,6 +209,7 @@ class ImageReaderViewModel
             if (spreads.isEmpty()) return
             val at = spreads.indexOfPage(st.page)
             if (at < spreads.lastIndex) goTo(spreads[at + 1].first()) else st.next?.let { open(it, page = 0) }
+            autoClose()
         }
 
         /** Previous page (spread), or the previous chapter's last page. */
@@ -201,16 +218,42 @@ class ImageReaderViewModel
             val st = session.value
             val at = spreads.indexOfPage(st.page)
             if (at > 0) goTo(spreads[at - 1].first()) else st.previous?.let { open(it, page = LAST_PAGE) }
+            autoClose()
         }
 
-        fun setLayout(layout: ReaderLayout) = updateSettings { it.withLayout(layout) }
+        /** Kavita "auto close menu": turning a page hides the chrome. */
+        private fun autoClose() {
+            if (state.value.settings.autoCloseMenu) session.update { it.copy(chromeVisible = false) }
+        }
+
+        fun showSettings(open: Boolean) = session.update { it.copy(settingsOpen = open) }
+
+        /** Account settings go to the series reading profile; device ones stay on this device. */
+        fun updateSettings(new: ReaderSettings) {
+            val old = state.value.settings
+            if (new.keepScreenOn != old.keepScreenOn || new.brightness != old.brightness) {
+                displayRepository.update(ReaderDisplay(new.keepScreenOn, new.brightness))
+            }
+            if (new.copy(keepScreenOn = old.keepScreenOn, brightness = old.brightness) != old) {
+                updateProfile {
+                    it.copy(
+                        scalingOption = new.scaling,
+                        backgroundColor = new.background,
+                        swipeToPaginate = new.swipeToTurn,
+                        autoCloseMenu = new.autoCloseMenu,
+                    )
+                }
+            }
+        }
+
+        fun setLayout(layout: ReaderLayout) = updateProfile { it.withLayout(layout) }
 
         fun nextChapter() = session.value.next?.let { open(it, page = 0) }
 
         fun previousChapter() = session.value.previous?.let { open(it, page = 0) }
 
         fun toggleDirection() =
-            updateSettings {
+            updateProfile {
                 it.copy(
                     readingDirection =
                         if (it.readingDirection ==
@@ -224,7 +267,7 @@ class ImageReaderViewModel
             }
 
         /** Local first; a failed push waits in the outbox (M17). */
-        private fun updateSettings(change: (ReadingProfileDto) -> ReadingProfileDto) {
+        private fun updateProfile(change: (ReadingProfileDto) -> ReadingProfileDto) {
             viewModelScope.launch {
                 val s = auth.activeServer.first() ?: return@launch
                 val libraryId = session.value.chapter?.libraryId ?: return@launch

@@ -120,8 +120,15 @@ private fun TopBar(
             }
         }
     }
-    // Settings button (M10.6) joins here.
     if (chapter?.isImage == true && state.pages > 0) BookmarkButton(state, actions)
+    CircleIconButton(
+        KavitaIcons.Sliders,
+        stringResource(R.string.reader_settings),
+        { actions.onShowSettings(true) },
+        containerColor = ImageReaderColors.chrome,
+        contentColor = ImageReaderColors.content,
+        modifier = Modifier.size(TOP_BUTTON),
+    )
 }
 
 @Composable

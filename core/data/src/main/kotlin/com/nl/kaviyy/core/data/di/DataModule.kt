@@ -23,11 +23,13 @@ import com.nl.kaviyy.core.data.OfflineFirstReaderSettingsRepository
 import com.nl.kaviyy.core.data.PersonRepository
 import com.nl.kaviyy.core.data.ProgressRepository
 import com.nl.kaviyy.core.data.ReadStateRepository
+import com.nl.kaviyy.core.data.ReaderDisplayRepository
 import com.nl.kaviyy.core.data.ReaderSettingsRepository
 import com.nl.kaviyy.core.data.ReviewRepository
 import com.nl.kaviyy.core.data.SearchRepository
 import com.nl.kaviyy.core.data.ServerApis
 import com.nl.kaviyy.core.data.SessionRepository
+import com.nl.kaviyy.core.data.SharedPrefsReaderDisplayRepository
 import com.nl.kaviyy.core.data.SmartFilterRepository
 import com.nl.kaviyy.core.network.KavitaApis
 import dagger.Binds
@@ -59,6 +61,9 @@ internal interface DataModule {
 
     @Binds
     fun progress(repository: OfflineFirstProgressRepository): ProgressRepository
+
+    @Binds
+    fun readerDisplay(repository: SharedPrefsReaderDisplayRepository): ReaderDisplayRepository
 
     @Binds
     fun search(repository: KavitaSearchRepository): SearchRepository

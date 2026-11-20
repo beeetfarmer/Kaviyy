@@ -167,6 +167,44 @@ class ImageReaderScreenTest {
     }
 
     @Test
+    fun settingsButtonOpensTheSheetWhichEditsSettings() {
+        val calls = mutableListOf<Any>()
+        compose.setContent {
+            ReaderPreview(
+                previewReader.copy(settingsOpen = true),
+                ImageReaderActions(onShowSettings = { calls += it }, onSettings = { calls += it }),
+            )
+        }
+        compose.onNodeWithContentDescription("Reader settings").performClick()
+        compose.onNodeWithText("Width").performClick()
+        compose.onNodeWithContentDescription("Keep screen on").performClick()
+        compose.onNodeWithContentDescription("System brightness").performClick()
+        compose.onNodeWithText("Done").performClick()
+        assertEquals(
+            listOf(
+                true,
+                ReaderSettings(scaling = SCALING_FIT_WIDTH),
+                ReaderSettings(keepScreenOn = false),
+                ReaderSettings(brightness = 0.5f),
+                false,
+            ),
+            calls,
+        )
+    }
+
+    @Test
+    fun backgroundHexParsesWithABlackFallback() {
+        assertEquals(androidx.compose.ui.graphics.Color.White, ReaderSettings(background = "#ffffff").backgroundColor())
+        assertEquals(
+            androidx.compose.ui.graphics.Color.Black,
+            ReaderSettings(background = "not a color").backgroundColor(),
+        )
+    }
+
+    @Test
+    fun screenshotSettings() = shot("reader_settings") { ReaderPreview(previewReader.copy(settingsOpen = true)) }
+
+    @Test
     fun screenshotRtl() = shot("reader_rtl") { ReaderPreview() }
 
     @Test

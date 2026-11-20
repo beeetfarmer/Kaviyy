@@ -76,13 +76,13 @@ internal fun PagedSpreads(
             reverseLayout = state.rightToLeft,
             beyondViewportPageCount = 1,
             // Pan instead of paging while a page is zoomed.
-            userScrollEnabled = !zoomed,
+            userScrollEnabled = !zoomed && state.settings.swipeToTurn,
             key = { spreads[it].first() },
         ) { index ->
             // Pairs read in the reading direction; "Double (Manga)" swaps them.
             val pages = spreads[index].let { if (state.rightToLeft != state.reversedPairs) it.reversed() else it }
             ZoomBox(zones, onZoomed = { zoomed = it }, Modifier.fillMaxSize()) {
-                if (pages.size == 1 && state.scaling == SCALING_FIT_WIDTH) {
+                if (pages.size == 1 && state.settings.scaling == SCALING_FIT_WIDTH) {
                     // Tall pages scroll vertically at full width.
                     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         PageImage(
@@ -117,7 +117,7 @@ internal fun PagedSpreads(
                                 } else {
                                     Alignment.CenterStart
                                 },
-                                contentScale(state.scaling),
+                                contentScale(state.settings.scaling),
                             )
                         }
                     }

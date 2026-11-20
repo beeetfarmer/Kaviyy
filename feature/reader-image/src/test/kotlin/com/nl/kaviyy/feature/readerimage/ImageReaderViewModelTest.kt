@@ -7,6 +7,8 @@ import com.nl.kaviyy.core.data.BookmarkRepository
 import com.nl.kaviyy.core.data.ImageReaderRepository
 import com.nl.kaviyy.core.data.ProgressRepository
 import com.nl.kaviyy.core.data.ReaderChapter
+import com.nl.kaviyy.core.data.ReaderDisplay
+import com.nl.kaviyy.core.data.ReaderDisplayRepository
 import com.nl.kaviyy.core.data.ReaderSettingsRepository
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
@@ -164,9 +166,19 @@ class ImageReaderViewModelTest {
             }
         }
 
+    private val display = MutableStateFlow(ReaderDisplay())
+    private val displayRepo =
+        object : ReaderDisplayRepository {
+            override val display = this@ImageReaderViewModelTest.display
+
+            override fun update(display: ReaderDisplay) {
+                this@ImageReaderViewModelTest.display.value = display
+            }
+        }
+
     private fun vm(
         saved: SavedStateHandle = SavedStateHandle(mapOf(READER_SERIES_ARG to 7, READER_CHAPTER_ARG to 49)),
-    ) = ImageReaderViewModel(session, repo, settings, bookmarks, progress, saved)
+    ) = ImageReaderViewModel(session, repo, settings, bookmarks, progress, displayRepo, saved)
 
     @Test
     fun pagesFlowIntoNeighbouringChapters() =
@@ -233,6 +245,31 @@ class ImageReaderViewModelTest {
                 vm.nextChapter() // leaving pushes at once
                 runCurrent()
                 assertEquals(listOf(49, 49), pushed)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun settingsSplitBetweenTheProfileAndTheDeviceAndAutoCloseHidesChrome() =
+        runTest {
+            val vm = vm()
+            vm.state.test {
+                runCurrent()
+                var st = expectMostRecentItem()
+                vm.updateSettings(st.settings.copy(brightness = 0.3f))
+                runCurrent()
+                assertEquals(ReaderDisplay(keepScreenOn = true, brightness = 0.3f), display.value)
+                assertEquals(emptyList(), updates) // device-only change: profile untouched
+                st = expectMostRecentItem()
+                vm.updateSettings(st.settings.copy(scaling = SCALING_FIT_WIDTH, swipeToTurn = false))
+                runCurrent()
+                st = expectMostRecentItem()
+                assertEquals(SCALING_FIT_WIDTH to false, st.settings.scaling to st.settings.swipeToTurn)
+                assertEquals(1, updates.size)
+                assertEquals(true, st.chromeVisible)
+                vm.nextPage() // autoCloseMenu defaults on
+                runCurrent()
+                assertEquals(false, expectMostRecentItem().chromeVisible)
                 cancelAndIgnoreRemainingEvents()
             }
         }

@@ -58,6 +58,19 @@ internal fun spreads(
     return out
 }
 
+/** The settings sheet: Kavita profile fields plus this device's display options. */
+data class ReaderSettings(
+    /** Kavita `ScalingOption`: 0 fit height, 1 fit width, 2 original, 3 automatic. */
+    val scaling: Int = SCALING_AUTOMATIC,
+    /** Hex, Kavita `backgroundColor`. */
+    val background: String = "#000000",
+    val swipeToTurn: Boolean = true,
+    val autoCloseMenu: Boolean = true,
+    val keepScreenOn: Boolean = true,
+    /** 0..1; null follows the system. */
+    val brightness: Float? = null,
+)
+
 const val SCALING_FIT_HEIGHT = 0
 const val SCALING_FIT_WIDTH = 1
 const val SCALING_ORIGINAL = 2
