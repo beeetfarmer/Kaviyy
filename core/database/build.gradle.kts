@@ -8,9 +8,19 @@ ksp {
     arg("room.generateKotlin", "true")
 }
 
+// Exported schemas double as test assets for MigrationTestHelper.
+extensions.configure<com.android.build.api.dsl.LibraryExtension> {
+    sourceSets
+        .getByName("test")
+        .assets.directories
+        .add("$projectDir/schemas")
+    testOptions.unitTests.isIncludeAndroidResources = true
+}
+
 dependencies {
     api(projects.core.model)
     api(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.room.testing)
 }

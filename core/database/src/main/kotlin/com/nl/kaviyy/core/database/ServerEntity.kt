@@ -1,12 +1,10 @@
 package com.nl.kaviyy.core.database
 
 import androidx.room.Dao
-import androidx.room.Database
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
-import androidx.room.RoomDatabase
 import androidx.room.Upsert
 import com.nl.kaviyy.core.model.server.PinnedCertificate
 import com.nl.kaviyy.core.model.server.Server
@@ -55,9 +53,4 @@ interface ServerDao {
 
     @Query("DELETE FROM servers WHERE id = :id")
     suspend fun delete(id: Long)
-}
-
-@Database(entities = [ServerEntity::class], version = 1, exportSchema = true)
-abstract class KaviyyDatabase : RoomDatabase() {
-    abstract fun serverDao(): ServerDao
 }
