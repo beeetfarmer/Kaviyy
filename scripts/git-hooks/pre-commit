@@ -1,0 +1,17 @@
+#!/bin/sh
+# Installed with: git config core.hooksPath scripts/git-hooks
+# Blocks commits that leak secrets, break formatting or fail unit tests.
+set -eu
+cd "$(git rev-parse --show-toplevel)"
+
+if command -v gitleaks >/dev/null 2>&1; then
+    gitleaks git --pre-commit --staged --redact --no-banner
+else
+    echo "pre-commit: gitleaks not installed, skipping secret scan" >&2
+fi
+
+if git diff --cached --name-only | grep -q '^gradle/wrapper/gradle-wrapper.jar$'; then
+    scripts/verify-wrapper.sh
+fi
+
+./gradlew --quiet spotlessCheck testDebugUnitTest
