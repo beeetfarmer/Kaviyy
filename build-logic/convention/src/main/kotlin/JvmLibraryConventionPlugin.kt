@@ -5,11 +5,13 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.kotlin.dsl.configure
 
 class JvmLibraryConventionPlugin : Plugin<Project> {
-    override fun apply(target: Project) = with(target) {
-        pluginManager.apply("org.jetbrains.kotlin.jvm")
-        extensions.configure<JavaPluginExtension> {
-            // Kotlin follows the Java toolchain, so both target the same JVM.
-            toolchain.languageVersion.set(JavaLanguageVersion.of(JAVA_VERSION.majorVersion))
+    override fun apply(target: Project) =
+        with(target) {
+            pluginManager.apply("org.jetbrains.kotlin.jvm")
+            configureUnitTests(android = false)
+            extensions.configure<JavaPluginExtension> {
+                // Kotlin follows the Java toolchain, so both target the same JVM.
+                toolchain.languageVersion.set(JavaLanguageVersion.of(JAVA_VERSION.majorVersion))
+            }
         }
-    }
 }

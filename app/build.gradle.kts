@@ -27,9 +27,17 @@ dependencies {
     implementation(projects.core.data)
     implementation(projects.core.model)
     listOf(
-        projects.feature.auth, projects.feature.home, projects.feature.library, projects.feature.series,
-        projects.feature.search, projects.feature.filter, projects.feature.lists, projects.feature.profile,
-        projects.feature.downloads, projects.feature.readerImage, projects.feature.readerEpub,
+        projects.feature.auth,
+        projects.feature.home,
+        projects.feature.library,
+        projects.feature.series,
+        projects.feature.search,
+        projects.feature.filter,
+        projects.feature.lists,
+        projects.feature.profile,
+        projects.feature.downloads,
+        projects.feature.readerImage,
+        projects.feature.readerEpub,
         projects.feature.readerPdf,
     ).forEach { implementation(it) }
     implementation(libs.androidx.core.ktx)

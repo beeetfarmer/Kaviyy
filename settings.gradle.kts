@@ -31,6 +31,16 @@ include(":app")
 listOf("model", "designsystem", "network", "database", "datastore", "data", "download", "sync", "testing")
     .forEach { include(":core:$it") }
 listOf(
-    "auth", "home", "library", "series", "search", "filter", "lists", "profile", "downloads",
-    "reader-image", "reader-epub", "reader-pdf",
+    "auth",
+    "home",
+    "library",
+    "series",
+    "search",
+    "filter",
+    "lists",
+    "profile",
+    "downloads",
+    "reader-image",
+    "reader-epub",
+    "reader-pdf",
 ).forEach { include(":feature:$it") }
