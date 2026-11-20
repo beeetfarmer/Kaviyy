@@ -51,6 +51,26 @@ class HomeScreenTest {
     }
 
     @Test
+    fun offlinePutsDownloadedFirstAndShowsOfflinePill() {
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) { HomeScreen(previewOffline, "Friday", HomeActions(), {}) }
+        }
+        compose.onNodeWithText("Offline").assertExists()
+        compose.onNodeWithText("Downloaded").assertExists()
+        compose.onNodeWithText("Moss & Iron").assertExists()
+    }
+
+    @Test
+    fun screenshotOfflineLight() =
+        captureRoboImage(
+            "src/test/screenshots/home_offline_light.png",
+        ) { HomePreview(Appearance.Light, previewOffline) }
+
+    @Test
+    fun screenshotOfflineDark() =
+        captureRoboImage("src/test/screenshots/home_offline_dark.png") { HomePreview(Appearance.Dark, previewOffline) }
+
+    @Test
     fun screenshotLight() = captureRoboImage("src/test/screenshots/home_light.png") { HomePreview(Appearance.Light) }
 
     @Test

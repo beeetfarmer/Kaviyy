@@ -1,6 +1,7 @@
 package com.nl.kaviyy.feature.home
 
 import com.nl.kaviyy.core.database.ChapterEntity
+import com.nl.kaviyy.core.model.result.AppError
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -53,5 +54,16 @@ class HomeFormatTest {
         assertEquals("AA", initials("aarav"))
         assertEquals("JD", initials("john.doe"))
         assertEquals("", initials(null))
+    }
+
+    @Test
+    fun offlineStateDerivations() {
+        assertEquals(listOf(1, 7), previewOffline.downloadedRail.map { it.seriesId })
+        assertEquals(false, previewOffline.isDimmed(1))
+        assertEquals(true, previewOffline.isDimmed(2))
+        assertEquals(emptyList(), previewState().downloadedRail)
+        assertEquals(false, previewState().isDimmed(2))
+        assertEquals(false, previewOffline.copy(error = AppError.Network).showStaleNotice)
+        assertEquals(true, previewState().copy(error = AppError.Network).showStaleNotice)
     }
 }

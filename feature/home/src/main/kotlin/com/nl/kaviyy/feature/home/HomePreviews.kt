@@ -59,6 +59,14 @@ internal val previewHome =
 
 internal fun previewState(home: Home? = previewHome) = HomeUiState(server = previewServer, home = home)
 
+/** Offline: two downloaded series; Ember Road (continue card, On Deck) is downloaded, the rest dimmed. */
+internal val previewOffline =
+    previewState(
+        previewHome.copy(
+            downloaded = listOf(HomeItem(1, 1, "Ember Road", 200, 124), HomeItem(7, 1, "Moss & Iron", 40, 0)),
+        ),
+    ).copy(offline = true)
+
 @Composable
 internal fun HomePreview(
     appearance: Appearance,
@@ -74,3 +82,11 @@ private fun HomeLightPreview() = HomePreview(Appearance.Light)
 @Preview(heightDp = 915, widthDp = 412)
 @Composable
 private fun HomeDarkPreview() = HomePreview(Appearance.Dark)
+
+@Preview(heightDp = 915, widthDp = 412)
+@Composable
+private fun HomeOfflineLightPreview() = HomePreview(Appearance.Light, previewOffline)
+
+@Preview(heightDp = 915, widthDp = 412)
+@Composable
+private fun HomeOfflineDarkPreview() = HomePreview(Appearance.Dark, previewOffline)

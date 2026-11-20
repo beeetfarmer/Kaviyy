@@ -21,6 +21,7 @@ import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class HomeViewModelTest {
     @get:Rule
@@ -33,6 +34,7 @@ class HomeViewModelTest {
     private val refreshed = mutableListOf<Long>()
     private var result: AppResult<Unit> = AppResult.Success(Unit)
     private val homes = MutableStateFlow(Home(null, emptyList()))
+    private val online = MutableStateFlow(true)
 
     private val session =
         object : AuthSession {
@@ -71,7 +73,7 @@ class HomeViewModelTest {
     @Test
     fun refreshesOnOpenAndOnServerSwitch() =
         runTest {
-            val vm = HomeViewModel(session, repo)
+            val vm = HomeViewModel(session, repo, { online })
             vm.state.test {
                 skipItems(1)
                 runCurrent()
@@ -84,10 +86,26 @@ class HomeViewModelTest {
         }
 
     @Test
+    fun goingOfflineFlagsStateAndComingBackRefreshes() =
+        runTest {
+            val vm = HomeViewModel(session, repo, { online })
+            vm.state.test {
+                runCurrent()
+                online.value = false
+                runCurrent()
+                assertTrue(expectMostRecentItem().offline)
+                online.value = true
+                runCurrent()
+                assertEquals(listOf(1L, 1L), refreshed)
+                assertEquals(false, expectMostRecentItem().offline)
+            }
+        }
+
+    @Test
     fun failedRefreshKeepsContentAndExposesTheError() =
         runTest {
             result = AppResult.Failure(AppError.Network)
-            val vm = HomeViewModel(session, repo)
+            val vm = HomeViewModel(session, repo, { online })
             vm.state.test {
                 runCurrent()
                 val s = expectMostRecentItem()

@@ -166,6 +166,24 @@ class HomeRepositoryTest {
         }
 
     @Test
+    fun downloadedSeriesNewestFirstOnlyWhenCompleted() =
+        runTest {
+            repo.refresh(server) // caches series 1, 2, 3, 4
+            val raw = db.openHelper.writableDatabase
+            val rows = listOf(Triple(1, "COMPLETED", 10), Triple(4, "COMPLETED", 20), Triple(2, "RUNNING", 30))
+            rows.forEach { (s, st, t) ->
+                raw.execSQL(
+                    "INSERT INTO downloads (serverId, chapterId, seriesId, volumeId, state, pageImages, pagesDone, " +
+                        "pagesTotal, bytesDone, bytesTotal, serverLastModified, updatedAt) " +
+                        "VALUES ($serverId, ${100 + s}, $s, 0, '$st', 1, 0, 0, 0, 0, 0, $t)",
+                )
+            }
+            val home = repo.home(server).first()
+            assertEquals(listOf(4, 1), home.downloaded.map { it.seriesId })
+            assertEquals(setOf(4, 1), home.downloadedIds)
+        }
+
+    @Test
     fun failedStreamKeepsItsCacheAndReportsTheError() =
         runTest {
             repo.refresh(server)

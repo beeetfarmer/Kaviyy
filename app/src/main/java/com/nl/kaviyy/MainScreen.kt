@@ -57,6 +57,7 @@ internal fun MainScreen(
                         onServerPill = onServerPill,
                         onProfile = { selected = Tab.You.ordinal },
                         onSeeAll = { selected = Tab.Library.ordinal },
+                        onSeeDownloads = { selected = Tab.Downloads.ordinal },
                     ),
                 )
             }

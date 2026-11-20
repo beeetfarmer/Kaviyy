@@ -57,8 +57,12 @@ data class HomeRail(
 data class Home(
     val continueReading: HomeItem?,
     val rails: List<HomeRail>,
+    /** Series with finished downloads: the first rail when offline. */
+    val downloaded: List<HomeItem> = emptyList(),
 ) {
-    val isEmpty: Boolean get() = continueReading == null && rails.all { it.items.isEmpty() }
+    val isEmpty: Boolean get() = continueReading == null && rails.all { it.items.isEmpty() } && downloaded.isEmpty()
+
+    val downloadedIds: Set<Int> by lazy { downloaded.mapTo(HashSet()) { it.seriesId } }
 }
 
 internal const val RAIL_SIZE = 20
@@ -98,6 +102,7 @@ class OfflineFirstHomeRepository
                 dashboard.observeItems(id),
                 dashboard.observeSeries(id),
                 dashboard.observeChapters(id),
+                dashboard.observeDownloadedSeries(id),
                 ::assemble,
             )
         }
@@ -233,6 +238,7 @@ private fun assemble(
     items: List<DashboardItemEntity>,
     series: List<SeriesEntity>,
     chapters: List<ChapterEntity>,
+    downloaded: List<SeriesEntity>,
 ): Home {
     val seriesById = series.associateBy { it.id }
     val chapterById = chapters.associateBy { it.id }
@@ -241,19 +247,15 @@ private fun assemble(
         streams.map { stream ->
             val rows =
                 byStream[stream.id].orEmpty().mapNotNull { item ->
-                    val s = seriesById[item.seriesId] ?: return@mapNotNull null
-                    HomeItem(
-                        seriesId = s.id,
-                        libraryId = s.libraryId,
-                        title = s.localizedName ?: s.name,
-                        pages = s.pages,
-                        pagesRead = s.pagesRead,
-                        newChapters = item.count,
-                        chapter = item.chapterId?.let(chapterById::get),
-                    )
+                    seriesById[item.seriesId]?.toHomeItem(item.count, item.chapterId?.let(chapterById::get))
                 }
             HomeRail(stream.id, stream.streamType, stream.name, rows)
         }
     val continueReading = rails.firstOrNull { it.type == StreamType.ON_DECK }?.items?.firstOrNull { it.chapter != null }
-    return Home(continueReading, rails)
+    return Home(continueReading, rails, downloaded.map { it.toHomeItem() })
 }
+
+private fun SeriesEntity.toHomeItem(
+    newChapters: Int = 0,
+    chapter: ChapterEntity? = null,
+) = HomeItem(id, libraryId, localizedName ?: name, pages, pagesRead, newChapters, chapter)

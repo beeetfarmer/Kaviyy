@@ -32,6 +32,13 @@ interface DashboardDao {
     )
     fun observeChapters(serverId: Long): Flow<List<ChapterEntity>>
 
+    /** Series with at least one finished download, most recently downloaded first (offline Home). */
+    @Query(
+        "SELECT s.* FROM series s JOIN downloads d ON d.serverId = s.serverId AND d.seriesId = s.id " +
+            "WHERE s.serverId = :serverId AND d.state = 'COMPLETED' GROUP BY s.id ORDER BY MAX(d.updatedAt) DESC",
+    )
+    fun observeDownloadedSeries(serverId: Long): Flow<List<SeriesEntity>>
+
     /** For list endpoints that return partial series: never overwrite a full cached row with less. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertSeriesIfAbsent(rows: List<SeriesEntity>)

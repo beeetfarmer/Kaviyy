@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -41,6 +42,12 @@ import com.nl.kaviyy.core.network.seriesCoverUrl
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+/** Local-only rail id; server stream ids are positive, built-ins negative small. */
+private const val DOWNLOADED_RAIL = Int.MIN_VALUE
+
+/** DESIGN.md §8: non-downloaded items at 50% while offline. */
+private const val DIMMED = 0.5f
+
 @Composable
 fun HomeRoute(
     actions: HomeActions,
@@ -62,7 +69,6 @@ fun HomeScreen(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val home = state.home
     val coverUrl: (Int) -> String? = { id -> state.server?.seriesCoverUrl(id) }
     LazyColumn(
         modifier = modifier.fillMaxSize().background(Kavita.colors.background),
@@ -70,35 +76,54 @@ fun HomeScreen(
             PaddingValues(top = KavitaSpacing.topBelowStatusBar, bottom = KavitaSpacing.contentBottomPadding),
         verticalArrangement = Arrangement.spacedBy(KavitaSpacing.sectionGapHome),
     ) {
-        item(key = "header") {
-            LargeTitleHeader(
-                title = stringResource(R.string.home_title),
-                overline = today,
-                modifier = Modifier.statusBarsPadding().padding(horizontal = KavitaSpacing.screenHorizontal),
-            ) {
-                state.server?.let { ServerPill(it.name, online = state.error == null, onClick = actions.onServerPill) }
-                Avatar(
-                    initials(state.server?.username ?: state.server?.name),
-                    stringResource(R.string.home_profile),
-                    onClick = actions.onProfile,
-                )
+        item(key = "header") { HomeHeader(state, today, actions) }
+        if (state.downloadedRail.isNotEmpty()) {
+            item(key = "downloaded") {
+                val rail = HomeRail(DOWNLOADED_RAIL, 0, stringResource(R.string.home_downloaded), state.downloadedRail)
+                Rail(rail, coverUrl, actions.copy(onSeeAll = { actions.onSeeDownloads() }), state::isDimmed)
             }
         }
-        if (home != null && !home.isEmpty && state.error != null) {
+        if (state.showStaleNotice) {
             item(key = "stale") { Notice(stringResource(R.string.home_refresh_failed)) }
         }
-        home?.continueReading?.let { item ->
+        state.home?.continueReading?.let { item ->
             item(key = "continue") {
-                val padding = Modifier.padding(horizontal = KavitaSpacing.screenHorizontal)
+                val padding =
+                    Modifier
+                        .padding(horizontal = KavitaSpacing.screenHorizontal)
+                        .alpha(if (state.isDimmed(item.seriesId)) DIMMED else 1f)
                 ContinueCard(item, coverUrl(item.seriesId), actions, padding)
             }
         }
-        home?.rails?.filter { it.items.isNotEmpty() }?.forEach { rail ->
-            item(key = "rail-${rail.streamId}") { Rail(rail, coverUrl, actions) }
+        state.home?.rails.orEmpty().filter { it.items.isNotEmpty() }.forEach { rail ->
+            item(key = "rail-${rail.streamId}") { Rail(rail, coverUrl, actions, state::isDimmed) }
         }
-        if (home != null && home.isEmpty && !state.refreshing) {
+        if (state.showEmpty) {
             item(key = "empty") { EmptyState(failed = state.error != null, onRetry = onRetry) }
         }
+    }
+}
+
+@Composable
+private fun HomeHeader(
+    state: HomeUiState,
+    today: String,
+    actions: HomeActions,
+) {
+    LargeTitleHeader(
+        title = stringResource(R.string.home_title),
+        overline = today,
+        modifier = Modifier.statusBarsPadding().padding(horizontal = KavitaSpacing.screenHorizontal),
+    ) {
+        state.server?.let {
+            val label = if (state.offline) stringResource(R.string.home_offline) else it.name
+            ServerPill(label, online = !state.offline && state.error == null, onClick = actions.onServerPill)
+        }
+        Avatar(
+            initials(state.server?.username ?: state.server?.name),
+            stringResource(R.string.home_profile),
+            onClick = actions.onProfile,
+        )
     }
 }
 
@@ -145,6 +170,7 @@ private fun Rail(
     rail: HomeRail,
     coverUrl: (Int) -> String?,
     actions: HomeActions,
+    dimmed: (Int) -> Boolean,
 ) {
     val title =
         when (rail.type) {
@@ -176,6 +202,8 @@ private fun Rail(
                     progress = item.progress.takeIf { rail.type == StreamType.ON_DECK },
                     unreadCount = item.newChapters.takeIf { updated },
                     imageUrl = coverUrl(item.seriesId),
+                    // ponytail: no cloud-off hint on tap yet; Series (M8) opens cached data offline.
+                    modifier = Modifier.alpha(if (dimmed(item.seriesId)) DIMMED else 1f),
                 )
             }
         }

@@ -7,6 +7,8 @@
     <string name="home_recently_updated">Recently Updated</string>
     <string name="home_recently_added">Recently Added</string>
     <string name="home_see_all">See All</string>
+    <string name="home_downloaded">Downloaded</string>
+    <string name="home_offline">Offline</string>
     <string name="home_volume_chapter">Volume %1$s · Chapter %2$s</string>
     <string name="home_chapter">Chapter %1$s</string>
     <string name="home_volume">Volume %1$s</string>
