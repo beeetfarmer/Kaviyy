@@ -25,6 +25,7 @@ data class ReaderChapter(
     val pageSizes: List<PageSize?> = emptyList(),
 ) {
     val isImage: Boolean get() = format != FORMAT_EPUB && format != FORMAT_PDF
+    val isEpub: Boolean get() = format == FORMAT_EPUB
 }
 
 data class PageSize(

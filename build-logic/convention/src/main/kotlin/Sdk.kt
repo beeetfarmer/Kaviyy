@@ -35,7 +35,10 @@ internal fun Project.configureAndroid(android: CommonExtension) {
         defaultConfig.minSdk = Sdk.MIN
         compileOptions.sourceCompatibility = JAVA_VERSION
         compileOptions.targetCompatibility = JAVA_VERSION
+        // Readium's AARs require core library desugaring.
+        compileOptions.isCoreLibraryDesugaringEnabled = true
     }
+    dependencies.add("coreLibraryDesugaring", lib("desugar-jdk-libs"))
 }
 
 /** MASVS K7: security lint checks fail the build. */

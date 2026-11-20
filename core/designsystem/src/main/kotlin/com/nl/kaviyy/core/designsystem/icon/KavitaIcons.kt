@@ -41,6 +41,9 @@ object KavitaIcons {
         )
     val Filter = stroke("filter", 2.2f, "M4 6h16M7 12h10M10 18h4")
     val Plus = stroke("plus", 2.2f, "M12 5v14M5 12h14")
+
+    /** [derived] Plus without the vertical stroke (steppers). */
+    val Minus = stroke("minus", 2.2f, "M5 12h14")
     val Close = stroke("close", 2.2f, "M6 6l12 12M18 6 6 18")
     val ChevronDown = stroke("chevron-down", 2.4f, "m6 9 6 6 6-6")
     val ChevronLeft = stroke("chevron-left", 2.4f, "m15 5-7 7 7 7")

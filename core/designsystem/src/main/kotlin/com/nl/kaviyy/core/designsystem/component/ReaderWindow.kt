@@ -1,4 +1,4 @@
-package com.nl.kaviyy.feature.readerimage
+package com.nl.kaviyy.core.designsystem.component
 
 import android.app.Activity
 import android.content.Context
@@ -13,7 +13,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 
 /** Keep screen on, brightness override and immersive bars (hidden with the chrome); all undone on leave. */
 @Composable
-internal fun ReaderWindowEffects(
+fun ReaderWindowEffects(
     keepScreenOn: Boolean,
     brightness: Float?,
     immersive: Boolean,

@@ -5,4 +5,5 @@ plugins {
 
 dependencies {
     api(libs.coil.compose)
+    implementation(libs.androidx.core.ktx)
 }

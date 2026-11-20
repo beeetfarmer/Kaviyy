@@ -107,6 +107,8 @@ open class FakeKavitaApi : KavitaApi {
         chapterId: Int,
     ): Int = error("unused")
 
+    override suspend fun downloadChapter(chapterId: Int): okhttp3.ResponseBody = error("unused")
+
     override suspend fun progress(chapterId: Int): ProgressDto = error("unused")
 
     override suspend fun saveProgress(body: ProgressDto): Unit = error("unused")

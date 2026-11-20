@@ -8,6 +8,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.ResponseBody
 import retrofit2.HttpException
 import retrofit2.Response
 import retrofit2.Retrofit
@@ -18,6 +19,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Streaming
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -290,6 +292,13 @@ interface KavitaApi {
         @Query("volumeId") volumeId: Int,
         @Query("currentChapterId") chapterId: Int,
     ): Int
+
+    /** The chapter's original file (a single EPUB/PDF is returned as is). Needs the Download role. */
+    @Streaming
+    @GET("api/Download/chapter")
+    suspend fun downloadChapter(
+        @Query("chapterId") chapterId: Int,
+    ): ResponseBody
 
     @GET("api/Reader/get-progress")
     suspend fun progress(

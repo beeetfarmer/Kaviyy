@@ -2,7 +2,9 @@ package com.nl.kaviyy.core.data.di
 
 import com.nl.kaviyy.core.data.AdminRepository
 import com.nl.kaviyy.core.data.AuthSession
+import com.nl.kaviyy.core.data.BookFileRepository
 import com.nl.kaviyy.core.data.BookmarkRepository
+import com.nl.kaviyy.core.data.CachedBookFileRepository
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.ConnectivityNetworkMonitor
 import com.nl.kaviyy.core.data.HomeRepository
@@ -61,6 +63,9 @@ internal interface DataModule {
 
     @Binds
     fun progress(repository: OfflineFirstProgressRepository): ProgressRepository
+
+    @Binds
+    fun bookFiles(repository: CachedBookFileRepository): BookFileRepository
 
     @Binds
     fun readerDisplay(repository: SharedPrefsReaderDisplayRepository): ReaderDisplayRepository

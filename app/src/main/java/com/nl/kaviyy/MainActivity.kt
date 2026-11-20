@@ -1,7 +1,6 @@
 package com.nl.kaviyy
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -24,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nl.kaviyy.core.data.ServerImages
@@ -34,16 +34,18 @@ import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
 import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.feature.auth.ConnectRoute
+import com.nl.kaviyy.feature.readerepub.installBookReaderRestoreFactory
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     @Inject
     lateinit var images: ServerImages
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
+        installBookReaderRestoreFactory() // before super: the FragmentManager restores fragments there
         super.onCreate(savedInstanceState)
         setContent { KaviyyApp(images) }
     }

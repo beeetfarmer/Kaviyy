@@ -171,8 +171,8 @@ class ImageReaderViewModelTest {
         object : ReaderDisplayRepository {
             override val display = this@ImageReaderViewModelTest.display
 
-            override fun update(display: ReaderDisplay) {
-                this@ImageReaderViewModelTest.display.value = display
+            override fun update(change: (ReaderDisplay) -> ReaderDisplay) {
+                this@ImageReaderViewModelTest.display.value = change(this@ImageReaderViewModelTest.display.value)
             }
         }
 

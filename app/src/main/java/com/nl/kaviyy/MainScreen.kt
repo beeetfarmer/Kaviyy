@@ -36,6 +36,7 @@ import com.nl.kaviyy.feature.filter.FilterSheet
 import com.nl.kaviyy.feature.home.HomeActions
 import com.nl.kaviyy.feature.home.HomeRoute
 import com.nl.kaviyy.feature.library.LibraryRoute
+import com.nl.kaviyy.feature.readerepub.EpubReaderRoute
 import com.nl.kaviyy.feature.readerimage.ImageReaderRoute
 import com.nl.kaviyy.feature.search.SearchDestination
 import com.nl.kaviyy.feature.search.SearchRoute
@@ -69,6 +70,12 @@ private data class BrowseDestination(
 private data object SearchRouteDestination
 
 /** Image reader (screen 06), full screen without the tab bar. */
+@Serializable
+private data class EpubDestination(
+    val seriesId: Int,
+    val chapterId: Int,
+)
+
 @Serializable
 private data class ReaderDestination(
     val seriesId: Int,
@@ -128,13 +135,26 @@ internal fun MainScreen(
                     }
                 })
             }
-            composable<ReaderDestination> { ImageReaderRoute(onClose = { nav.popBackStack() }) }
+            composable<ReaderDestination> { entry ->
+                ImageReaderRoute(
+                    onClose = { nav.popBackStack() },
+                    onOpenBook = { seriesId, chapterId ->
+                        nav.navigate(EpubDestination(seriesId, chapterId)) {
+                            popUpTo(entry.destination.id) { inclusive = true }
+                        }
+                    },
+                )
+            }
+            composable<EpubDestination> { EpubReaderRoute(onClose = { nav.popBackStack() }) }
             composable<BrowseDestination> { BrowseRoute(onBack = { nav.popBackStack() }, onOpenSeries = openSeries) }
         }
         filterFor?.let { id -> FilterSheet(id.takeIf { it != NO_LIBRARY }, onDismiss = { filterFor = null }) }
         val entry by nav.currentBackStackEntryAsState()
         val fullScreen =
-            entry?.destination?.let { it.hasRoute<SearchRouteDestination>() || it.hasRoute<ReaderDestination>() } ==
+            entry?.destination?.let {
+                it.hasRoute<SearchRouteDestination>() || it.hasRoute<ReaderDestination>() ||
+                    it.hasRoute<EpubDestination>()
+            } ==
                 true
         if (!fullScreen) {
             FloatingTabBar(

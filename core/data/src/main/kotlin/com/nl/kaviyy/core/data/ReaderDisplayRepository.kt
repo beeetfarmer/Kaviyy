@@ -14,12 +14,16 @@ data class ReaderDisplay(
     val keepScreenOn: Boolean = true,
     /** 0..1; null follows the system. */
     val brightness: Float? = null,
+    /** EPUB font key (the design's Literata / Inter / serif are not Kavita font names). */
+    val bookFont: String = BOOK_FONT_DEFAULT,
 )
+
+const val BOOK_FONT_DEFAULT = "literata"
 
 interface ReaderDisplayRepository {
     val display: Flow<ReaderDisplay>
 
-    fun update(display: ReaderDisplay)
+    fun update(change: (ReaderDisplay) -> ReaderDisplay)
 }
 
 /** Plain SharedPreferences: two non-sensitive device prefs (credentials live in the Tink-encrypted DataStore). */
@@ -35,6 +39,7 @@ class SharedPrefsReaderDisplayRepository
             ReaderDisplay(
                 keepScreenOn = prefs.getBoolean(KEEP_ON, true),
                 brightness = prefs.getFloat(BRIGHTNESS, -1f).takeIf { it >= 0f },
+                bookFont = prefs.getString(BOOK_FONT, null) ?: BOOK_FONT_DEFAULT,
             )
 
         override val display: Flow<ReaderDisplay> =
@@ -45,11 +50,13 @@ class SharedPrefsReaderDisplayRepository
                 awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
             }
 
-        override fun update(display: ReaderDisplay) {
+        override fun update(change: (ReaderDisplay) -> ReaderDisplay) {
+            val display = change(read())
             prefs
                 .edit()
                 .putBoolean(KEEP_ON, display.keepScreenOn)
                 .putFloat(BRIGHTNESS, display.brightness?.coerceIn(0f, 1f) ?: -1f)
+                .putString(BOOK_FONT, display.bookFont)
                 .apply()
         }
 
@@ -57,5 +64,6 @@ class SharedPrefsReaderDisplayRepository
             const val FILE = "reader_display"
             const val KEEP_ON = "keep_screen_on"
             const val BRIGHTNESS = "brightness"
+            const val BOOK_FONT = "book_font"
         }
     }

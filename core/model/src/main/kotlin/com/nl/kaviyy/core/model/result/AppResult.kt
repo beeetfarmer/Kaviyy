@@ -76,6 +76,12 @@ inline fun <T, R> AppResult<T>.map(transform: (T) -> R): AppResult<R> =
         is AppResult.Failure -> this
     }
 
+inline fun <T, R> AppResult<T>.flatMap(transform: (T) -> AppResult<R>): AppResult<R> =
+    when (this) {
+        is AppResult.Success -> transform(value)
+        is AppResult.Failure -> this
+    }
+
 fun <T> AppResult<T>.getOrNull(): T? = (this as? AppResult.Success)?.value
 
 /** Runs [action] on success; returns this result unchanged. */

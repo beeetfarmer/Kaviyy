@@ -8,7 +8,6 @@ import com.nl.kaviyy.core.data.BookmarkRepository
 import com.nl.kaviyy.core.data.ImageReaderRepository
 import com.nl.kaviyy.core.data.ProgressRepository
 import com.nl.kaviyy.core.data.ReaderChapter
-import com.nl.kaviyy.core.data.ReaderDisplay
 import com.nl.kaviyy.core.data.ReaderDisplayRepository
 import com.nl.kaviyy.core.data.ReaderSettingsRepository
 import com.nl.kaviyy.core.model.result.AppError
@@ -232,7 +231,7 @@ class ImageReaderViewModel
         fun updateSettings(new: ReaderSettings) {
             val old = state.value.settings
             if (new.keepScreenOn != old.keepScreenOn || new.brightness != old.brightness) {
-                displayRepository.update(ReaderDisplay(new.keepScreenOn, new.brightness))
+                displayRepository.update { it.copy(keepScreenOn = new.keepScreenOn, brightness = new.brightness) }
             }
             if (new.copy(keepScreenOn = old.keepScreenOn, brightness = old.brightness) != old) {
                 updateProfile {

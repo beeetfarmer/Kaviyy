@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.nl.kaviyy.core.data.ReaderChapter
 import com.nl.kaviyy.core.designsystem.component.LocalCoverImageLoader
+import com.nl.kaviyy.core.designsystem.component.ReaderWindowEffects
 import com.nl.kaviyy.core.designsystem.component.SecondaryButton
 import com.nl.kaviyy.core.designsystem.theme.ImageReaderColors
 import com.nl.kaviyy.core.designsystem.theme.Kavita
@@ -57,9 +58,13 @@ data class ImageReaderActions(
 @Composable
 fun ImageReaderRoute(
     onClose: () -> Unit,
+    onOpenBook: (seriesId: Int, chapterId: Int) -> Unit = { _, _ -> },
     viewModel: ImageReaderViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // Every chapter opens here first; EPUBs move on to their own reader.
+    val book = state.chapter?.takeIf { it.isEpub }
+    LaunchedEffect(book) { book?.let { onOpenBook(it.seriesId, it.id) } }
     ImageReaderScreen(
         state,
         ImageReaderActions(
