@@ -183,7 +183,7 @@ class ComponentsTest {
                 com.nl.kaviyy.core.designsystem.theme.Appearance.Dark,
             ) { ComponentShowcase() }
         }
-        compose.onNodeWithText("Home").assertExists()
+        compose.onNodeWithText("Friday, 20 November".uppercase()).assertExists()
         compose.onNodeWithText("Sign In").assertExists()
     }
 }

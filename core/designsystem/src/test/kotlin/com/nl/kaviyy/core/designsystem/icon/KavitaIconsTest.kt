@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 class KavitaIconsTest {
     @Test
     fun everyIconIsA24UnitVectorWithPaths() {
-        assertEquals(33, KavitaIcons.all.size)
+        assertEquals(34, KavitaIcons.all.size)
         assertEquals(
             KavitaIcons.all.size,
             KavitaIcons.all

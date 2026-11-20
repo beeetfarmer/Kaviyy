@@ -253,7 +253,7 @@ fun GroupedThumbRow(
     }
 }
 
-/** 50 high settings row: 30×30 colored tile with a white glyph, label, value, chevron. */
+/** 50 high settings row: 30×30 colored tile with a white glyph, label, value, chevron (Profile canvas). */
 @Composable
 fun SettingsRow(
     icon: ImageVector,
@@ -271,8 +271,9 @@ fun SettingsRow(
                 .fillMaxWidth()
                 .height(KavitaSpacing.settingsRowHeight)
                 .rowClick(onClick)
-                .rowDivider(divider, 58.dp)
-                .padding(horizontal = 16.dp),
+                // Divider sits under label + value only: 14 padding + 30 tile + 12 gap.
+                .rowDivider(divider, 56.dp)
+                .padding(horizontal = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -283,7 +284,9 @@ fun SettingsRow(
             Icon(icon, null, Modifier.size(17.dp), tint = Color.White)
         }
         Text(label, style = Kavita.type.bodyRegular, color = colors.label, modifier = Modifier.weight(1f))
-        if (value != null) Text(value, style = Kavita.type.callout, color = colors.labelSecondary, maxLines = 1)
-        Chevron()
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (value != null) Text(value, style = Kavita.type.callout, color = colors.labelSecondary, maxLines = 1)
+            Icon(KavitaIcons.ChevronRight, null, Modifier.size(12.dp), tint = colors.labelTertiary)
+        }
     }
 }

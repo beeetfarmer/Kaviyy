@@ -6,6 +6,7 @@ naming:
     constantPattern: '[A-Z][A-Za-z0-9_]*'
 complexity:
   LongParameterList:
+    constructorThreshold: 11 # design-token enums carry one value per dimension
     ignoreAnnotated: ['Composable']
     ignoreDefaultParameters: true
   LongMethod:

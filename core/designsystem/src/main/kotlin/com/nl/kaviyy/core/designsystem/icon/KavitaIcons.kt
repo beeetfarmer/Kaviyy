@@ -67,6 +67,7 @@ object KavitaIcons {
             "M12 6.5v13",
         )
     val Lock = stroke("lock", 2f, rect(4f, 10f, 16f, 11f, 2f), "M8 10V7a4 4 0 0 1 8 0v3")
+    val Check = stroke("check", 2.4f, "m8 12 3 3 5-6")
     val CheckCircle = stroke("check-circle", 2.2f, circle(12f, 12f, 9f), "m8 12 3 3 5-6")
     val Moon = stroke("moon", 2f, "M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z")
     val Server = stroke("server", 2f, "M4 4h16v7H4zM4 13h16v7H4zM8 7.5h.01M8 16.5h.01")
@@ -104,6 +105,7 @@ object KavitaIcons {
             ArrowLtr,
             Book,
             Lock,
+            Check,
             CheckCircle,
             Moon,
             Server,
