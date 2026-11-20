@@ -71,7 +71,7 @@ class ReaderSettingsRepositoryTest {
             }
         }
 
-    private val repo = ReaderSettingsRepository(db.readingProfileDao(), db.outboxDao(), { api })
+    private val repo = OfflineFirstReaderSettingsRepository(db.readingProfileDao(), db.outboxDao(), { api })
 
     @After
     fun tearDown() = db.close()

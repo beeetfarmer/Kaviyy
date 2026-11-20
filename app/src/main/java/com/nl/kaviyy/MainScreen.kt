@@ -36,6 +36,7 @@ import com.nl.kaviyy.feature.filter.FilterSheet
 import com.nl.kaviyy.feature.home.HomeActions
 import com.nl.kaviyy.feature.home.HomeRoute
 import com.nl.kaviyy.feature.library.LibraryRoute
+import com.nl.kaviyy.feature.readerimage.ImageReaderRoute
 import com.nl.kaviyy.feature.search.SearchDestination
 import com.nl.kaviyy.feature.search.SearchRoute
 import com.nl.kaviyy.feature.series.BrowseRoute
@@ -66,6 +67,13 @@ private data class BrowseDestination(
 /** Search (screen 05): replaces the tab bar with its own bottom search bar. */
 @Serializable
 private data object SearchRouteDestination
+
+/** Image reader (screen 06), full screen without the tab bar. */
+@Serializable
+private data class ReaderDestination(
+    val seriesId: Int,
+    val chapterId: Int,
+)
 
 private const val NO_LIBRARY = -1
 
@@ -100,12 +108,17 @@ internal fun MainScreen(
                 }, onServerPill, onSignOut, onDeleteLocalData) { filterFor = it }
             }
             composable<SeriesDestination> {
-                // Readers: M10–M12.
-                SeriesRoute(onBack = { nav.popBackStack() }, onRead = {
-                    _,
-                    _,
-                    ->
-                }, onOpenSeries = openSeries, onBrowse = browse)
+                SeriesRoute(
+                    onBack = { nav.popBackStack() },
+                    onRead = {
+                        seriesId,
+                        chapterId,
+                        ->
+                        chapterId?.let { nav.navigate(ReaderDestination(seriesId, it)) }
+                    },
+                    onOpenSeries = openSeries,
+                    onBrowse = browse,
+                )
             }
             composable<SearchRouteDestination> {
                 SearchRoute(onHome = { nav.popBackStack(TabsDestination, inclusive = false) }, onOpen = { d ->
@@ -115,11 +128,15 @@ internal fun MainScreen(
                     }
                 })
             }
+            composable<ReaderDestination> { ImageReaderRoute(onClose = { nav.popBackStack() }) }
             composable<BrowseDestination> { BrowseRoute(onBack = { nav.popBackStack() }, onOpenSeries = openSeries) }
         }
         filterFor?.let { id -> FilterSheet(id.takeIf { it != NO_LIBRARY }, onDismiss = { filterFor = null }) }
         val entry by nav.currentBackStackEntryAsState()
-        if (entry?.destination?.hasRoute<SearchRouteDestination>() != true) {
+        val fullScreen =
+            entry?.destination?.let { it.hasRoute<SearchRouteDestination>() || it.hasRoute<ReaderDestination>() } ==
+                true
+        if (!fullScreen) {
             FloatingTabBar(
                 items = tabs,
                 selectedIndex = selected,

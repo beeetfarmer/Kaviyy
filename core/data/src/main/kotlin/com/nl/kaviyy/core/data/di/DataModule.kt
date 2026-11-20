@@ -5,7 +5,9 @@ import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.ConnectivityNetworkMonitor
 import com.nl.kaviyy.core.data.HomeRepository
+import com.nl.kaviyy.core.data.ImageReaderRepository
 import com.nl.kaviyy.core.data.KavitaAdminRepository
+import com.nl.kaviyy.core.data.KavitaImageReaderRepository
 import com.nl.kaviyy.core.data.KavitaPersonRepository
 import com.nl.kaviyy.core.data.KavitaReviewRepository
 import com.nl.kaviyy.core.data.KavitaSearchRepository
@@ -14,8 +16,10 @@ import com.nl.kaviyy.core.data.NetworkMonitor
 import com.nl.kaviyy.core.data.OfflineFirstCatalogRepository
 import com.nl.kaviyy.core.data.OfflineFirstHomeRepository
 import com.nl.kaviyy.core.data.OfflineFirstReadStateRepository
+import com.nl.kaviyy.core.data.OfflineFirstReaderSettingsRepository
 import com.nl.kaviyy.core.data.PersonRepository
 import com.nl.kaviyy.core.data.ReadStateRepository
+import com.nl.kaviyy.core.data.ReaderSettingsRepository
 import com.nl.kaviyy.core.data.ReviewRepository
 import com.nl.kaviyy.core.data.SearchRepository
 import com.nl.kaviyy.core.data.ServerApis
@@ -39,6 +43,12 @@ internal interface DataModule {
 
     @Binds
     fun catalog(repository: OfflineFirstCatalogRepository): CatalogRepository
+
+    @Binds
+    fun readerSettings(repository: OfflineFirstReaderSettingsRepository): ReaderSettingsRepository
+
+    @Binds
+    fun imageReader(repository: KavitaImageReaderRepository): ImageReaderRepository
 
     @Binds
     fun search(repository: KavitaSearchRepository): SearchRepository

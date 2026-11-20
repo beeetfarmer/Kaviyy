@@ -269,6 +269,27 @@ interface KavitaApi {
         @Query("personId") personId: Int,
     ): List<Int>
 
+    @GET("api/Reader/chapter-info")
+    suspend fun chapterInfo(
+        @Query("chapterId") chapterId: Int,
+    ): ChapterInfoDto
+
+    /** -1 when there is none. */
+    @GET("api/Reader/next-chapter")
+    suspend fun nextChapter(
+        @Query("seriesId") seriesId: Int,
+        @Query("volumeId") volumeId: Int,
+        @Query("currentChapterId") chapterId: Int,
+    ): Int
+
+    /** -1 when there is none. */
+    @GET("api/Reader/prev-chapter")
+    suspend fun prevChapter(
+        @Query("seriesId") seriesId: Int,
+        @Query("volumeId") volumeId: Int,
+        @Query("currentChapterId") chapterId: Int,
+    ): Int
+
     @GET("api/Series/all-related")
     suspend fun allRelated(
         @Query("seriesId") seriesId: Int,

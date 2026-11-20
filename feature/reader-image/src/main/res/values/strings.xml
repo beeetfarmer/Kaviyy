@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_close">Close reader</string>
+    <string name="reader_toggle_controls">Toggle reader controls</string>
+    <string name="reader_next_page">Next page</string>
+    <string name="reader_previous_page">Previous page</string>
+    <string name="reader_previous_chapter">Previous chapter</string>
+    <string name="reader_next_chapter">Next chapter</string>
+    <string name="reader_page_of">Page %1$d of %2$d</string>
+    <string name="reader_pages_left">%1$d left</string>
+    <string name="reader_page_slider">Page</string>
+    <string name="reader_rtl">Right to left</string>
+    <string name="reader_ltr">Left to right</string>
+    <string name="reader_volume">Vol. %1$s</string>
+    <string name="reader_chapter">Chapter %1$s</string>
+    <string name="reader_special">Special</string>
+    <string name="reader_dot">%1$s · %2$s</string>
+    <string name="reader_page_image">Page %1$d</string>
+    <string name="reader_load_failed">Couldn\'t open this chapter.</string>
+    <string name="reader_retry">Try Again</string>
+    <string name="reader_unsupported">This book opens in the EPUB/PDF reader, which isn\'t available yet.</string>
+</resources>

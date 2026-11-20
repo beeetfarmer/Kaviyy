@@ -1,0 +1,187 @@
+package com.nl.kaviyy.feature.readerimage
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
+import com.nl.kaviyy.core.data.ReaderChapter
+import com.nl.kaviyy.core.designsystem.component.LocalCoverImageLoader
+import com.nl.kaviyy.core.designsystem.component.SecondaryButton
+import com.nl.kaviyy.core.designsystem.theme.ImageReaderColors
+import com.nl.kaviyy.core.designsystem.theme.Kavita
+import com.nl.kaviyy.core.network.pageUrl
+import kotlinx.coroutines.flow.drop
+
+data class ImageReaderActions(
+    val onClose: () -> Unit = {},
+    val onPage: (Int) -> Unit = {},
+    val onNextPage: () -> Unit = {},
+    val onPreviousPage: () -> Unit = {},
+    val onNextChapter: () -> Unit = {},
+    val onPreviousChapter: () -> Unit = {},
+    val onToggleChrome: () -> Unit = {},
+    val onToggleDirection: () -> Unit = {},
+    val onRetry: () -> Unit = {},
+)
+
+@Composable
+fun ImageReaderRoute(
+    onClose: () -> Unit,
+    viewModel: ImageReaderViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    ImageReaderScreen(
+        state,
+        ImageReaderActions(
+            onClose = onClose,
+            onPage = viewModel::goTo,
+            onNextPage = viewModel::nextPage,
+            onPreviousPage = viewModel::previousPage,
+            onNextChapter = viewModel::nextChapter,
+            onPreviousChapter = viewModel::previousChapter,
+            onToggleChrome = viewModel::toggleChrome,
+            onToggleDirection = viewModel::toggleDirection,
+            onRetry = viewModel::retry,
+        ),
+    )
+}
+
+/** Screen 06 (DESIGN.md §7): black ground, page fills the width, tap zones, chrome over the page. */
+@Composable
+fun ImageReaderScreen(
+    state: ImageReaderUiState,
+    actions: ImageReaderActions,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier.fillMaxSize().background(ImageReaderColors.background)) {
+        val chapter = state.chapter
+        when {
+            chapter != null && !chapter.isImage -> Message(stringResource(R.string.reader_unsupported), null)
+            chapter != null -> Pages(chapter, state, actions)
+            state.error != null -> Message(stringResource(R.string.reader_load_failed), actions.onRetry)
+        }
+        if (state.chromeVisible) ReaderChrome(state, actions)
+    }
+}
+
+@Composable
+private fun Pages(
+    chapter: ReaderChapter,
+    state: ImageReaderUiState,
+    actions: ImageReaderActions,
+) {
+    // A new chapter gets a fresh pager.
+    key(chapter.id) {
+        val pager = rememberPagerState(initialPage = state.page) { chapter.pages }
+        val onPage by rememberUpdatedState(actions.onPage)
+        LaunchedEffect(state.page) { if (pager.currentPage != state.page) pager.scrollToPage(state.page) }
+        LaunchedEffect(pager) { snapshotFlow { pager.settledPage }.drop(1).collect { onPage(it) } }
+        val zones = TapZones(state.rightToLeft, actions)
+        val next = stringResource(R.string.reader_next_page)
+        val previous = stringResource(R.string.reader_previous_page)
+        val toggle = stringResource(R.string.reader_toggle_controls)
+        HorizontalPager(
+            pager,
+            Modifier
+                .fillMaxSize()
+                .pointerInput(zones) { detectTapGestures { zones.onTap(it.x, size.width.toFloat()) } }
+                .semantics {
+                    // Tap zones have no visible targets: expose them to TalkBack/Switch Access.
+                    customActions =
+                        listOf(
+                            CustomAccessibilityAction(next) { actions.onNextPage().let { true } },
+                            CustomAccessibilityAction(previous) { actions.onPreviousPage().let { true } },
+                            CustomAccessibilityAction(toggle) { actions.onToggleChrome().let { true } },
+                        )
+                },
+            reverseLayout = state.rightToLeft,
+            beyondViewportPageCount = 1,
+            key = { it },
+        ) { page -> Page(chapter, page, state) }
+    }
+}
+
+@Composable
+private fun Page(
+    chapter: ReaderChapter,
+    page: Int,
+    state: ImageReaderUiState,
+) {
+    val url = state.server?.pageUrl(chapter.id, page)
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        val loader = LocalCoverImageLoader.current
+        if (url != null && loader != null) {
+            AsyncImage(
+                url,
+                stringResource(R.string.reader_page_image, page + 1),
+                loader,
+                Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+            )
+        }
+    }
+}
+
+/** Left/right thirds turn pages (mirrored for right-to-left), the middle toggles the chrome. */
+internal class TapZones(
+    private val rightToLeft: Boolean,
+    private val actions: ImageReaderActions,
+) {
+    fun onTap(
+        x: Float,
+        width: Float,
+    ) {
+        val third = width / ZONES
+        when {
+            x < third -> if (rightToLeft) actions.onNextPage() else actions.onPreviousPage()
+            x > width - third -> if (rightToLeft) actions.onPreviousPage() else actions.onNextPage()
+            else -> actions.onToggleChrome()
+        }
+    }
+
+    override fun equals(other: Any?) = other is TapZones && other.rightToLeft == rightToLeft && other.actions == actions
+
+    override fun hashCode() = 31 * rightToLeft.hashCode() + actions.hashCode()
+
+    private companion object {
+        const val ZONES = 3
+    }
+}
+
+@Composable
+private fun Message(
+    text: String,
+    onRetry: (() -> Unit)?,
+) = Column(
+    Modifier.fillMaxSize().padding(32.dp),
+    verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+    horizontalAlignment = Alignment.CenterHorizontally,
+) {
+    Text(text, style = Kavita.type.callout, color = ImageReaderColors.secondary, textAlign = TextAlign.Center)
+    onRetry?.let { SecondaryButton(stringResource(R.string.reader_retry), it) }
+}

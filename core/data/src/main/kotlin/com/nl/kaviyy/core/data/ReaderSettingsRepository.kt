@@ -26,14 +26,39 @@ private const val KIND_IMPLICIT = 2
  * else Kavita's defaults). Edits are written locally first as the series' implicit profile, then pushed; if the push
  * fails they wait in the outbox (latest per series) for the sync worker (M17).
  */
-class ReaderSettingsRepository
+interface ReaderSettingsRepository {
+    fun settings(
+        server: Server,
+        seriesId: Int,
+    ): Flow<ReadingProfileDto>
+
+    /** Fetches the profile the server applies to this series. */
+    suspend fun refresh(
+        server: Server,
+        libraryId: Int,
+        seriesId: Int,
+    ): AppResult<Unit>
+
+    /**
+     * Saves [settings] for this series. Always succeeds locally; the result says whether the server has it yet
+     * (failure = queued in the outbox).
+     */
+    suspend fun update(
+        server: Server,
+        libraryId: Int,
+        seriesId: Int,
+        settings: ReadingProfileDto,
+    ): AppResult<Unit>
+}
+
+class OfflineFirstReaderSettingsRepository
     @Inject
     constructor(
         private val profiles: ReadingProfileDao,
         private val outbox: OutboxDao,
         private val apis: ServerApis,
-    ) {
-        fun settings(
+    ) : ReaderSettingsRepository {
+        override fun settings(
             server: Server,
             seriesId: Int,
         ): Flow<ReadingProfileDto> =
@@ -41,8 +66,7 @@ class ReaderSettingsRepository
                 row?.let { ReadingProfileDto.parse(it.json) } ?: ReadingProfileDto()
             }
 
-        /** Fetches the profile the server applies to this series. */
-        suspend fun refresh(
+        override suspend fun refresh(
             server: Server,
             libraryId: Int,
             seriesId: Int,
@@ -58,11 +82,7 @@ class ReaderSettingsRepository
                 }
             }
 
-        /**
-         * Saves [settings] for this series. Always succeeds locally; the result says whether the server has it yet
-         * (failure = queued in the outbox).
-         */
-        suspend fun update(
+        override suspend fun update(
             server: Server,
             libraryId: Int,
             seriesId: Int,

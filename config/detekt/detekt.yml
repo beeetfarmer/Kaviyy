@@ -14,7 +14,7 @@ complexity:
   CyclomaticComplexMethod:
     ignoreSimpleWhenEntries: true # enum → string-resource tables
   TooManyFunctions:
-    ignoreAnnotated: ['Dao', 'HiltViewModel'] # one function per query (DAO) / per user intent (ViewModel)
+    ignoreAnnotated: ['Dao', 'HiltViewModel', 'Module'] # one function per query (DAO) / user intent (VM) / binding (DI)
 style:
   ThrowsCount:
     excludes: ['**/test/**']

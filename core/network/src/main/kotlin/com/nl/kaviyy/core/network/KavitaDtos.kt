@@ -384,3 +384,19 @@ data class SearchResultGroupDto(
     val chapters: List<ChapterDto> = emptyList(),
     val bookmarks: List<SearchBookmarkDto> = emptyList(),
 )
+
+/** `GET api/Reader/chapter-info`. Numbers are strings; Kavita uses "-100000" for "none" (loose leaf / default). */
+@Serializable
+data class ChapterInfoDto(
+    val seriesId: Int = 0,
+    val volumeId: Int = 0,
+    val libraryId: Int = 0,
+    val seriesName: String? = null,
+    /** Kavita `MangaFormat`: 0 image, 1 archive, 2 unknown, 3 EPUB, 4 PDF. */
+    val seriesFormat: Int = 0,
+    val chapterNumber: String? = null,
+    val volumeNumber: String? = null,
+    val chapterTitle: String? = null,
+    val isSpecial: Boolean = false,
+    val pages: Int = 0,
+)

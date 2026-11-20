@@ -1,6 +1,7 @@
 package com.nl.kaviyy.core.data
 
 import com.nl.kaviyy.core.network.ChapterDto
+import com.nl.kaviyy.core.network.ChapterInfoDto
 import com.nl.kaviyy.core.network.CollectionDto
 import com.nl.kaviyy.core.network.DashboardStreamDto
 import com.nl.kaviyy.core.network.DecodeFilterDto
@@ -86,6 +87,20 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun allRelated(seriesId: Int): RelatedSeriesDto = error("unused")
 
     override suspend fun person(name: String): PersonDto = error("unused")
+
+    override suspend fun chapterInfo(chapterId: Int): ChapterInfoDto = error("unused")
+
+    override suspend fun nextChapter(
+        seriesId: Int,
+        volumeId: Int,
+        chapterId: Int,
+    ): Int = error("unused")
+
+    override suspend fun prevChapter(
+        seriesId: Int,
+        volumeId: Int,
+        chapterId: Int,
+    ): Int = error("unused")
 
     override suspend fun search(
         query: String,

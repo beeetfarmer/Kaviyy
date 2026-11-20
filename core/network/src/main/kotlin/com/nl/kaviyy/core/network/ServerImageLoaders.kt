@@ -85,3 +85,9 @@ fun Server.seriesCoverUrl(seriesId: Int): String = url.resolve("api/Image/series
 fun Server.volumeCoverUrl(volumeId: Int): String = url.resolve("api/Image/volume-cover?volumeId=$volumeId")
 
 fun Server.chapterCoverUrl(chapterId: Int): String = url.resolve("api/Image/chapter-cover?chapterId=$chapterId")
+
+/** One page of an image chapter (0-based [page]). */
+fun Server.pageUrl(
+    chapterId: Int,
+    page: Int,
+): String = url.resolve("api/Reader/image?chapterId=$chapterId&page=$page&extractPdf=false")
