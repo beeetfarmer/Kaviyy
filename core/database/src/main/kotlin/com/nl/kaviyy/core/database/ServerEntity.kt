@@ -47,6 +47,12 @@ interface ServerDao {
     @Upsert
     suspend fun upsert(server: ServerEntity): Long
 
+    @Query("UPDATE servers SET lastUsedAt = :at WHERE id = :id")
+    suspend fun touch(
+        id: Long,
+        at: Long,
+    )
+
     @Query("DELETE FROM servers WHERE id = :id")
     suspend fun delete(id: Long)
 }

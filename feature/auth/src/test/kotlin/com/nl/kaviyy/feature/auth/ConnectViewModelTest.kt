@@ -18,6 +18,7 @@ import com.nl.kaviyy.core.network.ServerInfo
 import com.nl.kaviyy.core.network.SsoInfo
 import com.nl.kaviyy.core.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -47,6 +48,11 @@ class ConnectViewModelTest {
     private val session =
         object : AuthSession {
             override val activeServer = emptyFlow<Server?>()
+            override val servers = emptyFlow<List<Server>>()
+
+            override suspend fun switchTo(serverId: ServerId) = Unit
+
+            override suspend fun remove(serverId: ServerId) = Unit
 
             override suspend fun knownServer(url: ServerUrl) = known[url.value]
 
@@ -242,6 +248,19 @@ class ConnectViewModelTest {
             vm.signIn()
             runCurrent()
             assertEquals("", vm.password.text.toString())
+        }
+
+    @Test
+    fun successfulSignInFiresOneEvent() =
+        runTest {
+            val vm = readyToSignIn()
+            loginResult = AppResult.Success(Server(ServerId(1), "k", url("https://k.example")))
+            val events = mutableListOf<Unit>()
+            backgroundScope.launch { vm.signedIn.collect { events += it } }
+            runCurrent()
+            vm.signIn()
+            runCurrent()
+            assertEquals(1, events.size)
         }
 
     @Test

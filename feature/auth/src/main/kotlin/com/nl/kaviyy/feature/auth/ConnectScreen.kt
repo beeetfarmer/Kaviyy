@@ -22,7 +22,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -66,10 +68,13 @@ private val AddressKeyboard =
 @Composable
 fun ConnectRoute(
     modifier: Modifier = Modifier,
+    onSignedIn: () -> Unit = {},
     onLogoLongPress: (() -> Unit)? = null,
     viewModel: ConnectViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val signedIn by rememberUpdatedState(onSignedIn)
+    LaunchedEffect(viewModel) { viewModel.signedIn.collect { signedIn() } }
     ConnectScreen(
         state = state,
         address = viewModel.address,

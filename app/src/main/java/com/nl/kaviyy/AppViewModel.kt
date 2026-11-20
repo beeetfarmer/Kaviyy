@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.model.server.Server
+import com.nl.kaviyy.core.model.server.ServerId
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -35,7 +36,18 @@ class AppViewModel
                 .map { server -> server?.let(AppState::SignedIn) ?: AppState.SignedOut }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), AppState.Loading)
 
+        val servers: StateFlow<List<Server>> =
+            session.servers.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
         fun signOut(server: Server) {
             viewModelScope.launch { session.signOut(server.id) }
+        }
+
+        fun switchTo(id: ServerId) {
+            viewModelScope.launch { session.switchTo(id) }
+        }
+
+        fun remove(id: ServerId) {
+            viewModelScope.launch { session.remove(id) }
         }
     }

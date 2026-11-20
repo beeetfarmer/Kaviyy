@@ -10,6 +10,8 @@ import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.LoginMethod
 import com.nl.kaviyy.core.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
@@ -23,6 +25,16 @@ class AppViewModelTest {
     private val session =
         object : AuthSession {
             override val activeServer = active
+            override val servers = active.map { listOfNotNull(it) }
+
+            override suspend fun switchTo(serverId: ServerId) {
+                calls += "switch ${serverId.value}"
+            }
+
+            override suspend fun remove(serverId: ServerId) {
+                calls += "remove ${serverId.value}"
+                active.value = null
+            }
 
             override suspend fun knownServer(url: ServerUrl): Server? = null
 
@@ -37,6 +49,18 @@ class AppViewModelTest {
             }
 
             override fun credentialSource(serverId: ServerId) = error("unused")
+        }
+
+    private val calls = mutableListOf<String>()
+
+    @Test
+    fun switchAndRemoveGoThroughTheSession() =
+        runTest {
+            val vm = AppViewModel(session)
+            vm.switchTo(ServerId(2))
+            vm.remove(ServerId(3))
+            runCurrent()
+            assertEquals(listOf("switch 2", "remove 3"), calls)
         }
 
     @Test

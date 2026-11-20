@@ -3,4 +3,10 @@
     <string name="signed_in_title">Signed in</string>
     <string name="signed_in_body">Connected to %1$s. Your library arrives in the next update.</string>
     <string name="sign_out">Sign Out</string>
+    <string name="servers_title">Servers</string>
+    <string name="servers_done">Done</string>
+    <string name="servers_active">Current server</string>
+    <string name="servers_add">Add Server</string>
+    <string name="servers_remove">Remove “%1$s”</string>
+    <string name="servers_remove_confirm">Tap again to sign out and remove this server’s data</string>
 </resources>

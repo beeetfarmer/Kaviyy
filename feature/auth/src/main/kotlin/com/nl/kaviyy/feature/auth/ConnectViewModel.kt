@@ -21,8 +21,11 @@ import com.nl.kaviyy.core.network.ServerProber
 import com.nl.kaviyy.core.network.SsoInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -114,6 +117,12 @@ class ConnectViewModel
         private val _state = MutableStateFlow(ConnectUiState())
         val state: StateFlow<ConnectUiState> = _state.asStateFlow()
 
+        // No replay: an event nobody is collecting (signed-out screen already gone) is dropped, not redelivered.
+        private val _signedIn = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+        /** Fires once per successful sign-in. */
+        val signedIn: SharedFlow<Unit> = _signedIn.asSharedFlow()
+
         /** Trust decisions made on the sheets this session; saved only with a successful sign-in. */
         private var acceptedPin: Pair<ServerUrl, PinnedCertificate>? = null
         private var insecureAllowedFor: ServerUrl? = null
@@ -201,7 +210,10 @@ class ConnectViewModel
             viewModelScope.launch {
                 val result = session.signIn(found.server, method, stay)
                 _state.update { it.copy(signingIn = false, signInError = (result as? AppResult.Failure)?.error) }
-                if (result is AppResult.Success) onSuccess()
+                if (result is AppResult.Success) {
+                    onSuccess()
+                    _signedIn.tryEmit(Unit)
+                }
             }
         }
 

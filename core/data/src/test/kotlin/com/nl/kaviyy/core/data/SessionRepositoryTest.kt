@@ -15,6 +15,7 @@ import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.LoginMethod
 import com.nl.kaviyy.core.network.LoginResult
+import com.nl.kaviyy.core.network.ServerImageLoaders
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -27,6 +28,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 
@@ -52,7 +54,14 @@ class SessionRepositoryTest {
     private val store = CredentialStore(disk)
     private val jwt = Credentials.Jwt("aarav", "t", "r", "k")
     private var login: AppResult<LoginResult> = AppResult.Success(LoginResult(jwt, setOf("Download")))
-    private val session = SessionRepository(db.serverDao(), store) { _, _ -> login }
+    private val session =
+        SessionRepository(
+            db.serverDao(),
+            store,
+            { _, _ -> login },
+            RuntimeEnvironment.getApplication(),
+            Dispatchers.Unconfined,
+        )
     private val url = (ServerUrl.parse("https://kavita.home.lan:5000") as ServerUrlResult.Valid).url
 
     @After
@@ -115,6 +124,32 @@ class SessionRepositoryTest {
                     .first()
                     .size,
             )
+        }
+
+    @Test
+    fun switchingAndRemovingServers() =
+        runTest {
+            val a = (signIn() as AppResult.Success).value
+            val otherUrl = (ServerUrl.parse("https://other.lan") as ServerUrlResult.Valid).url
+            val b =
+                (
+                    session.signIn(
+                        Server(ServerId(0), "other.lan", otherUrl),
+                        LoginMethod.AuthKey("k"),
+                        true,
+                    ) as AppResult.Success
+                ).value
+            assertEquals(listOf(b.id, a.id), session.servers.first().map { it.id })
+            Thread.sleep(2) // lastUsedAt is wall-clock millis
+            session.switchTo(a.id)
+            assertEquals(a.id, session.activeServer.first()?.id)
+            val cache = ServerImageLoaders.cacheDir(RuntimeEnvironment.getApplication(), a).apply { mkdirs() }
+            java.io.File(cache, "x").writeText("img")
+            session.remove(a.id)
+            assertEquals(listOf(b.id), session.servers.first().map { it.id })
+            assertNull(store.credentials(a.id).first())
+            assertNull(session.knownServer(url))
+            assertFalse(cache.exists())
         }
 
     @Test

@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nl.kaviyy.core.designsystem.component.PrimaryButton
+import com.nl.kaviyy.core.designsystem.component.ServerPill
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
 import com.nl.kaviyy.core.model.server.Server
@@ -44,6 +45,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun KaviyyApp(viewModel: AppViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val servers by viewModel.servers.collectAsStateWithLifecycle()
+    var switcher by rememberSaveable { mutableStateOf(false) }
+    // ponytail: "Add Server" reuses the activity-scoped ConnectViewModel; a NavHost entry gives it a fresh one (M4).
+    var adding by rememberSaveable { mutableStateOf(false) }
     // ponytail: no NavHost yet; Navigation Compose arrives with the tabbed Main screen (M4).
     var catalogue by rememberSaveable { mutableStateOf(false) }
     if (catalogue) {
@@ -64,8 +69,32 @@ private fun KaviyyApp(viewModel: AppViewModel = hiltViewModel()) {
                 )
             }
 
+            is AppState.SignedIn if adding -> {
+                BackHandler { adding = false }
+                ConnectRoute(onSignedIn = { adding = false })
+            }
+
             is AppState.SignedIn -> {
-                SignedInPlaceholder(s.server) { viewModel.signOut(s.server) }
+                SignedInPlaceholder(s.server, onServerPill = { switcher = true }) { viewModel.signOut(s.server) }
+                if (switcher) {
+                    ServerSwitcherSheet(
+                        servers = servers,
+                        active = s.server.id,
+                        onSwitch = {
+                            viewModel.switchTo(it)
+                            switcher = false
+                        },
+                        onAdd = {
+                            switcher = false
+                            adding = true
+                        },
+                        onRemove = {
+                            viewModel.remove(it)
+                            switcher = false
+                        },
+                        onDismiss = { switcher = false },
+                    )
+                }
             }
         }
     }
@@ -75,6 +104,7 @@ private fun KaviyyApp(viewModel: AppViewModel = hiltViewModel()) {
 @Composable
 private fun SignedInPlaceholder(
     server: Server,
+    onServerPill: () -> Unit,
     onSignOut: () -> Unit,
 ) {
     Column(
@@ -86,6 +116,7 @@ private fun SignedInPlaceholder(
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        ServerPill(server.name, online = true, onClick = onServerPill)
         Text(stringResource(R.string.signed_in_title), style = Kavita.type.largeTitle, color = Kavita.colors.label)
         Text(
             stringResource(R.string.signed_in_body, server.name),
