@@ -158,6 +158,21 @@ interface KavitaApi {
     ): List<SeriesDto>
 
     /** The chapter to resume in a series. */
+    @GET("api/Series/metadata")
+    suspend fun seriesMetadata(
+        @Query("seriesId") seriesId: Int,
+    ): SeriesMetadataDto
+
+    @GET("api/Reader/time-left")
+    suspend fun timeLeft(
+        @Query("seriesId") seriesId: Int,
+    ): HourEstimateRangeDto
+
+    @GET("api/want-to-read")
+    suspend fun isWantToRead(
+        @Query("seriesId") seriesId: Int,
+    ): Boolean
+
     @GET("api/Reader/continue-point")
     suspend fun continuePoint(
         @Query("seriesId") seriesId: Int,

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="series_back">Back</string>
+    <string name="series_share">Share</string>
+    <string name="series_share_chooser">Share series</string>
+    <string name="series_want_to_read_add">Add to Want to Read</string>
+    <string name="series_want_to_read_remove">Remove from Want to Read</string>
+    <string name="series_start">Start Reading</string>
+    <string name="series_read_again">Read Again</string>
+    <string name="series_continue">Continue</string>
+    <string name="series_continue_chapter">Continue Ch. %1$s</string>
+    <string name="series_continue_volume">Continue Vol. %1$s</string>
+    <string name="series_more">More</string>
+    <string name="series_less">Less</string>
+    <string name="series_hours_left">~%1$d h left</string>
+    <string name="series_under_hour_left">&lt;1 h left</string>
+    <string name="series_rating">%1$.1f</string>
+    <string name="series_loading">Loading…</string>
+    <string name="series_load_failed">Couldn\'t load this series.</string>
+    <string name="series_refresh_failed">Couldn\'t refresh. Showing saved details.</string>
+    <string name="series_retry">Try Again</string>
+    <string name="series_status_ongoing">Ongoing</string>
+    <string name="series_status_hiatus">Hiatus</string>
+    <string name="series_status_completed">Completed</string>
+    <string name="series_status_cancelled">Cancelled</string>
+    <string name="series_status_ended">Ended</string>
+    <string name="age_rating_pending">Rating Pending</string>
+    <string name="age_rating_early_childhood">Early Childhood</string>
+    <string name="age_rating_everyone">Everyone</string>
+    <string name="age_rating_g">G</string>
+    <string name="age_rating_everyone_10">Everyone 10+</string>
+    <string name="age_rating_pg">PG</string>
+    <string name="age_rating_kids_to_adults">Kids to Adults</string>
+    <string name="age_rating_teen">Teen</string>
+    <string name="age_rating_ma15">MA15+</string>
+    <string name="age_rating_mature_17">Mature 17+</string>
+    <string name="age_rating_mature">M</string>
+    <string name="age_rating_r18">R18+</string>
+    <string name="age_rating_adults_only">Adults Only 18+</string>
+    <string name="age_rating_x18">X18+</string>
+</resources>

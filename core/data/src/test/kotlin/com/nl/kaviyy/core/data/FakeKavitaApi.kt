@@ -6,6 +6,7 @@ import com.nl.kaviyy.core.network.DashboardStreamDto
 import com.nl.kaviyy.core.network.DecodeFilterDto
 import com.nl.kaviyy.core.network.GenreTagDto
 import com.nl.kaviyy.core.network.GroupedSeriesDto
+import com.nl.kaviyy.core.network.HourEstimateRangeDto
 import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.LanguageDto
 import com.nl.kaviyy.core.network.LibraryDto
@@ -14,6 +15,7 @@ import com.nl.kaviyy.core.network.PersonDto
 import com.nl.kaviyy.core.network.SeriesDetailDto
 import com.nl.kaviyy.core.network.SeriesDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
+import com.nl.kaviyy.core.network.SeriesMetadataDto
 import com.nl.kaviyy.core.network.SideNavStreamDto
 import com.nl.kaviyy.core.network.SmartFilterDto
 import kotlinx.serialization.json.JsonObject
@@ -47,7 +49,7 @@ open class FakeKavitaApi : KavitaApi {
         pageSize: Int,
     ): List<SeriesDto> = error("unused")
 
-    override suspend fun continuePoint(seriesId: Int): ChapterDto = error("unused")
+    override suspend fun continuePoint(seriesId: Int): ChapterDto = ChapterDto(0, volumeId = 0)
 
     override suspend fun dashboard(visibleOnly: Boolean): List<DashboardStreamDto> = error("unused")
 
@@ -66,6 +68,12 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun collections(): List<CollectionDto> = error("unused")
 
     override suspend fun smartFilters(): List<SmartFilterDto> = error("unused")
+
+    override suspend fun seriesMetadata(seriesId: Int): SeriesMetadataDto = SeriesMetadataDto()
+
+    override suspend fun timeLeft(seriesId: Int): HourEstimateRangeDto = HourEstimateRangeDto()
+
+    override suspend fun isWantToRead(seriesId: Int): Boolean = false
 
     override suspend fun saveSmartFilter(filter: SeriesFilterV2Dto): Unit = error("unused")
 

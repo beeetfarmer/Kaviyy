@@ -18,6 +18,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.nl.kaviyy.core.designsystem.component.FloatingTabBar
 import com.nl.kaviyy.core.designsystem.component.LargeTitleHeader
 import com.nl.kaviyy.core.designsystem.component.PrimaryButton
@@ -31,8 +34,20 @@ import com.nl.kaviyy.feature.filter.FilterSheet
 import com.nl.kaviyy.feature.home.HomeActions
 import com.nl.kaviyy.feature.home.HomeRoute
 import com.nl.kaviyy.feature.library.LibraryRoute
+import com.nl.kaviyy.feature.series.SeriesRoute
+import kotlinx.serialization.Serializable
 
 private enum class Tab { Home, Library, Lists, Downloads, You }
+
+/** Root of the tab area: whichever tab is selected. */
+@Serializable
+private data object TabsDestination
+
+/** Series detail, pushed over the tabs (the tab bar stays, DESIGN.md §7 screen 04). */
+@Serializable
+private data class SeriesDestination(
+    val seriesId: Int,
+)
 
 private const val NO_LIBRARY = -1
 
@@ -55,42 +70,72 @@ internal fun MainScreen(
             TabItem(stringResource(R.string.tab_downloads), KavitaIcons.Download),
             TabItem(stringResource(R.string.tab_you), KavitaIcons.User),
         )
+    val nav = rememberNavController()
+    val openSeries: (Int) -> Unit = { nav.navigate(SeriesDestination(it)) }
     Box(Modifier.fillMaxSize().background(Kavita.colors.background)) {
-        when (Tab.entries[selected]) {
-            Tab.Home -> {
-                HomeRoute(
-                    HomeActions(
-                        onServerPill = onServerPill,
-                        onProfile = { selected = Tab.You.ordinal },
-                        onSeeAll = { selected = Tab.Library.ordinal },
-                        onSeeDownloads = { selected = Tab.Downloads.ordinal },
-                    ),
-                )
+        NavHost(nav, startDestination = TabsDestination) {
+            composable<TabsDestination> {
+                TabContent(Tab.entries[selected], server, tabs[selected].label, openSeries, onSelect = {
+                    selected =
+                        it.ordinal
+                }, onServerPill, onSignOut, onDeleteLocalData) { filterFor = it }
             }
-
-            Tab.Library -> {
-                // Series detail: M8.
-                LibraryRoute(onOpenSeries = {}, onOpenFilter = { filterFor = it ?: NO_LIBRARY })
-            }
-
-            // M8
-            Tab.You -> {
-                YouPlaceholder(server, tabs[selected].label, onSignOut, onDeleteLocalData)
-            }
-
-            else -> {
-                ComingSoon(tabs[selected].label)
+            composable<SeriesDestination> {
+                SeriesRoute(onBack = { nav.popBackStack() }, onRead = { _, _ -> }) // Readers: M10–M12.
             }
         }
         filterFor?.let { id -> FilterSheet(id.takeIf { it != NO_LIBRARY }, onDismiss = { filterFor = null }) }
         FloatingTabBar(
             items = tabs,
             selectedIndex = selected,
-            onSelect = { selected = it },
+            onSelect = {
+                selected = it
+                nav.popBackStack(TabsDestination, inclusive = false)
+            },
             searchLabel = stringResource(R.string.tab_search),
             onSearch = {}, // M9
             modifier = Modifier.align(Alignment.BottomCenter),
         )
+    }
+}
+
+@Suppress("LongParameterList")
+@Composable
+private fun TabContent(
+    tab: Tab,
+    server: Server,
+    label: String,
+    onOpenSeries: (Int) -> Unit,
+    onSelect: (Tab) -> Unit,
+    onServerPill: () -> Unit,
+    onSignOut: () -> Unit,
+    onDeleteLocalData: () -> Unit,
+    onOpenFilter: (Int) -> Unit,
+) {
+    when (tab) {
+        Tab.Home -> {
+            HomeRoute(
+                HomeActions(
+                    onServerPill = onServerPill,
+                    onProfile = { onSelect(Tab.You) },
+                    onSeeAll = { onSelect(Tab.Library) },
+                    onSeeDownloads = { onSelect(Tab.Downloads) },
+                    onOpenSeries = onOpenSeries,
+                ),
+            )
+        }
+
+        Tab.Library -> {
+            LibraryRoute(onOpenSeries = onOpenSeries, onOpenFilter = { onOpenFilter(it ?: NO_LIBRARY) })
+        }
+
+        Tab.You -> {
+            YouPlaceholder(server, label, onSignOut, onDeleteLocalData)
+        }
+
+        else -> {
+            ComingSoon(label)
+        }
     }
 }
 

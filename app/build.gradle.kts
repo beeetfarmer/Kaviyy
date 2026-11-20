@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kaviyy.android.application)
     alias(libs.plugins.kaviyy.android.compose)
     alias(libs.plugins.kaviyy.hilt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -49,4 +50,5 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.navigation.compose)
 }

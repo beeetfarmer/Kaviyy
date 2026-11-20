@@ -113,3 +113,33 @@ data class QueryItemEntity(
     val position: Int,
     val seriesId: Int,
 )
+
+/**
+ * Series detail extras (screen 04), one row per series. List columns hold JSON (`[{"id":1,"name":"…"}]`) written and
+ * read by core:data, so this module stays free of serialization.
+ */
+@Entity(
+    tableName = "series_metadata",
+    primaryKeys = [SERVER, "seriesId"],
+    foreignKeys = [ForeignKey(ServerEntity::class, ["id"], [SERVER], onDelete = ForeignKey.CASCADE)],
+)
+data class SeriesMetadataEntity(
+    val serverId: Long,
+    val seriesId: Int,
+    /** Raw server HTML; sanitize before display. */
+    val summary: String? = null,
+    val releaseYear: Int = 0,
+    /** Kavita `AgeRating`. */
+    val ageRating: Int = 0,
+    /** Kavita `PublicationStatus`. */
+    val publicationStatus: Int = 0,
+    val genresJson: String = "[]",
+    val tagsJson: String = "[]",
+    val writersJson: String = "[]",
+    val webLinks: String? = null,
+    /** `api/Reader/time-left` average, hours. */
+    val hoursLeft: Float = 0f,
+    val wantToRead: Boolean = false,
+    /** `api/Reader/continue-point`. */
+    val continueChapterId: Int? = null,
+)

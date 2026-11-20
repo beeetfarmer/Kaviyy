@@ -28,6 +28,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nl.kaviyy.core.data.HomeItem
 import com.nl.kaviyy.core.data.HomeRail
 import com.nl.kaviyy.core.data.StreamType
+import com.nl.kaviyy.core.data.displayTitle
+import com.nl.kaviyy.core.data.minutesLeft
+import com.nl.kaviyy.core.data.number
+import com.nl.kaviyy.core.data.pagesLeft
+import com.nl.kaviyy.core.data.progress
+import com.nl.kaviyy.core.data.volumeNumber
 import com.nl.kaviyy.core.designsystem.component.Avatar
 import com.nl.kaviyy.core.designsystem.component.ContinueReadingCard
 import com.nl.kaviyy.core.designsystem.component.CoverCard

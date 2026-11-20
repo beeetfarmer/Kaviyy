@@ -70,6 +70,15 @@ interface SeriesDao {
     @Upsert
     suspend fun upsertSeries(rows: List<SeriesEntity>)
 
+    @Query("SELECT * FROM series_metadata WHERE serverId = :serverId AND seriesId = :seriesId")
+    fun observeMetadata(
+        serverId: Long,
+        seriesId: Int,
+    ): Flow<SeriesMetadataEntity?>
+
+    @Upsert
+    suspend fun upsertMetadata(row: SeriesMetadataEntity)
+
     @Query("SELECT * FROM series WHERE serverId = :serverId AND id = :seriesId")
     fun observeSeries(
         serverId: Long,

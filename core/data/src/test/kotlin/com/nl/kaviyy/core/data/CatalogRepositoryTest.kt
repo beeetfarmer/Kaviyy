@@ -17,12 +17,16 @@ import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.ChapterDto
+import com.nl.kaviyy.core.network.GenreTagDto
+import com.nl.kaviyy.core.network.HourEstimateRangeDto
 import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.LibraryDto
 import com.nl.kaviyy.core.network.MangaFileDto
+import com.nl.kaviyy.core.network.PersonDto
 import com.nl.kaviyy.core.network.SeriesDetailDto
 import com.nl.kaviyy.core.network.SeriesDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
+import com.nl.kaviyy.core.network.SeriesMetadataDto
 import com.nl.kaviyy.core.network.VolumeDto
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -87,6 +91,21 @@ class CatalogRepositoryTest {
                 SeriesDto(seriesId, libraryId = 3, name = "One Piece", sortName = "one piece")
 
             override suspend fun seriesDetail(seriesId: Int) = detail
+
+            override suspend fun seriesMetadata(seriesId: Int) =
+                SeriesMetadataDto(
+                    summary = "<p>A courier</p>",
+                    releaseYear = 2019,
+                    genres = listOf(GenreTagDto(4, "Fantasy"), GenreTagDto(5)),
+                    writers = listOf(PersonDto(8, "Mira Okafor")),
+                    webLinks = "https://a.example, ,https://b.example",
+                )
+
+            override suspend fun timeLeft(seriesId: Int) = HourEstimateRangeDto(avgHours = 38f)
+
+            override suspend fun isWantToRead(seriesId: Int) = true
+
+            override suspend fun continuePoint(seriesId: Int) = ChapterDto(11, volumeId = 5)
         }
 
     private val repo = OfflineFirstCatalogRepository(db.libraryDao(), dao, { api })
@@ -204,6 +223,14 @@ class CatalogRepositoryTest {
             assertEquals(7, d.volumes.single().seriesId)
             assertEquals(listOf(10, 11, 12), d.chapters.map { it.id })
             assertEquals(150, d.chapters.first().fileBytes)
+            val meta = d.metadata
+            assertEquals("<p>A courier</p>", meta?.summary)
+            assertEquals(listOf(NamedRef(4, "Fantasy")), meta?.genres) // nameless refs dropped
+            assertEquals(listOf(NamedRef(8, "Mira Okafor")), meta?.writers)
+            assertEquals(listOf("https://a.example", "https://b.example"), meta?.webLinks)
+            assertEquals(38f, meta?.hoursLeft)
+            assertEquals(true, meta?.wantToRead)
+            assertEquals(11, meta?.continueChapterId)
             detail = SeriesDetailDto(volumes = listOf(VolumeDto(5, chapters = listOf(ch1))))
             repo.refreshSeries(server, 7)
             d = repo.seriesDetail(server, 7).first()

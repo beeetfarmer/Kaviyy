@@ -37,6 +37,7 @@ data class SeriesDetail(
     val series: SeriesEntity?,
     val volumes: List<VolumeEntity>,
     val chapters: List<ChapterEntity>,
+    val metadata: SeriesMetadata? = null,
 )
 
 internal const val SERIES_PAGE_SIZE = 50
@@ -169,8 +170,8 @@ class OfflineFirstCatalogRepository
                 dao.observeSeries(server.id.value, seriesId),
                 dao.observeVolumes(server.id.value, seriesId),
                 dao.observeChapters(server.id.value, seriesId),
-                ::SeriesDetail,
-            )
+                dao.observeMetadata(server.id.value, seriesId),
+            ) { series, volumes, chapters, metadata -> SeriesDetail(series, volumes, chapters, metadata?.toDomain()) }
 
         override suspend fun refreshSeries(
             server: Server,
@@ -180,19 +181,39 @@ class OfflineFirstCatalogRepository
             val id = server.id.value
             val series = apiCall { api.series(seriesId) }
             if (series is AppResult.Failure) return series
-            return apiCall { api.seriesDetail(seriesId) }.map { detail ->
-                // Volumes carry their chapters; specials/loose chapters are also listed separately. Dedupe by id.
-                val chapters =
-                    (detail.volumes.flatMap { it.chapters } + detail.specials + detail.chapters)
-                        .distinctBy { it.id }
-                        .map { it.toEntity(id, seriesId) }
-                dao.replaceSeriesDetail(
-                    (series as AppResult.Success).value.toEntity(id),
-                    detail.volumes.map { it.copy(seriesId = seriesId).toEntity(id) },
-                    chapters,
+            return apiCall { api.seriesDetail(seriesId) }
+                .map { detail ->
+                    // Volumes carry their chapters; specials/loose chapters are also listed separately. Dedupe by id.
+                    val chapters =
+                        (detail.volumes.flatMap { it.chapters } + detail.specials + detail.chapters)
+                            .distinctBy { it.id }
+                            .map { it.toEntity(id, seriesId) }
+                    dao.replaceSeriesDetail(
+                        (series as AppResult.Success).value.toEntity(id),
+                        detail.volumes.map { it.copy(seriesId = seriesId).toEntity(id) },
+                        chapters,
+                    )
+                }.let { if (it is AppResult.Failure) it else refreshMetadata(api, id, seriesId) }
+        }
+
+        /** Summary, chips, Want to Read and the continue point; one call each (all in the spec). */
+        private suspend fun refreshMetadata(
+            api: KavitaApi,
+            serverId: Long,
+            seriesId: Int,
+        ): AppResult<Unit> =
+            apiCall {
+                val meta = api.seriesMetadata(seriesId)
+                dao.upsertMetadata(
+                    meta.toEntity(
+                        serverId,
+                        seriesId,
+                        hoursLeft = api.timeLeft(seriesId).avgHours,
+                        wantToRead = api.isWantToRead(seriesId),
+                        continueChapterId = api.continuePoint(seriesId).id.takeIf { it > 0 },
+                    ),
                 )
             }
-        }
     }
 
 /**

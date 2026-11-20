@@ -202,3 +202,25 @@ fun kavitaTime(value: String?): Long {
         .getOrDefault(0)
         .coerceAtLeast(0)
 }
+
+/** `GET api/Series/metadata` (only what screen 04 shows). */
+@Serializable
+data class SeriesMetadataDto(
+    val summary: String? = null,
+    val releaseYear: Int = 0,
+    val ageRating: Int = 0,
+    val publicationStatus: Int = 0,
+    val genres: List<GenreTagDto> = emptyList(),
+    val tags: List<GenreTagDto> = emptyList(),
+    val writers: List<PersonDto> = emptyList(),
+    /** Comma-separated URLs. */
+    val webLinks: String? = null,
+)
+
+/** `GET api/Reader/time-left`. */
+@Serializable
+data class HourEstimateRangeDto(
+    val minHours: Int = 0,
+    val maxHours: Int = 0,
+    val avgHours: Float = 0f,
+)
