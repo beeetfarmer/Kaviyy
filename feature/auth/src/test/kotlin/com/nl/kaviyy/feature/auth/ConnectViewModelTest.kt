@@ -52,6 +52,8 @@ class ConnectViewModelTest {
 
             override suspend fun switchTo(serverId: ServerId) = Unit
 
+            override suspend fun deleteAllLocalData() = Unit
+
             override suspend fun remove(serverId: ServerId) = Unit
 
             override suspend fun knownServer(url: ServerUrl) = known[url.value]

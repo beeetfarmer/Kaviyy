@@ -31,6 +31,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 class SessionRepositoryTest {
@@ -56,7 +57,7 @@ class SessionRepositoryTest {
     private var login: AppResult<LoginResult> = AppResult.Success(LoginResult(jwt, setOf("Download")))
     private val session =
         SessionRepository(
-            db.serverDao(),
+            db,
             store,
             { _, _ -> login },
             RuntimeEnvironment.getApplication(),
@@ -149,6 +150,19 @@ class SessionRepositoryTest {
             assertEquals(listOf(b.id), session.servers.first().map { it.id })
             assertNull(store.credentials(a.id).first())
             assertNull(session.knownServer(url))
+            assertFalse(cache.exists())
+        }
+
+    @Test
+    fun deleteAllLocalDataWipesEverything() =
+        runTest {
+            signIn()
+            signIn(stay = false)
+            val cache = java.io.File(RuntimeEnvironment.getApplication().cacheDir, "images/1").apply { mkdirs() }
+            session.deleteAllLocalData()
+            assertNull(session.activeServer.first())
+            assertNull(session.knownServer(url))
+            assertTrue(store.serverIds.first().isEmpty())
             assertFalse(cache.exists())
         }
 

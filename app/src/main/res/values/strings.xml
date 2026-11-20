@@ -3,6 +3,8 @@
     <string name="signed_in_title">Signed in</string>
     <string name="signed_in_body">Connected to %1$s. Your library arrives in the next update.</string>
     <string name="sign_out">Sign Out</string>
+    <string name="delete_local_data">Delete Local Data</string>
+    <string name="delete_local_data_confirm">Tap again to sign out everywhere and delete all data</string>
     <string name="servers_title">Servers</string>
     <string name="servers_done">Done</string>
     <string name="servers_active">Current server</string>

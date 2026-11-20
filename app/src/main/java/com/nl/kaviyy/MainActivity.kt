@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nl.kaviyy.core.designsystem.component.PrimaryButton
+import com.nl.kaviyy.core.designsystem.component.SecondaryButton
 import com.nl.kaviyy.core.designsystem.component.ServerPill
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
@@ -75,7 +76,11 @@ private fun KaviyyApp(viewModel: AppViewModel = hiltViewModel()) {
             }
 
             is AppState.SignedIn -> {
-                SignedInPlaceholder(s.server, onServerPill = { switcher = true }) { viewModel.signOut(s.server) }
+                SignedInPlaceholder(
+                    s.server,
+                    onServerPill = { switcher = true },
+                    onDeleteLocalData = viewModel::deleteAllLocalData,
+                ) { viewModel.signOut(s.server) }
                 if (switcher) {
                     ServerSwitcherSheet(
                         servers = servers,
@@ -105,8 +110,10 @@ private fun KaviyyApp(viewModel: AppViewModel = hiltViewModel()) {
 private fun SignedInPlaceholder(
     server: Server,
     onServerPill: () -> Unit,
+    onDeleteLocalData: () -> Unit,
     onSignOut: () -> Unit,
 ) {
+    var confirmWipe by rememberSaveable { mutableStateOf(false) }
     Column(
         Modifier
             .fillMaxSize()
@@ -124,5 +131,11 @@ private fun SignedInPlaceholder(
             color = Kavita.colors.labelSecondary,
         )
         PrimaryButton(stringResource(R.string.sign_out), onSignOut, Modifier.fillMaxWidth())
+        // [derived] Final home: You › Privacy & security › Delete local data (DESIGN.md §10). Two taps.
+        SecondaryButton(
+            stringResource(if (confirmWipe) R.string.delete_local_data_confirm else R.string.delete_local_data),
+            { if (confirmWipe) onDeleteLocalData() else confirmWipe = true },
+            Modifier.fillMaxWidth(),
+        )
     }
 }

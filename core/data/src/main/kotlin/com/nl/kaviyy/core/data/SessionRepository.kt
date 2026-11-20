@@ -1,6 +1,7 @@
 package com.nl.kaviyy.core.data
 
 import android.content.Context
+import com.nl.kaviyy.core.database.KaviyyDatabase
 import com.nl.kaviyy.core.database.ServerDao
 import com.nl.kaviyy.core.database.ServerEntity
 import com.nl.kaviyy.core.database.toModel
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -43,6 +45,9 @@ interface AuthSession {
 
     /** Signs out and forgets the server: its row, trust decisions and cached images. */
     suspend fun remove(serverId: ServerId)
+
+    /** Signs out of every server and deletes everything stored locally (database, credentials, caches). */
+    suspend fun deleteAllLocalData()
 
     /** A saved server for this address (its pin and HTTP opt-in), if any. */
     suspend fun knownServer(url: ServerUrl): Server?
@@ -68,12 +73,13 @@ interface AuthSession {
 class SessionRepository
     @Inject
     constructor(
-        private val dao: ServerDao,
+        private val db: KaviyyDatabase,
         private val store: CredentialStore,
         private val accounts: AccountApi,
         @param:ApplicationContext private val context: Context,
         @param:Dispatcher(KaviyyDispatchers.IO) private val io: CoroutineDispatcher,
     ) : AuthSession {
+        private val dao: ServerDao = db.serverDao()
         private val memoryOnly = MutableStateFlow<Map<ServerId, Credentials>>(emptyMap())
 
         override val servers: Flow<List<Server>> =
@@ -91,6 +97,15 @@ class SessionRepository
             dao.delete(serverId.value)
             // Per-server data isolation: everything cached for a server lives under its id (paths from ids only).
             server?.let { withContext(io) { ServerImageLoaders.cacheDir(context, it).deleteRecursively() } }
+        }
+
+        override suspend fun deleteAllLocalData() {
+            memoryOnly.value = emptyMap()
+            store.clearAll()
+            withContext(io) {
+                db.clearAllTables()
+                File(context.cacheDir, "images").deleteRecursively()
+            }
         }
 
         override suspend fun knownServer(url: ServerUrl): Server? = dao.byUrl(url.value)?.toModel()

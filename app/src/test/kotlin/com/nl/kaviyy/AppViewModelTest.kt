@@ -31,6 +31,11 @@ class AppViewModelTest {
                 calls += "switch ${serverId.value}"
             }
 
+            override suspend fun deleteAllLocalData() {
+                calls += "wipe"
+                active.value = null
+            }
+
             override suspend fun remove(serverId: ServerId) {
                 calls += "remove ${serverId.value}"
                 active.value = null
@@ -59,8 +64,9 @@ class AppViewModelTest {
             val vm = AppViewModel(session)
             vm.switchTo(ServerId(2))
             vm.remove(ServerId(3))
+            vm.deleteAllLocalData()
             runCurrent()
-            assertEquals(listOf("switch 2", "remove 3"), calls)
+            assertEquals(listOf("switch 2", "remove 3", "wipe"), calls)
         }
 
     @Test

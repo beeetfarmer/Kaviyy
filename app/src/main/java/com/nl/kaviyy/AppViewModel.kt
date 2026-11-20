@@ -50,4 +50,8 @@ class AppViewModel
         fun remove(id: ServerId) {
             viewModelScope.launch { session.remove(id) }
         }
+
+        fun deleteAllLocalData() {
+            viewModelScope.launch { session.deleteAllLocalData() }
+        }
     }
