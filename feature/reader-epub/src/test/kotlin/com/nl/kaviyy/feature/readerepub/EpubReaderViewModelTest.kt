@@ -5,10 +5,12 @@ import app.cash.turbine.test
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.BookFileRepository
 import com.nl.kaviyy.core.data.ImageReaderRepository
+import com.nl.kaviyy.core.data.ProgressRepository
 import com.nl.kaviyy.core.data.ReaderChapter
 import com.nl.kaviyy.core.data.ReaderDisplay
 import com.nl.kaviyy.core.data.ReaderDisplayRepository
 import com.nl.kaviyy.core.data.ReaderSettingsRepository
+import com.nl.kaviyy.core.data.ResumePosition
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
@@ -20,18 +22,22 @@ import com.nl.kaviyy.core.network.ReadingProfileDto
 import com.nl.kaviyy.core.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
-import org.readium.r2.shared.publication.Manifest
-import org.readium.r2.shared.publication.Metadata
+import org.junit.runner.RunWith
 import org.readium.r2.shared.publication.Publication
+import org.robolectric.RobolectricTestRunner
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
+@RunWith(RobolectricTestRunner::class) // Readium locators use org.json
 class EpubReaderViewModelTest {
+    private val book = testBook
+
     @get:Rule
     val main = MainDispatcherRule()
 
@@ -99,7 +105,7 @@ class EpubReaderViewModelTest {
         object : PublicationLoader {
             override suspend fun open(file: File): AppResult<Publication> {
                 opened += file
-                return AppResult.Success(Publication(Manifest(metadata = Metadata())))
+                return AppResult.Success(book)
             }
         }
 
@@ -137,6 +143,34 @@ class EpubReaderViewModelTest {
             }
         }
 
+    private var resumeAt = ResumePosition(0)
+    private val recorded = mutableListOf<Int>()
+    private val pushed = mutableListOf<Int>()
+    private val progress =
+        object : ProgressRepository {
+            override suspend fun resume(
+                server: Server,
+                chapter: ReaderChapter,
+            ) = resumeAt
+
+            override suspend fun record(
+                server: Server,
+                chapter: ReaderChapter,
+                page: Int,
+                position: String?,
+            ) {
+                recorded += page
+            }
+
+            override suspend fun push(
+                server: Server,
+                chapterId: Int,
+            ): AppResult<Unit> {
+                pushed += chapterId
+                return AppResult.Success(Unit)
+            }
+        }
+
     private fun vm() =
         EpubReaderViewModel(
             session,
@@ -145,6 +179,7 @@ class EpubReaderViewModelTest {
             loader,
             settings,
             displayRepo,
+            progress,
             SavedStateHandle(mapOf(EPUB_SERIES_ARG to 9, EPUB_CHAPTER_ARG to 201)),
         )
 
@@ -158,6 +193,29 @@ class EpubReaderViewModelTest {
                 assertEquals(false, st.loading)
                 assertEquals("Book", st.chapter?.seriesName)
                 assertEquals(listOf(File("book.epub")), opened)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun resumesAtTheSavedPageAndRecordsReading() =
+        runTest {
+            resumeAt = ResumePosition(1)
+            val vm = vm()
+            vm.state.test {
+                runCurrent()
+                val st = expectMostRecentItem()
+                assertEquals("ch2.xhtml", st.locator?.href.toString())
+                assertEquals(3, st.toc.size)
+                st.locator?.let(vm::onLocator) // the navigator echoes the start: not reading
+                runCurrent()
+                assertEquals(emptyList(), recorded)
+                vm.onLocator(at("ch3.xhtml", 0.2))
+                runCurrent()
+                assertEquals(listOf(1), recorded) // last item not finished yet
+                advanceTimeBy(2_000)
+                runCurrent()
+                assertEquals(listOf(201), pushed)
                 cancelAndIgnoreRemainingEvents()
             }
         }

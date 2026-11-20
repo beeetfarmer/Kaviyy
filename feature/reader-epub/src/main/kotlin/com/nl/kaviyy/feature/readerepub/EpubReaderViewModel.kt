@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.BookFileRepository
 import com.nl.kaviyy.core.data.ImageReaderRepository
+import com.nl.kaviyy.core.data.ProgressRepository
 import com.nl.kaviyy.core.data.ReaderChapter
 import com.nl.kaviyy.core.data.ReaderDisplayRepository
 import com.nl.kaviyy.core.data.ReaderSettingsRepository
@@ -18,6 +19,7 @@ import com.nl.kaviyy.core.network.ReadingProfileDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -56,6 +58,8 @@ data class EpubReaderUiState(
     val section: String? = null,
     /** Last reported position; a recreated navigator reopens here. */
     val locator: Locator? = null,
+    val toc: List<TocEntry> = emptyList(),
+    val tocOpen: Boolean = false,
 )
 
 private data class Session(
@@ -65,8 +69,10 @@ private data class Session(
     val error: AppError? = null,
     val chromeVisible: Boolean = true,
     val settingsOpen: Boolean = false,
+    val tocOpen: Boolean = false,
     val locator: Locator? = null,
     val positions: Int = 0,
+    val toc: List<TocEntry> = emptyList(),
 )
 
 /** Screen 07. The original EPUB is fetched into the book cache (Download role) and opened with Readium. */
@@ -81,12 +87,17 @@ class EpubReaderViewModel
         private val loader: PublicationLoader,
         private val settingsRepository: ReaderSettingsRepository,
         private val displayRepository: ReaderDisplayRepository,
+        private val progressRepository: ProgressRepository,
         saved: SavedStateHandle,
     ) : ViewModel() {
         private val seriesId: Int = checkNotNull(saved.get<Int>(EPUB_SERIES_ARG)) { "missing $EPUB_SERIES_ARG" }
         private val chapterId: Int = checkNotNull(saved.get<Int>(EPUB_CHAPTER_ARG)) { "missing $EPUB_CHAPTER_ARG" }
         private val session = MutableStateFlow(Session())
         private var loadJob: Job? = null
+        private var pushJob: Job? = null
+
+        /** Where the book opened; the navigator echoes it back first, which is not reading. */
+        private var opened: Locator? = null
 
         private val profile =
             auth.activeServer.flatMapLatest { s ->
@@ -118,6 +129,8 @@ class EpubReaderViewModel
                     positions = st.positions,
                     section = st.locator?.title,
                     locator = st.locator,
+                    toc = st.toc,
+                    tocOpen = st.tocOpen,
                 )
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), EpubReaderUiState())
 
@@ -131,8 +144,29 @@ class EpubReaderViewModel
 
         fun showSettings(open: Boolean) = session.update { it.copy(settingsOpen = open) }
 
-        /** Where the navigator is now (progress sync is M11.2). */
-        fun onLocator(locator: Locator) = session.update { it.copy(locator = locator) }
+        fun showToc(open: Boolean) = session.update { it.copy(tocOpen = open) }
+
+        /** Where the navigator is now: saved locally at once, sent to Kavita after a pause. */
+        fun onLocator(locator: Locator) {
+            session.update { it.copy(locator = locator) }
+            val st = session.value
+            val chapter = st.chapter
+            val book = st.publication
+            if (chapter == null || book == null || locator == opened) return
+            pushJob?.cancel()
+            pushJob =
+                viewModelScope.launch {
+                    val s = auth.activeServer.first() ?: return@launch
+                    progressRepository.record(
+                        s,
+                        chapter,
+                        book.kavitaPage(locator, chapter.pages),
+                        locator.toJSON().toString(),
+                    )
+                    delay(PUSH_DEBOUNCE_MS)
+                    progressRepository.push(s, chapter.id)
+                }
+        }
 
         fun updateSettings(new: BookSettings) {
             displayRepository.update {
@@ -170,8 +204,26 @@ class EpubReaderViewModel
                 }.flatMap { loader.open(it) }
                 .map { publication ->
                     val positions = publication.positions().size
-                    session.update { it.copy(publication = publication, positions = positions, loading = false) }
+                    val chapter = session.value.chapter
+                    // Keep a position from before a reload (retry) rather than jumping back.
+                    val start =
+                        session.value.locator
+                            ?: chapter?.let { publication.startLocator(progressRepository.resume(server, it)) }
+                    opened = start
+                    session.update {
+                        it.copy(
+                            publication = publication,
+                            positions = positions,
+                            locator = start,
+                            toc = publication.toc(),
+                            loading = false,
+                        )
+                    }
                 }
+
+        private companion object {
+            const val PUSH_DEBOUNCE_MS = 1_500L
+        }
 
         override fun onCleared() {
             session.value.publication?.close()

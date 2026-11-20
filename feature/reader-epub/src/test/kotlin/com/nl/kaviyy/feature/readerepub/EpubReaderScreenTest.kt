@@ -1,6 +1,7 @@
 package com.nl.kaviyy.feature.readerepub
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -85,6 +86,38 @@ class EpubReaderScreenTest {
             picked,
         )
     }
+
+    @Test
+    fun tocSheetJumpsToAnEntry() {
+        val went = mutableListOf<String>()
+        compose.setContent {
+            BookPreview(
+                previewBook.copy(
+                    publication = testBook,
+                    toc = testBook.toc(),
+                    tocOpen = true,
+                    locator = at("ch3.xhtml", 0.1),
+                ),
+                EpubReaderActions(onGo = { went += it.title }),
+            )
+        }
+        compose.onNodeWithText("Three").assertIsSelected()
+        compose.onNodeWithText("One A").performClick()
+        assertEquals(listOf("One A"), went)
+    }
+
+    @Test
+    fun screenshotToc() =
+        shot("epub_toc") {
+            BookPreview(
+                previewBook.copy(
+                    publication = testBook,
+                    toc = testBook.toc(),
+                    tocOpen = true,
+                    locator = at("ch3.xhtml", 0.1),
+                ),
+            )
+        }
 
     @Test
     fun screenshotPaper() = shot("epub_paper") { BookPreview() }

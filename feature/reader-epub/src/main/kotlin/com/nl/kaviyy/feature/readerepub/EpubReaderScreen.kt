@@ -55,6 +55,8 @@ data class EpubReaderActions(
     val onSettings: (BookSettings) -> Unit = {},
     val onNext: () -> Unit = {},
     val onPrevious: () -> Unit = {},
+    val onShowToc: (Boolean) -> Unit = {},
+    val onGo: (TocEntry) -> Unit = {},
 )
 
 @Composable
@@ -74,6 +76,11 @@ fun EpubReaderRoute(
             onSettings = viewModel::updateSettings,
             onNext = handle::next,
             onPrevious = handle::previous,
+            onShowToc = viewModel::showToc,
+            onGo = { entry ->
+                viewModel.showToc(false)
+                handle.go(entry.link)
+            },
         ),
     ) {
         state.publication?.let { book ->
@@ -128,6 +135,7 @@ fun EpubReaderScreen(
             )
             if (state.chromeVisible) Chrome(state, actions)
             if (state.settingsOpen) BookSettingsSheet(state.settings, actions)
+            if (state.tocOpen) TocSheet(state, actions)
         }
     }
 }
@@ -185,7 +193,16 @@ private fun BoxScope.Chrome(
                 )
             }
         }
-        // TOC button joins here with M11.2.
+        if (state.toc.isNotEmpty()) {
+            CircleIconButton(
+                KavitaIcons.ListIcon,
+                stringResource(R.string.epub_toc),
+                { actions.onShowToc(true) },
+                containerColor = colors.track,
+                contentColor = colors.foreground,
+                modifier = Modifier.size(TOP_BUTTON),
+            )
+        }
         val label = stringResource(R.string.epub_settings)
         Box(
             Modifier

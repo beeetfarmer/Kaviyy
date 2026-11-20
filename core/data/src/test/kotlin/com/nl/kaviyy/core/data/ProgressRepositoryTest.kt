@@ -109,15 +109,33 @@ class ProgressRepositoryTest {
         runTest {
             seed()
             remotePage = 12
-            assertEquals(12, repo.resume(server, chapter)) // nothing local: server
+            assertEquals(12, repo.resume(server, chapter).page) // nothing local: server
             offline = true
             repo.record(server, chapter, 3) // queued
             offline = false
-            assertEquals(3, repo.resume(server, chapter)) // unpushed local wins over the server
+            assertEquals(3, repo.resume(server, chapter).page) // unpushed local wins over the server
             repo.push(server, 10)
-            assertEquals(12, repo.resume(server, chapter)) // pushed: server again (another device may have moved on)
+            // Pushed: the server again (another device may have moved on).
+            assertEquals(12, repo.resume(server, chapter).page)
             offline = true
             val read = chapter.copy(id = 11)
-            assertEquals(0, repo.resume(server, read)) // offline, cached pagesRead = finished: start over
+            assertEquals(0, repo.resume(server, read).page) // offline, cached pagesRead = finished: start over
+        }
+
+    @Test
+    fun appPositionsStayLocalAndResumeOnlyWhenThePageMatches() =
+        runTest {
+            seed()
+            val locator = """{"href":"ch3.xhtml","locations":{"progression":0.4}}"""
+            repo.record(server, chapter, 3, locator)
+            repo.push(server, 10)
+            assertEquals(null, sent.single().bookScrollId) // never sent to Kavita
+            remotePage = 3
+            assertEquals(ResumePosition(3, locator), repo.resume(server, chapter))
+            remotePage = 7 // another device moved on: its page wins, our position no longer applies
+            assertEquals(ResumePosition(7), repo.resume(server, chapter))
+            repo.record(server, chapter, 4, "//BODY/DIV[1]/P[2]")
+            repo.push(server, 10)
+            assertEquals("//BODY/DIV[1]/P[2]", sent.last().bookScrollId) // a Kavita XPath round-trips
         }
 }

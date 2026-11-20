@@ -311,7 +311,7 @@ class ImageReaderViewModel
                             val start =
                                 when (page) {
                                     LAST_PAGE -> chapter.pages - 1
-                                    RESUME -> progressRepository.resume(s, chapter)
+                                    RESUME -> progressRepository.resume(s, chapter).page
                                     else -> page
                                 }
                             session.update { it.copy(chapter = chapter, loading = false, next = null, previous = null) }

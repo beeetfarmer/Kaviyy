@@ -31,4 +31,6 @@
     <string name="epub_keep_screen_on">Keep screen on</string>
     <string name="epub_system_brightness">System brightness</string>
     <string name="epub_brightness">Brightness</string>
+    <string name="epub_toc">Contents</string>
+    <string name="epub_untitled">Untitled section</string>
 </resources>

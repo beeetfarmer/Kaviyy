@@ -10,6 +10,7 @@ import com.nl.kaviyy.core.data.ReaderChapter
 import com.nl.kaviyy.core.data.ReaderDisplay
 import com.nl.kaviyy.core.data.ReaderDisplayRepository
 import com.nl.kaviyy.core.data.ReaderSettingsRepository
+import com.nl.kaviyy.core.data.ResumePosition
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
@@ -147,12 +148,13 @@ class ImageReaderViewModelTest {
             override suspend fun resume(
                 server: Server,
                 chapter: ReaderChapter,
-            ) = resumeAt
+            ) = ResumePosition(resumeAt)
 
             override suspend fun record(
                 server: Server,
                 chapter: ReaderChapter,
                 page: Int,
+                position: String?,
             ) {
                 recorded += chapter.id to page
             }

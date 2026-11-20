@@ -28,6 +28,7 @@ import org.readium.r2.navigator.preferences.Color
 import org.readium.r2.navigator.preferences.FontFamily
 import org.readium.r2.navigator.util.DirectionalNavigationAdapter
 import org.readium.r2.shared.ExperimentalReadiumApi
+import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.util.AbsoluteUrl
@@ -48,6 +49,10 @@ class EpubNavigatorHandle {
 
     fun previous() {
         fragment?.goBackward()
+    }
+
+    fun go(link: Link) {
+        fragment?.go(link)
     }
 }
 
