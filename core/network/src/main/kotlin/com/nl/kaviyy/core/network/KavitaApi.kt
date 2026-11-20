@@ -50,6 +50,31 @@ interface KavitaApi {
         @Query("libraryIds") libraryIds: String,
     ): List<MetadataValueDto>
 
+    @GET("api/Metadata/tags")
+    suspend fun tags(
+        @Query("libraryIds") libraryIds: String,
+    ): List<GenreTagDto>
+
+    @GET("api/Metadata/languages")
+    suspend fun languages(
+        @Query("libraryIds") libraryIds: String,
+    ): List<LanguageDto>
+
+    @GET("api/Metadata/age-ratings")
+    suspend fun ageRatings(
+        @Query("libraryIds") libraryIds: String,
+    ): List<MetadataValueDto>
+
+    /** People with a Kavita `PersonRole`. */
+    @GET("api/Metadata/people-by-role")
+    suspend fun peopleByRole(
+        @Query("role") role: Int,
+    ): List<PersonDto>
+
+    /** Collections the user can see (own + promoted). */
+    @GET("api/Collection")
+    suspend fun collections(): List<CollectionDto>
+
     /** The user's Home layout. */
     @GET("api/Stream/dashboard")
     suspend fun dashboard(

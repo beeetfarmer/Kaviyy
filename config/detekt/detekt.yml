@@ -11,8 +11,10 @@ complexity:
     ignoreDefaultParameters: true
   LongMethod:
     ignoreAnnotated: ['Composable']
+  CyclomaticComplexMethod:
+    ignoreSimpleWhenEntries: true # enum → string-resource tables
   TooManyFunctions:
-    ignoreAnnotated: ['Dao'] # one function per query is the point of a DAO
+    ignoreAnnotated: ['Dao', 'HiltViewModel'] # one function per query (DAO) / per user intent (ViewModel)
 style:
   ThrowsCount:
     excludes: ['**/test/**']

@@ -7,8 +7,14 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
-import com.nl.kaviyy.core.data.FilterOption
+import com.nl.kaviyy.core.data.Comparison
+import com.nl.kaviyy.core.data.FilterField
+import com.nl.kaviyy.core.data.FilterRule
+import com.nl.kaviyy.core.data.LibraryFilterStore
 import com.nl.kaviyy.core.data.LibraryQuery
+import com.nl.kaviyy.core.data.OptionSource
+import com.nl.kaviyy.core.data.RuleValue
+import com.nl.kaviyy.core.data.SeriesFilter
 import com.nl.kaviyy.core.data.SeriesSort
 import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.database.SeriesEntity
@@ -36,13 +42,29 @@ import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** Sort + quick chips, independent of the library (genre/status ids are server-global). */
-data class QuickFilters(
-    val sort: SeriesSort = SeriesSort.RecentlyAdded,
-    val unreadOnly: Boolean = false,
-    val genre: FilterOption? = null,
-    val status: FilterOption? = null,
-)
+/** Chip shortcuts: each one owns a well-known rule inside the shared [SeriesFilter]. */
+internal val UNREAD_RULE = FilterRule(FilterField.ReadProgress, Comparison.LessThan, listOf(RuleValue("100")))
+
+internal fun SeriesFilter.unreadOnly(): Boolean = UNREAD_RULE in rules
+
+/** The chip's rule: the first "is any of" rule on [field]. */
+internal fun SeriesFilter.chipRule(field: FilterField): FilterRule? =
+    rules.firstOrNull { it.field == field && it.comparison == Comparison.Contains }
+
+internal fun SeriesFilter.withChip(
+    field: FilterField,
+    value: RuleValue?,
+): SeriesFilter {
+    val existing = chipRule(field)
+    val next = value?.let { FilterRule(field, Comparison.Contains, listOf(it)) }
+    val rules =
+        when {
+            existing == null -> rules + listOfNotNull(next)
+            next == null -> rules - existing
+            else -> rules.map { if (it == existing) next else it }
+        }
+    return copy(rules = rules)
+}
 
 enum class LibrarySheet { Sort, Genre, Status }
 
@@ -51,7 +73,7 @@ sealed interface SheetOptions {
     data object Loading : SheetOptions
 
     data class Loaded(
-        val options: List<FilterOption>,
+        val options: List<RuleValue>,
     ) : SheetOptions
 
     data class Failed(
@@ -67,21 +89,19 @@ data class LibraryUiState(
     val grid: Boolean = true,
     /** Libraries refresh failed (the grid reports its own errors through paging). */
     val error: AppError? = null,
-    val filters: QuickFilters = QuickFilters(),
+    val filter: SeriesFilter = SeriesFilter(),
     val sheet: LibrarySheet? = null,
     val options: SheetOptions = SheetOptions.Loading,
 ) {
     val selectedIndex: Int get() = libraries.orEmpty().indexOfFirst { it.id == selectedId }.coerceAtLeast(0)
 
-    val query: LibraryQuery?
-        get() = selectedId?.let { LibraryQuery(it, filters.sort, filters.unreadOnly, filters.genre, filters.status) }
+    val query: LibraryQuery? get() = selectedId?.let { LibraryQuery(it, filter) }
 }
 
-/** What the user chose on this screen; picked library, layout and filters survive process death. */
+/** What the user chose on this screen; picked library and layout survive process death (the filter too, below). */
 private data class Local(
     val picked: Int? = null,
     val grid: Boolean = true,
-    val filters: QuickFilters = QuickFilters(),
     val sheet: LibrarySheet? = null,
     val options: SheetOptions = SheetOptions.Loading,
 )
@@ -89,10 +109,7 @@ private data class Local(
 private const val STOP_TIMEOUT_MS = 5_000L
 private const val KEY_LIBRARY = "library"
 private const val KEY_GRID = "grid"
-private const val KEY_SORT = "sort"
-private const val KEY_UNREAD = "unread"
-private const val KEY_GENRE = "genre"
-private const val KEY_STATUS = "status"
+private const val KEY_FILTER = "filter"
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -101,6 +118,7 @@ class LibraryViewModel
     constructor(
         session: AuthSession,
         private val repository: CatalogRepository,
+        private val store: LibraryFilterStore,
         private val saved: SavedStateHandle,
     ) : ViewModel() {
         private val server = session.activeServer.stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -110,11 +128,14 @@ class LibraryViewModel
         private val libraries =
             server.flatMapLatest { s -> if (s == null) flowOf(null) else repository.libraries(s) }
 
+        private val filter =
+            server.flatMapLatest { s -> if (s == null) flowOf(SeriesFilter()) else store.filter(s.id) }
+
         val state: StateFlow<LibraryUiState> =
-            combine(server, libraries, local, error) { s, libs, l, e ->
+            combine(server, libraries, local, error, filter) { s, libs, l, e, f ->
                 // A library removed on the server (or a server switch) falls back to the first one.
                 val selected = libs?.firstOrNull { it.id == l.picked }?.id ?: libs?.firstOrNull()?.id
-                LibraryUiState(s, libs, selected, l.grid, e, l.filters, l.sheet, l.options)
+                LibraryUiState(s, libs, selected, l.grid, e, f, l.sheet, l.options)
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), LibraryUiState())
 
         /** The current query's series; empty until there is a library. */
@@ -127,26 +148,40 @@ class LibraryViewModel
 
         init {
             viewModelScope.launch {
-                server.filterNotNull().distinctUntilChangedBy { it.id }.collectLatest { refreshLibraries(it) }
+                server.filterNotNull().distinctUntilChangedBy { it.id }.collectLatest { s ->
+                    saved.get<String>(KEY_FILTER)?.let(SeriesFilter::decode)?.let { store.restore(s.id, it) }
+                    refreshLibraries(s)
+                }
             }
+            viewModelScope.launch { filter.collect { saved[KEY_FILTER] = it.encode() } }
         }
 
         fun select(libraryId: Int) = change { it.copy(picked = libraryId) }
 
         fun toggleLayout() = change { it.copy(grid = !it.grid) }
 
-        fun toggleUnread() = filters { it.copy(unreadOnly = !it.unreadOnly) }
+        fun toggleUnread() =
+            filter {
+                if (it.unreadOnly()) {
+                    it.copy(rules = it.rules - UNREAD_RULE)
+                } else {
+                    it.copy(
+                        rules =
+                            it.rules + UNREAD_RULE,
+                    )
+                }
+            }
 
         fun setSort(sort: SeriesSort) {
-            filters { it.copy(sort = sort) }
+            filter { it.copy(sort = sort) }
             showSheet(null)
         }
 
         /** Null clears the chip. */
-        fun pick(option: FilterOption?) {
+        fun pick(option: RuleValue?) {
             when (local.value.sheet) {
-                LibrarySheet.Genre -> filters { it.copy(genre = option) }
-                LibrarySheet.Status -> filters { it.copy(status = option) }
+                LibrarySheet.Genre -> filter { it.withChip(FilterField.Genres, option) }
+                LibrarySheet.Status -> filter { it.withChip(FilterField.PublicationStatus, option) }
                 else -> Unit
             }
             showSheet(null)
@@ -159,12 +194,15 @@ class LibraryViewModel
             val libraryId = state.value.selectedId ?: return
             if (sheet == LibrarySheet.Genre || sheet == LibrarySheet.Status) {
                 viewModelScope.launch {
-                    val result =
-                        if (sheet == LibrarySheet.Genre) {
-                            repository.genres(s, libraryId)
+                    val source =
+                        if (sheet ==
+                            LibrarySheet.Genre
+                        ) {
+                            OptionSource.Genres
                         } else {
-                            repository.publicationStatuses(s, libraryId)
+                            OptionSource.PublicationStatus
                         }
+                    val result = repository.filterOptions(s, source, listOf(libraryId))
                     val options =
                         when (result) {
                             is AppResult.Success -> SheetOptions.Loaded(result.value)
@@ -184,8 +222,9 @@ class LibraryViewModel
             error.update { (result as? AppResult.Failure)?.error }
         }
 
-        private fun filters(transform: (QuickFilters) -> QuickFilters) =
-            change { it.copy(filters = transform(it.filters)) }
+        private fun filter(transform: (SeriesFilter) -> SeriesFilter) {
+            server.value?.let { store.update(it.id, transform) }
+        }
 
         private fun change(transform: (Local) -> Local) = saved.save(local.updateAndGet(transform))
     }
@@ -193,25 +232,6 @@ class LibraryViewModel
 private fun SavedStateHandle.save(local: Local) {
     this[KEY_LIBRARY] = local.picked
     this[KEY_GRID] = local.grid
-    this[KEY_SORT] = local.filters.sort.name
-    this[KEY_UNREAD] = local.filters.unreadOnly
-    this[KEY_GENRE] = local.filters.genre?.let { arrayListOf(it.id.toString(), it.title) }
-    this[KEY_STATUS] = local.filters.status?.let { arrayListOf(it.id.toString(), it.title) }
 }
 
-private fun SavedStateHandle.restore(): Local {
-    fun option(key: String) =
-        get<ArrayList<String>>(key)?.let { (id, title) -> id.toIntOrNull()?.let { FilterOption(it, title) } }
-    val sort = get<String>(KEY_SORT)?.let { name -> SeriesSort.entries.firstOrNull { it.name == name } }
-    return Local(
-        picked = get(KEY_LIBRARY),
-        grid = get(KEY_GRID) ?: true,
-        filters =
-            QuickFilters(
-                sort ?: SeriesSort.RecentlyAdded,
-                get(KEY_UNREAD) ?: false,
-                option(KEY_GENRE),
-                option(KEY_STATUS),
-            ),
-    )
-}
+private fun SavedStateHandle.restore(): Local = Local(picked = get(KEY_LIBRARY), grid = get(KEY_GRID) ?: true)

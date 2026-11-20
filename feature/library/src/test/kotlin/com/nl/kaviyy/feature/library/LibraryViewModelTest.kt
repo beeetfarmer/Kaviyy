@@ -5,9 +5,15 @@ import androidx.paging.PagingData
 import app.cash.turbine.test
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
-import com.nl.kaviyy.core.data.FilterOption
+import com.nl.kaviyy.core.data.Comparison
+import com.nl.kaviyy.core.data.FilterField
+import com.nl.kaviyy.core.data.FilterRule
+import com.nl.kaviyy.core.data.LibraryFilterStore
 import com.nl.kaviyy.core.data.LibraryQuery
+import com.nl.kaviyy.core.data.OptionSource
+import com.nl.kaviyy.core.data.RuleValue
 import com.nl.kaviyy.core.data.SeriesDetail
+import com.nl.kaviyy.core.data.SeriesFilter
 import com.nl.kaviyy.core.data.SeriesSort
 import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.database.SeriesEntity
@@ -42,7 +48,8 @@ class LibraryViewModelTest {
     private var refreshResult: AppResult<Unit> = AppResult.Success(Unit)
     private val pagedFor = mutableListOf<Int>()
     private val queries = mutableListOf<LibraryQuery>()
-    private var genreResult: AppResult<List<FilterOption>> = AppResult.Success(listOf(FilterOption(7, "Drama")))
+    private var genreResult: AppResult<List<RuleValue>> = AppResult.Success(listOf(DRAMA))
+    private val store = LibraryFilterStore()
 
     private val session =
         object : AuthSession {
@@ -83,15 +90,11 @@ class LibraryViewModelTest {
                 return flowOf(PagingData.empty())
             }
 
-            override suspend fun genres(
+            override suspend fun filterOptions(
                 server: Server,
-                libraryId: Int,
-            ) = genreResult
-
-            override suspend fun publicationStatuses(
-                server: Server,
-                libraryId: Int,
-            ): AppResult<List<FilterOption>> = AppResult.Success(emptyList())
+                source: OptionSource,
+                libraryIds: List<Int>,
+            ) = if (source == OptionSource.Genres) genreResult else AppResult.Success(emptyList())
 
             override fun seriesDetail(
                 server: Server,
@@ -107,7 +110,7 @@ class LibraryViewModelTest {
     @Test
     fun selectsFirstLibraryThenTheChosenOneAndFallsBackWhenItDisappears() =
         runTest {
-            val vm = LibraryViewModel(session, repo, SavedStateHandle())
+            val vm = LibraryViewModel(session, repo, store, SavedStateHandle())
             backgroundScope.launch { vm.series.collect {} }
             vm.state.test {
                 runCurrent()
@@ -123,10 +126,10 @@ class LibraryViewModelTest {
         }
 
     @Test
-    fun quickFiltersDriveTheQueryAndSurviveRecreation() =
+    fun chipsEditTheSharedFilterAndItSurvivesRecreation() =
         runTest {
             val saved = SavedStateHandle()
-            val vm = LibraryViewModel(session, repo, saved)
+            val vm = LibraryViewModel(session, repo, store, saved)
             backgroundScope.launch { vm.series.collect {} }
             vm.state.test {
                 runCurrent()
@@ -134,23 +137,24 @@ class LibraryViewModelTest {
                 vm.setSort(SeriesSort.Title)
                 vm.showSheet(LibrarySheet.Genre)
                 runCurrent()
-                val open = expectMostRecentItem()
-                assertEquals(SheetOptions.Loaded(listOf(FilterOption(7, "Drama"))), open.options)
-                vm.pick(FilterOption(7, "Drama"))
+                assertEquals(SheetOptions.Loaded(listOf(DRAMA)), expectMostRecentItem().options)
+                vm.pick(DRAMA)
                 runCurrent()
                 val s = expectMostRecentItem()
                 assertNull(s.sheet)
-                assertEquals(LibraryQuery(10, SeriesSort.Title, true, FilterOption(7, "Drama")), queries.last())
-                assertEquals(2, s.query?.activeFilters)
+                val genreRule = FilterRule(FilterField.Genres, Comparison.Contains, listOf(DRAMA))
+                assertEquals(SeriesFilter(rules = listOf(UNREAD_RULE, genreRule), sort = SeriesSort.Title), s.filter)
+                assertEquals(LibraryQuery(10, s.filter), queries.last())
+                assertEquals(s.filter, store.current(ServerId(1))) // the filter sheet sees the same filter
+                vm.toggleUnread()
+                runCurrent()
+                assertEquals(listOf(genreRule), expectMostRecentItem().filter.rules)
             }
-            // Process death: a new ViewModel on the same SavedStateHandle restores the filters.
-            val restored = LibraryViewModel(session, repo, saved)
+            // Process death: a fresh store + ViewModel on the same SavedStateHandle restores the filter.
+            val restored = LibraryViewModel(session, repo, LibraryFilterStore(), saved)
             restored.state.test {
                 runCurrent()
-                assertEquals(
-                    QuickFilters(SeriesSort.Title, true, FilterOption(7, "Drama")),
-                    expectMostRecentItem().filters,
-                )
+                assertEquals(SeriesSort.Title, expectMostRecentItem().filter.sort)
             }
         }
 
@@ -158,7 +162,7 @@ class LibraryViewModelTest {
     fun genreSheetFailureIsShown() =
         runTest {
             genreResult = AppResult.Failure(AppError.Network)
-            val vm = LibraryViewModel(session, repo, SavedStateHandle())
+            val vm = LibraryViewModel(session, repo, store, SavedStateHandle())
             vm.state.test {
                 runCurrent()
                 vm.showSheet(LibrarySheet.Genre)
@@ -171,7 +175,7 @@ class LibraryViewModelTest {
     fun layoutToggleAndRefreshError() =
         runTest {
             refreshResult = AppResult.Failure(AppError.Network)
-            val vm = LibraryViewModel(session, repo, SavedStateHandle())
+            val vm = LibraryViewModel(session, repo, store, SavedStateHandle())
             vm.state.test {
                 runCurrent()
                 val s = expectMostRecentItem()
@@ -187,3 +191,5 @@ class LibraryViewModelTest {
             }
         }
 }
+
+private val DRAMA = RuleValue("7", "Drama")

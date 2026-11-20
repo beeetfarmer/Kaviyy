@@ -61,6 +61,7 @@ private const val GRID_COLUMNS = 3
 @Composable
 fun LibraryRoute(
     onOpenSeries: (seriesId: Int) -> Unit,
+    onOpenFilter: (libraryId: Int?) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
@@ -76,6 +77,7 @@ fun LibraryRoute(
             onShowSheet = viewModel::showSheet,
             onSort = viewModel::setSort,
             onPick = viewModel::pick,
+            onOpenFilter = { onOpenFilter(state.selectedId) },
         )
     LibraryScreen(state, series, actions, modifier)
     LibrarySheets(state, actions)
@@ -89,7 +91,8 @@ data class LibraryActions(
     val onToggleUnread: () -> Unit = {},
     val onShowSheet: (LibrarySheet?) -> Unit = {},
     val onSort: (com.nl.kaviyy.core.data.SeriesSort) -> Unit = {},
-    val onPick: (com.nl.kaviyy.core.data.FilterOption?) -> Unit = {},
+    val onPick: (com.nl.kaviyy.core.data.RuleValue?) -> Unit = {},
+    val onOpenFilter: () -> Unit = {},
 )
 
 /** Screen 03 (DESIGN.md §7). TODO(api): the count line needs a total; the list endpoint returns none in the spec. */
@@ -133,7 +136,7 @@ fun LibraryScreen(
                 if (libraries.size > 1) {
                     fullWidth("libraries") { Libraries(state, actions.onSelect) }
                 }
-                fullWidth("chips") { QuickChips(state.filters, actions) }
+                fullWidth("chips") { QuickChips(state.filter, actions) }
                 seriesItems(series, state.grid, coverUrl, actions.onOpenSeries)
             }
         }

@@ -15,7 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.nl.kaviyy.core.data.FilterOption
+import com.nl.kaviyy.core.data.FilterField
+import com.nl.kaviyy.core.data.RuleValue
+import com.nl.kaviyy.core.data.SeriesFilter
 import com.nl.kaviyy.core.data.SeriesSort
 import com.nl.kaviyy.core.designsystem.component.FilterChip
 import com.nl.kaviyy.core.designsystem.component.GroupedList
@@ -39,13 +41,10 @@ internal fun sortLabel(sort: SeriesSort): String =
         },
     )
 
-/**
- * Canvas chip row: Sort dropdown · Unread · Genre · Status. Runs to the screen edge on the right.
- * The accent "Filter · n" chip opens sheet 09, which lands with M7.
- */
+/** Canvas chip row: "Filter · n" (accent, opens sheet 09) · Sort · Unread · Genre · Status, running to the edge. */
 @Composable
 internal fun QuickChips(
-    filters: QuickFilters,
+    filter: SeriesFilter,
     actions: LibraryActions,
 ) {
     val edge = KavitaSpacing.screenHorizontal
@@ -59,17 +58,32 @@ internal fun QuickChips(
             .padding(end = edge),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        FilterChip(sortLabel(filters.sort), false, { actions.onShowSheet(LibrarySheet.Sort) }, dropdown = true)
-        FilterChip(stringResource(R.string.library_chip_unread), filters.unreadOnly, actions.onToggleUnread)
+        val count = filter.activeRules
         FilterChip(
-            filters.genre?.title ?: stringResource(R.string.library_chip_genre),
-            filters.genre != null,
+            if (count >
+                0
+            ) {
+                stringResource(R.string.library_chip_filter_count, count)
+            } else {
+                stringResource(R.string.library_chip_filter)
+            },
+            selected = true,
+            onClick = actions.onOpenFilter,
+            leadingIcon = KavitaIcons.Filter,
+        )
+        FilterChip(sortLabel(filter.sort), false, { actions.onShowSheet(LibrarySheet.Sort) }, dropdown = true)
+        FilterChip(stringResource(R.string.library_chip_unread), filter.unreadOnly(), actions.onToggleUnread)
+        val genre = filter.chipRule(FilterField.Genres)
+        FilterChip(
+            genre?.values?.joinToString { it.label } ?: stringResource(R.string.library_chip_genre),
+            genre != null,
             { actions.onShowSheet(LibrarySheet.Genre) },
             dropdown = true,
         )
+        val status = filter.chipRule(FilterField.PublicationStatus)
         FilterChip(
-            filters.status?.title ?: stringResource(R.string.library_chip_status),
-            filters.status != null,
+            status?.values?.joinToString { it.label } ?: stringResource(R.string.library_chip_status),
+            status != null,
             { actions.onShowSheet(LibrarySheet.Status) },
             dropdown = true,
         )
@@ -98,7 +112,7 @@ internal fun LibrarySheets(
         ) {
             when (sheet) {
                 LibrarySheet.Sort -> {
-                    val rows = SeriesSort.entries.map { sortLabel(it) to (it == state.filters.sort) }
+                    val rows = SeriesSort.entries.map { sortLabel(it) to (it == state.filter.sort) }
                     Options(rows) { i -> actions.onSort(SeriesSort.entries[i]) }
                 }
 
@@ -114,9 +128,14 @@ internal fun LibrarySheets(
 private fun FilterOptions(
     state: LibraryUiState,
     sheet: LibrarySheet,
-    onPick: (FilterOption?) -> Unit,
+    onPick: (RuleValue?) -> Unit,
 ) {
-    val current = if (sheet == LibrarySheet.Genre) state.filters.genre else state.filters.status
+    val field = if (sheet == LibrarySheet.Genre) FilterField.Genres else FilterField.PublicationStatus
+    val current =
+        state.filter
+            .chipRule(field)
+            ?.values
+            ?.singleOrNull()
     when (val o = state.options) {
         SheetOptions.Loading -> {
             Hint(stringResource(R.string.library_loading))
@@ -128,7 +147,7 @@ private fun FilterOptions(
 
         is SheetOptions.Loaded -> {
             val any = stringResource(R.string.library_any) to (current == null)
-            val rows = listOf(any) + o.options.map { it.title to (it.id == current?.id) }
+            val rows = listOf(any) + o.options.map { it.label to (it.code == current?.code) }
             Options(rows) { i -> onPick(if (i == 0) null else o.options[i - 1]) }
         }
     }

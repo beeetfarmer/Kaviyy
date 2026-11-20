@@ -13,6 +13,8 @@
     <string name="library_error_body">Couldn’t reach your server. Check your connection and try again.</string>
     <string name="library_retry">Try Again</string>
     <string name="library_page_error">Couldn’t load more.</string>
+    <string name="library_chip_filter">Filter</string>
+    <string name="library_chip_filter_count">Filter · %1$d</string>
     <string name="library_chip_unread">Unread</string>
     <string name="library_chip_genre">Genre</string>
     <string name="library_chip_status">Status</string>

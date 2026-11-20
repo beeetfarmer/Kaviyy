@@ -56,17 +56,12 @@ interface CatalogRepository {
         query: LibraryQuery,
     ): Flow<PagingData<SeriesEntity>>
 
-    /** Genre chip options (network only). */
-    suspend fun genres(
+    /** Values for an options rule (network only). [OptionSource.Formats] is local. */
+    suspend fun filterOptions(
         server: Server,
-        libraryId: Int,
-    ): AppResult<List<FilterOption>>
-
-    /** Status chip options (network only). */
-    suspend fun publicationStatuses(
-        server: Server,
-        libraryId: Int,
-    ): AppResult<List<FilterOption>>
+        source: OptionSource,
+        libraryIds: List<Int>,
+    ): AppResult<List<RuleValue>>
 
     fun seriesDetail(
         server: Server,
@@ -105,23 +100,66 @@ class OfflineFirstCatalogRepository
                 pagingSourceFactory = { dao.seriesForQuery(server.id.value, query.key) },
             ).flow
 
-        override suspend fun genres(
+        override suspend fun filterOptions(
             server: Server,
-            libraryId: Int,
-        ): AppResult<List<FilterOption>> =
-            apiCall { apis.api(server).genres(libraryId.toString()) }.map { list ->
-                list
-                    .mapNotNull { g -> g.title?.takeIf { it.isNotBlank() }?.let { FilterOption(g.id, it) } }
-                    .sortedBy { it.title.lowercase() }
-            }
+            source: OptionSource,
+            libraryIds: List<Int>,
+        ): AppResult<List<RuleValue>> {
+            val api = apis.api(server)
+            val libs = libraryIds.joinToString(",")
 
-        override suspend fun publicationStatuses(
-            server: Server,
-            libraryId: Int,
-        ): AppResult<List<FilterOption>> =
-            apiCall { apis.api(server).publicationStatuses(libraryId.toString()) }.map { list ->
-                list.map { FilterOption(it.value, it.title?.takeIf { t -> t.isNotBlank() } ?: it.value.toString()) }
+            fun named(
+                id: Any,
+                title: String?,
+            ) = title?.takeIf { it.isNotBlank() }?.let { RuleValue(id.toString(), it) }
+            return apiCall {
+                when (source) {
+                    OptionSource.Genres -> {
+                        api.genres(libs).mapNotNull { named(it.id, it.title) }
+                    }
+
+                    OptionSource.Tags -> {
+                        api.tags(libs).mapNotNull { named(it.id, it.title) }
+                    }
+
+                    OptionSource.Languages -> {
+                        api.languages(libs).mapNotNull { l ->
+                            l.isoCode?.let { named(it, l.title) }
+                        }
+                    }
+
+                    OptionSource.AgeRatings -> {
+                        api.ageRatings(libs).mapNotNull { named(it.value, it.title) }
+                    }
+
+                    OptionSource.PublicationStatus -> {
+                        api
+                            .publicationStatuses(
+                                libs,
+                            ).mapNotNull { named(it.value, it.title) }
+                    }
+
+                    OptionSource.Collections -> {
+                        api.collections().mapNotNull { named(it.id, it.title) }
+                    }
+
+                    OptionSource.Formats -> {
+                        emptyList()
+                    }
+
+                    else -> {
+                        api.peopleByRole(source.role).mapNotNull { named(it.id, it.name) }
+                    }
+                }
+            }.map { list ->
+                // Age ratings and statuses keep the server's order (it is meaningful); the rest are alphabetical.
+                if (source == OptionSource.AgeRatings || source == OptionSource.PublicationStatus) {
+                    list
+                } else {
+                    list.sortedBy { it.label.lowercase() }
+                }
             }
+        }
 
         override fun seriesDetail(
             server: Server,

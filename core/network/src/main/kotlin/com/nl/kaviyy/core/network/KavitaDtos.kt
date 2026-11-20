@@ -105,7 +105,7 @@ data class DashboardStreamDto(
     val smartFilterEncoded: String? = null,
 )
 
-/** `GET api/Metadata/genres` item. */
+/** `GET api/Metadata/genres` / `tags` item (GenreTagDto / TagDto: id + title). */
 @Serializable
 data class GenreTagDto(
     val id: Int,
@@ -116,6 +116,24 @@ data class GenreTagDto(
 @Serializable
 data class MetadataValueDto(
     val value: Int,
+    val title: String? = null,
+)
+
+@Serializable
+data class LanguageDto(
+    val isoCode: String? = null,
+    val title: String? = null,
+)
+
+@Serializable
+data class PersonDto(
+    val id: Int,
+    val name: String? = null,
+)
+
+@Serializable
+data class CollectionDto(
+    val id: Int,
     val title: String? = null,
 )
 

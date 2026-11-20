@@ -27,11 +27,14 @@ import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaSpacing
 import com.nl.kaviyy.core.model.server.Server
+import com.nl.kaviyy.feature.filter.FilterSheet
 import com.nl.kaviyy.feature.home.HomeActions
 import com.nl.kaviyy.feature.home.HomeRoute
 import com.nl.kaviyy.feature.library.LibraryRoute
 
 private enum class Tab { Home, Library, Lists, Downloads, You }
+
+private const val NO_LIBRARY = -1
 
 /** Signed-in shell: tab content + FloatingTabBar (DESIGN.md §6; Downloads is the derived fifth tab). */
 @Composable
@@ -42,6 +45,8 @@ internal fun MainScreen(
     onDeleteLocalData: () -> Unit,
 ) {
     var selected by rememberSaveable { mutableIntStateOf(Tab.Home.ordinal) }
+    // Library id the filter sheet is open for; null = closed.
+    var filterFor by rememberSaveable { mutableStateOf<Int?>(null) }
     val tabs =
         listOf(
             TabItem(stringResource(R.string.tab_home), KavitaIcons.Home),
@@ -64,7 +69,8 @@ internal fun MainScreen(
             }
 
             Tab.Library -> {
-                LibraryRoute(onOpenSeries = {})
+                // Series detail: M8.
+                LibraryRoute(onOpenSeries = {}, onOpenFilter = { filterFor = it ?: NO_LIBRARY })
             }
 
             // M8
@@ -76,6 +82,7 @@ internal fun MainScreen(
                 ComingSoon(tabs[selected].label)
             }
         }
+        filterFor?.let { id -> FilterSheet(id.takeIf { it != NO_LIBRARY }, onDismiss = { filterFor = null }) }
         FloatingTabBar(
             items = tabs,
             selectedIndex = selected,

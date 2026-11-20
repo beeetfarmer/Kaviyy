@@ -1,13 +1,16 @@
 package com.nl.kaviyy.core.data
 
 import com.nl.kaviyy.core.network.ChapterDto
+import com.nl.kaviyy.core.network.CollectionDto
 import com.nl.kaviyy.core.network.DashboardStreamDto
 import com.nl.kaviyy.core.network.DecodeFilterDto
 import com.nl.kaviyy.core.network.GenreTagDto
 import com.nl.kaviyy.core.network.GroupedSeriesDto
 import com.nl.kaviyy.core.network.KavitaApi
+import com.nl.kaviyy.core.network.LanguageDto
 import com.nl.kaviyy.core.network.LibraryDto
 import com.nl.kaviyy.core.network.MetadataValueDto
+import com.nl.kaviyy.core.network.PersonDto
 import com.nl.kaviyy.core.network.SeriesDetailDto
 import com.nl.kaviyy.core.network.SeriesDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
@@ -49,6 +52,16 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun genres(libraryIds: String): List<GenreTagDto> = error("unused")
 
     override suspend fun publicationStatuses(libraryIds: String): List<MetadataValueDto> = error("unused")
+
+    override suspend fun tags(libraryIds: String): List<GenreTagDto> = error("unused")
+
+    override suspend fun languages(libraryIds: String): List<LanguageDto> = error("unused")
+
+    override suspend fun ageRatings(libraryIds: String): List<MetadataValueDto> = error("unused")
+
+    override suspend fun peopleByRole(role: Int): List<PersonDto> = error("unused")
+
+    override suspend fun collections(): List<CollectionDto> = error("unused")
 
     override suspend fun decodeFilter(body: DecodeFilterDto): JsonObject = error("unused")
 

@@ -114,7 +114,8 @@ class CatalogRepositoryTest {
     fun mediatorAppendsPagesUntilAShortPage() =
         runTest {
             seriesTotal = SERIES_PAGE_SIZE + 5
-            val mediator = LibrarySeriesMediator(server, LibraryQuery(3, SeriesSort.Title), api, dao)
+            val mediator =
+                LibrarySeriesMediator(server, LibraryQuery(3, SeriesFilter(sort = SeriesSort.Title)), api, dao)
             val state = PagingState<Int, SeriesEntity>(emptyList(), null, PagingConfig(SERIES_PAGE_SIZE), 0)
             assertEquals(RemoteMediator.InitializeAction.LAUNCH_INITIAL_REFRESH, mediator.initialize())
             val first = assertIs<RemoteMediator.MediatorResult.Success>(mediator.load(LoadType.REFRESH, state))
@@ -126,7 +127,7 @@ class CatalogRepositoryTest {
                 dao
                     .seriesForQuery(
                         serverId,
-                        LibraryQuery(3, SeriesSort.Title).key,
+                        LibraryQuery(3, SeriesFilter(sort = SeriesSort.Title)).key,
                     ).load(PagingSource.LoadParams.Refresh(null, 100, false))
             assertEquals(SERIES_PAGE_SIZE + 5, (page as PagingSource.LoadResult.Page).data.size)
             assertEquals("S000", page.data.first().name)
@@ -136,8 +137,8 @@ class CatalogRepositoryTest {
     fun eachQueryKeepsItsOwnRowsAndARefreshReplacesThem() =
         runTest {
             val state = PagingState<Int, SeriesEntity>(emptyList(), null, PagingConfig(SERIES_PAGE_SIZE), 0)
-            val byTitle = LibraryQuery(3, SeriesSort.Title)
-            val unread = byTitle.copy(unreadOnly = true)
+            val byTitle = LibraryQuery(3, SeriesFilter(sort = SeriesSort.Title))
+            val unread = byTitle.copy(filter = byTitle.filter.copy(rules = listOf(UNREAD_RULE)))
 
             suspend fun rows(q: LibraryQuery) =
                 (
@@ -158,7 +159,8 @@ class CatalogRepositoryTest {
     fun mediatorFailureKeepsCacheAndReportsTheError() =
         runTest {
             failWith = IOException("offline")
-            val mediator = LibrarySeriesMediator(server, LibraryQuery(3, SeriesSort.Title), api, dao)
+            val mediator =
+                LibrarySeriesMediator(server, LibraryQuery(3, SeriesFilter(sort = SeriesSort.Title)), api, dao)
             val state = PagingState<Int, SeriesEntity>(emptyList(), null, PagingConfig(SERIES_PAGE_SIZE), 0)
             val error = assertIs<RemoteMediator.MediatorResult.Error>(mediator.load(LoadType.REFRESH, state))
             assertEquals(AppError.Network, assertIs<AppErrorException>(error.throwable).error)
@@ -208,3 +210,5 @@ class CatalogRepositoryTest {
             assertEquals(listOf(10), d.chapters.map { it.id })
         }
 }
+
+private val UNREAD_RULE = FilterRule(FilterField.ReadProgress, Comparison.LessThan, listOf(RuleValue("100")))
