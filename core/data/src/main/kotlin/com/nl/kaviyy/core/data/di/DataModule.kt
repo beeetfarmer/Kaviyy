@@ -2,6 +2,7 @@ package com.nl.kaviyy.core.data.di
 
 import com.nl.kaviyy.core.data.AdminRepository
 import com.nl.kaviyy.core.data.AuthSession
+import com.nl.kaviyy.core.data.BookmarkRepository
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.ConnectivityNetworkMonitor
 import com.nl.kaviyy.core.data.HomeRepository
@@ -13,6 +14,7 @@ import com.nl.kaviyy.core.data.KavitaReviewRepository
 import com.nl.kaviyy.core.data.KavitaSearchRepository
 import com.nl.kaviyy.core.data.KavitaSmartFilterRepository
 import com.nl.kaviyy.core.data.NetworkMonitor
+import com.nl.kaviyy.core.data.OfflineFirstBookmarkRepository
 import com.nl.kaviyy.core.data.OfflineFirstCatalogRepository
 import com.nl.kaviyy.core.data.OfflineFirstHomeRepository
 import com.nl.kaviyy.core.data.OfflineFirstReadStateRepository
@@ -49,6 +51,9 @@ internal interface DataModule {
 
     @Binds
     fun imageReader(repository: KavitaImageReaderRepository): ImageReaderRepository
+
+    @Binds
+    fun bookmarks(repository: OfflineFirstBookmarkRepository): BookmarkRepository
 
     @Binds
     fun search(repository: KavitaSearchRepository): SearchRepository

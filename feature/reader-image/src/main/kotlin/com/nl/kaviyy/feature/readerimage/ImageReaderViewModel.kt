@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nl.kaviyy.core.data.AuthSession
+import com.nl.kaviyy.core.data.BookmarkRepository
 import com.nl.kaviyy.core.data.ImageReaderRepository
 import com.nl.kaviyy.core.data.ReaderChapter
 import com.nl.kaviyy.core.data.ReaderSettingsRepository
@@ -20,9 +21,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -59,6 +62,8 @@ data class ImageReaderUiState(
     val error: AppError? = null,
     val nextChapterId: Int? = null,
     val previousChapterId: Int? = null,
+    /** Bookmarked pages of this chapter. */
+    val bookmarks: Set<Int> = emptySet(),
 ) {
     val pages: Int get() = chapter?.pages ?: 0
 
@@ -91,6 +96,7 @@ class ImageReaderViewModel
         private val auth: AuthSession,
         private val repository: ImageReaderRepository,
         private val settingsRepository: ReaderSettingsRepository,
+        private val bookmarkRepository: BookmarkRepository,
         private val saved: SavedStateHandle,
     ) : ViewModel() {
         private val seriesId: Int = checkNotNull(saved.get<Int>(READER_SERIES_ARG)) { "missing $READER_SERIES_ARG" }
@@ -108,8 +114,15 @@ class ImageReaderViewModel
                 }
             }
 
+        private val chapterId = session.map { it.chapter?.id }.distinctUntilChanged()
+
+        private val bookmarks =
+            combine(auth.activeServer, chapterId, ::Pair).flatMapLatest { (s, id) ->
+                if (s == null || id == null) flowOf(emptySet()) else bookmarkRepository.pages(s, id)
+            }
+
         val state: StateFlow<ImageReaderUiState> =
-            combine(auth.activeServer, session, settings) { s, st, prefs ->
+            combine(auth.activeServer, session, settings, bookmarks) { s, st, prefs, marks ->
                 ImageReaderUiState(
                     server = s,
                     chapter = st.chapter,
@@ -123,6 +136,7 @@ class ImageReaderViewModel
                     error = st.error,
                     nextChapterId = st.next,
                     previousChapterId = st.previous,
+                    bookmarks = marks,
                 )
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ImageReaderUiState())
 
@@ -191,6 +205,16 @@ class ImageReaderViewModel
             }
         }
 
+        /** Bookmarks or un-bookmarks [page] (the current page by default). */
+        fun toggleBookmark(page: Int = session.value.page) {
+            val chapter = session.value.chapter ?: return
+            val on = page !in state.value.bookmarks
+            viewModelScope.launch {
+                val s = auth.activeServer.first() ?: return@launch
+                bookmarkRepository.set(s, chapter, page, on)
+            }
+        }
+
         private fun open(
             chapterId: Int,
             page: Int,
@@ -215,6 +239,7 @@ class ImageReaderViewModel
                             goTo(start)
                             session.update { it.copy(next = next.await(), previous = previous.await()) }
                             settingsRepository.refresh(s, chapter.libraryId, seriesId)
+                            bookmarkRepository.refresh(s, chapter.id)
                         }
                     }
                 }

@@ -1,5 +1,6 @@
 package com.nl.kaviyy.core.data
 
+import com.nl.kaviyy.core.network.BookmarkDto
 import com.nl.kaviyy.core.network.ChapterDto
 import com.nl.kaviyy.core.network.ChapterInfoDto
 import com.nl.kaviyy.core.network.CollectionDto
@@ -104,6 +105,12 @@ open class FakeKavitaApi : KavitaApi {
         volumeId: Int,
         chapterId: Int,
     ): Int = error("unused")
+
+    override suspend fun chapterBookmarks(chapterId: Int): List<BookmarkDto> = error("unused")
+
+    override suspend fun bookmark(body: BookmarkDto): Unit = error("unused")
+
+    override suspend fun unbookmark(body: BookmarkDto): Unit = error("unused")
 
     override suspend fun search(
         query: String,

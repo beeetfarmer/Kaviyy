@@ -1,6 +1,7 @@
 package com.nl.kaviyy.feature.readerimage
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -21,11 +22,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -54,7 +58,7 @@ import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaShapes
 import kotlin.math.roundToInt
 
-private val TOP_BUTTON = 44.dp
+internal val TOP_BUTTON = 44.dp
 private val CHAPTER_BUTTON = 56.dp
 private const val CHAPTER_BUTTON_ALPHA = 0.10f
 
@@ -63,7 +67,7 @@ internal fun BoxScope.ReaderChrome(
     state: ImageReaderUiState,
     actions: ImageReaderActions,
 ) {
-    TopBar(state.chapter, actions.onClose, Modifier.align(Alignment.TopCenter))
+    TopBar(state, actions, Modifier.align(Alignment.TopCenter))
     if (state.chapter?.isImage == true && state.pages > 0) {
         BottomBar(state, actions, Modifier.align(Alignment.BottomCenter))
     }
@@ -71,8 +75,8 @@ internal fun BoxScope.ReaderChrome(
 
 @Composable
 private fun TopBar(
-    chapter: ReaderChapter?,
-    onClose: () -> Unit,
+    state: ImageReaderUiState,
+    actions: ImageReaderActions,
     modifier: Modifier = Modifier,
 ) = Row(
     modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -82,12 +86,12 @@ private fun TopBar(
     CircleIconButton(
         KavitaIcons.ChevronLeft,
         stringResource(R.string.reader_close),
-        onClose,
+        actions.onClose,
         containerColor = ImageReaderColors.chrome,
         contentColor = ImageReaderColors.content,
         modifier = Modifier.size(TOP_BUTTON),
     )
-    // Bookmark (M10.4) and settings (M10.6) buttons join here.
+    val chapter = state.chapter
     if (chapter != null) {
         Column(
             Modifier
@@ -116,6 +120,8 @@ private fun TopBar(
             }
         }
     }
+    // Settings button (M10.6) joins here.
+    if (chapter?.isImage == true && state.pages > 0) BookmarkButton(state, actions)
 }
 
 @Composable

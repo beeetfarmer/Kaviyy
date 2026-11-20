@@ -3,6 +3,7 @@ package com.nl.kaviyy.feature.readerimage
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.nl.kaviyy.core.data.AuthSession
+import com.nl.kaviyy.core.data.BookmarkRepository
 import com.nl.kaviyy.core.data.ImageReaderRepository
 import com.nl.kaviyy.core.data.ReaderChapter
 import com.nl.kaviyy.core.data.ReaderSettingsRepository
@@ -110,9 +111,33 @@ class ImageReaderViewModelTest {
             }
         }
 
+    private val marks = MutableStateFlow(emptySet<Int>())
+    private val bookmarks =
+        object : BookmarkRepository {
+            override fun pages(
+                server: Server,
+                chapterId: Int,
+            ) = marks
+
+            override suspend fun refresh(
+                server: Server,
+                chapterId: Int,
+            ): AppResult<Unit> = AppResult.Success(Unit)
+
+            override suspend fun set(
+                server: Server,
+                chapter: ReaderChapter,
+                page: Int,
+                on: Boolean,
+            ): AppResult<Unit> {
+                marks.value = if (on) marks.value + page else marks.value - page
+                return AppResult.Success(Unit)
+            }
+        }
+
     private fun vm(
         saved: SavedStateHandle = SavedStateHandle(mapOf(READER_SERIES_ARG to 7, READER_CHAPTER_ARG to 49)),
-    ) = ImageReaderViewModel(session, repo, settings, saved)
+    ) = ImageReaderViewModel(session, repo, settings, bookmarks, saved)
 
     @Test
     fun pagesFlowIntoNeighbouringChapters() =
@@ -156,6 +181,23 @@ class ImageReaderViewModelTest {
                 vm.toggleChrome()
                 runCurrent()
                 assertEquals(false, expectMostRecentItem().chromeVisible)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun bookmarkTogglesTheCurrentPage() =
+        runTest {
+            val vm = vm()
+            vm.state.test {
+                runCurrent()
+                vm.goTo(2)
+                vm.toggleBookmark()
+                runCurrent()
+                assertEquals(setOf(2), expectMostRecentItem().bookmarks)
+                vm.toggleBookmark(2)
+                runCurrent()
+                assertEquals(emptySet(), expectMostRecentItem().bookmarks)
                 cancelAndIgnoreRemainingEvents()
             }
         }

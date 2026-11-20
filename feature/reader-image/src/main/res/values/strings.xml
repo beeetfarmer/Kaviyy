@@ -22,4 +22,10 @@
     <string name="reader_layout_single">Single</string>
     <string name="reader_layout_double">Double</string>
     <string name="reader_layout_webtoon">Webtoon</string>
+    <string name="reader_bookmark_page">Bookmark page</string>
+    <string name="reader_bookmark_add">Bookmark this page</string>
+    <string name="reader_bookmark_remove">Remove bookmark</string>
+    <string name="reader_bookmarks">Show bookmarks</string>
+    <string name="reader_bookmarks_empty">No bookmarks in this chapter</string>
+    <string name="reader_bookmark_delete">Remove bookmark on page %1$d</string>
 </resources>

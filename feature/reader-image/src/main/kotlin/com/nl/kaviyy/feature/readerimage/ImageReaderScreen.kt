@@ -47,6 +47,8 @@ data class ImageReaderActions(
     val onToggleChrome: () -> Unit = {},
     val onToggleDirection: () -> Unit = {},
     val onLayout: (ReaderLayout) -> Unit = {},
+    /** Toggle the bookmark on a page. */
+    val onBookmark: (Int) -> Unit = {},
     val onRetry: () -> Unit = {},
 )
 
@@ -68,6 +70,7 @@ fun ImageReaderRoute(
             onToggleChrome = viewModel::toggleChrome,
             onToggleDirection = viewModel::toggleDirection,
             onLayout = viewModel::setLayout,
+            onBookmark = viewModel::toggleBookmark,
             onRetry = viewModel::retry,
         ),
     )

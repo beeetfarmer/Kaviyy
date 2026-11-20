@@ -291,6 +291,21 @@ interface KavitaApi {
         @Query("currentChapterId") chapterId: Int,
     ): Int
 
+    @GET("api/Reader/chapter-bookmarks")
+    suspend fun chapterBookmarks(
+        @Query("chapterId") chapterId: Int,
+    ): List<BookmarkDto>
+
+    @POST("api/Reader/bookmark")
+    suspend fun bookmark(
+        @Body body: BookmarkDto,
+    )
+
+    @POST("api/Reader/unbookmark")
+    suspend fun unbookmark(
+        @Body body: BookmarkDto,
+    )
+
     @GET("api/Series/all-related")
     suspend fun allRelated(
         @Query("seriesId") seriesId: Int,

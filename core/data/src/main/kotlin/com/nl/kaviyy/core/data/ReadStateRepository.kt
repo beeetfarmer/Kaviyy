@@ -74,6 +74,7 @@ interface ReadStateRepository {
 internal const val OUTBOX_MARK_READ = "markRead"
 internal const val OUTBOX_WANT_TO_READ = "wantToRead"
 internal const val OUTBOX_RATING = "rating"
+internal const val OUTBOX_BOOKMARK = "bookmark"
 private const val MAX_RATING = 5f
 
 class OfflineFirstReadStateRepository
@@ -148,19 +149,26 @@ class OfflineFirstReadStateRepository
             key: String,
             payload: String,
             call: suspend (KavitaApi) -> Unit,
-        ): AppResult<Unit> {
-            val id = server.id.value
-            val result = apiCall { call(apis.api(server)) }
-            if (result is AppResult.Success) {
-                outbox.deleteFor(id, type, key) // an older queued change is now superseded
-            } else {
-                outbox.enqueue(
-                    OutboxEntity(0, id, type, key, payload, UUID.randomUUID().toString(), System.currentTimeMillis()),
-                )
-            }
-            return result
-        }
+        ): AppResult<Unit> = outbox.pushOrQueue(server, type, key, payload) { call(apis.api(server)) }
     }
+
+/** Runs [call]; on success drops any queued change for (type, key), on failure queues [payload] (coalesced). */
+internal suspend fun OutboxDao.pushOrQueue(
+    server: Server,
+    type: String,
+    key: String,
+    payload: String,
+    call: suspend () -> Unit,
+): AppResult<Unit> {
+    val id = server.id.value
+    val result = apiCall { call() }
+    if (result is AppResult.Success) {
+        deleteFor(id, type, key) // an older queued change is now superseded
+    } else {
+        enqueue(OutboxEntity(0, id, type, key, payload, UUID.randomUUID().toString(), System.currentTimeMillis()))
+    }
+    return result
+}
 
 private suspend fun KavitaApi.markRead(
     target: ReadTarget,

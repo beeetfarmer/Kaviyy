@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -147,6 +148,22 @@ class ImageReaderScreenTest {
         // A single tap fires once the double-tap window has passed.
         compose.mainClock.advanceTimeBy(1_000)
         assertEquals(1, toggles)
+    }
+
+    @Test
+    fun bookmarkButtonTogglesAndLongPressListsBookmarks() {
+        val calls = mutableListOf<String>()
+        compose.setContent {
+            ReaderPreview(
+                previewReader.copy(bookmarks = setOf(4, 13)),
+                ImageReaderActions(onBookmark = { calls += "mark $it" }, onPage = { calls += "page $it" }),
+            )
+        }
+        compose.onNodeWithContentDescription("Bookmark page").performClick()
+        compose.onNodeWithContentDescription("Bookmark page").performTouchInput { longClick() }
+        compose.onNodeWithContentDescription("Remove bookmark on page 5").performClick()
+        compose.onNodeWithText("Page 5").performClick()
+        assertEquals(listOf("mark 13", "mark 4", "page 4"), calls)
     }
 
     @Test

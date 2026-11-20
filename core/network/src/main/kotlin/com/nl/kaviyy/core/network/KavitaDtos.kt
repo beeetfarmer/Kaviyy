@@ -410,3 +410,14 @@ data class FileDimensionDto(
     val height: Int = 0,
     val isWide: Boolean = false,
 )
+
+/** Page bookmark (request and response). Request fields have no defaults so they are always sent. */
+@Serializable
+data class BookmarkDto(
+    val id: Int,
+    val page: Int,
+    val volumeId: Int,
+    val seriesId: Int,
+    val chapterId: Int,
+    val imageOffset: Int = 0,
+)
