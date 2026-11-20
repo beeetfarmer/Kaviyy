@@ -66,12 +66,19 @@ fun LibraryRoute(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val series = viewModel.series.collectAsLazyPagingItems()
-    LibraryScreen(
-        state,
-        series,
-        LibraryActions(viewModel::select, viewModel::toggleLayout, onOpenSeries, viewModel::retry),
-        modifier,
-    )
+    val actions =
+        LibraryActions(
+            onSelect = viewModel::select,
+            onToggleLayout = viewModel::toggleLayout,
+            onOpenSeries = onOpenSeries,
+            onRetryLibraries = viewModel::retry,
+            onToggleUnread = viewModel::toggleUnread,
+            onShowSheet = viewModel::showSheet,
+            onSort = viewModel::setSort,
+            onPick = viewModel::pick,
+        )
+    LibraryScreen(state, series, actions, modifier)
+    LibrarySheets(state, actions)
 }
 
 data class LibraryActions(
@@ -79,9 +86,13 @@ data class LibraryActions(
     val onToggleLayout: () -> Unit = {},
     val onOpenSeries: (seriesId: Int) -> Unit = {},
     val onRetryLibraries: () -> Unit = {},
+    val onToggleUnread: () -> Unit = {},
+    val onShowSheet: (LibrarySheet?) -> Unit = {},
+    val onSort: (com.nl.kaviyy.core.data.SeriesSort) -> Unit = {},
+    val onPick: (com.nl.kaviyy.core.data.FilterOption?) -> Unit = {},
 )
 
-/** Screen 03 (DESIGN.md §7). Chips, sort and the count line arrive with M6.2. */
+/** Screen 03 (DESIGN.md §7). TODO(api): the count line needs a total; the list endpoint returns none in the spec. */
 @Composable
 fun LibraryScreen(
     state: LibraryUiState,
@@ -122,6 +133,7 @@ fun LibraryScreen(
                 if (libraries.size > 1) {
                     fullWidth("libraries") { Libraries(state, actions.onSelect) }
                 }
+                fullWidth("chips") { QuickChips(state.filters, actions) }
                 seriesItems(series, state.grid, coverUrl, actions.onOpenSeries)
             }
         }

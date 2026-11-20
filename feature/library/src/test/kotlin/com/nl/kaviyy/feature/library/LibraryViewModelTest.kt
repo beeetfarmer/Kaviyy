@@ -5,7 +5,10 @@ import androidx.paging.PagingData
 import app.cash.turbine.test
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
+import com.nl.kaviyy.core.data.FilterOption
+import com.nl.kaviyy.core.data.LibraryQuery
 import com.nl.kaviyy.core.data.SeriesDetail
+import com.nl.kaviyy.core.data.SeriesSort
 import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.model.result.AppError
@@ -38,6 +41,8 @@ class LibraryViewModelTest {
     private val libs = MutableStateFlow(listOf(LibraryEntity(1, 10, "Manga", 0), LibraryEntity(1, 20, "Books", 2)))
     private var refreshResult: AppResult<Unit> = AppResult.Success(Unit)
     private val pagedFor = mutableListOf<Int>()
+    private val queries = mutableListOf<LibraryQuery>()
+    private var genreResult: AppResult<List<FilterOption>> = AppResult.Success(listOf(FilterOption(7, "Drama")))
 
     private val session =
         object : AuthSession {
@@ -71,11 +76,22 @@ class LibraryViewModelTest {
 
             override fun librarySeries(
                 server: Server,
-                libraryId: Int,
+                query: LibraryQuery,
             ): Flow<PagingData<SeriesEntity>> {
-                pagedFor += libraryId
+                pagedFor += query.libraryId
+                queries += query
                 return flowOf(PagingData.empty())
             }
+
+            override suspend fun genres(
+                server: Server,
+                libraryId: Int,
+            ) = genreResult
+
+            override suspend fun publicationStatuses(
+                server: Server,
+                libraryId: Int,
+            ): AppResult<List<FilterOption>> = AppResult.Success(emptyList())
 
             override fun seriesDetail(
                 server: Server,
@@ -103,6 +119,51 @@ class LibraryViewModelTest {
                 libs.value = libs.value.take(1)
                 runCurrent()
                 assertEquals(10, expectMostRecentItem().selectedId)
+            }
+        }
+
+    @Test
+    fun quickFiltersDriveTheQueryAndSurviveRecreation() =
+        runTest {
+            val saved = SavedStateHandle()
+            val vm = LibraryViewModel(session, repo, saved)
+            backgroundScope.launch { vm.series.collect {} }
+            vm.state.test {
+                runCurrent()
+                vm.toggleUnread()
+                vm.setSort(SeriesSort.Title)
+                vm.showSheet(LibrarySheet.Genre)
+                runCurrent()
+                val open = expectMostRecentItem()
+                assertEquals(SheetOptions.Loaded(listOf(FilterOption(7, "Drama"))), open.options)
+                vm.pick(FilterOption(7, "Drama"))
+                runCurrent()
+                val s = expectMostRecentItem()
+                assertNull(s.sheet)
+                assertEquals(LibraryQuery(10, SeriesSort.Title, true, FilterOption(7, "Drama")), queries.last())
+                assertEquals(2, s.query?.activeFilters)
+            }
+            // Process death: a new ViewModel on the same SavedStateHandle restores the filters.
+            val restored = LibraryViewModel(session, repo, saved)
+            restored.state.test {
+                runCurrent()
+                assertEquals(
+                    QuickFilters(SeriesSort.Title, true, FilterOption(7, "Drama")),
+                    expectMostRecentItem().filters,
+                )
+            }
+        }
+
+    @Test
+    fun genreSheetFailureIsShown() =
+        runTest {
+            genreResult = AppResult.Failure(AppError.Network)
+            val vm = LibraryViewModel(session, repo, SavedStateHandle())
+            vm.state.test {
+                runCurrent()
+                vm.showSheet(LibrarySheet.Genre)
+                runCurrent()
+                assertEquals(SheetOptions.Failed(AppError.Network), expectMostRecentItem().options)
             }
         }
 

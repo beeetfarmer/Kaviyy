@@ -19,6 +19,7 @@ style:
   MagicNumber:
     ignorePropertyDeclaration: true
     ignoreAnnotated: ['Preview', 'Composable']
+    ignoreEnums: true # enum entries map 1:1 to Kavita API values
   UnusedPrivateMember:
     ignoreAnnotated: ['Preview']
   ForbiddenComment:

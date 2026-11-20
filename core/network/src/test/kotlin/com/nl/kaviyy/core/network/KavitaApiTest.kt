@@ -41,7 +41,15 @@ class KavitaApiTest {
         runTest {
             val json = """[{"id":4,"libraryId":3,"name":"A","format":0,"pages":10,"unknownField":true}]"""
             mock.enqueue(MockResponse(body = json))
-            val list = api().series(SeriesFilterV2Dto.library(3), 2, 50)
+            val list =
+                api().series(
+                    SeriesFilterV2Dto(
+                        listOf(SeriesFilterStatementDto(0, 19, "3")),
+                        sortOptions = SeriesSortOptionDto(1),
+                    ),
+                    2,
+                    50,
+                )
             assertEquals(listOf(4), list.map { it.id })
             val request = mock.takeRequest()
             assertEquals("/kavita/api/Series/v2", request.url.encodedPath)

@@ -105,6 +105,20 @@ data class DashboardStreamDto(
     val smartFilterEncoded: String? = null,
 )
 
+/** `GET api/Metadata/genres` item. */
+@Serializable
+data class GenreTagDto(
+    val id: Int,
+    val title: String? = null,
+)
+
+/** `GET api/Metadata/publication-status` item (the API reuses `AgeRatingDto`: value + title). */
+@Serializable
+data class MetadataValueDto(
+    val value: Int,
+    val title: String? = null,
+)
+
 @Serializable
 data class DecodeFilterDto(
     val encodedFilter: String,
@@ -134,20 +148,7 @@ data class SeriesFilterV2Dto(
     val combination: Int = 1,
     val sortOptions: SeriesSortOptionDto? = null,
     val limitTo: Int = 0,
-) {
-    companion object {
-        private const val FIELD_LIBRARIES = 19
-        private const val COMPARISON_EQUAL = 0
-        private const val SORT_NAME = 1
-
-        /** All series of one library, by sort name. */
-        fun library(libraryId: Int) =
-            SeriesFilterV2Dto(
-                statements = listOf(SeriesFilterStatementDto(COMPARISON_EQUAL, FIELD_LIBRARIES, libraryId.toString())),
-                sortOptions = SeriesSortOptionDto(SORT_NAME),
-            )
-    }
-}
+)
 
 /**
  * Kavita times → epoch millis. `*Utc` fields are ISO instants; the others are server-local without an offset and are

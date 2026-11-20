@@ -37,13 +37,35 @@ interface LibraryDao {
 @Dao
 interface SeriesDao {
     @Query(
-        "SELECT * FROM series WHERE serverId = :serverId AND libraryId = :libraryId " +
-            "ORDER BY sortName COLLATE NOCASE, id",
+        "SELECT s.* FROM query_items q JOIN series s ON s.serverId = q.serverId AND s.id = q.seriesId " +
+            "WHERE q.serverId = :serverId AND q.queryKey = :queryKey ORDER BY q.position",
     )
-    fun seriesInLibrary(
+    fun seriesForQuery(
         serverId: Long,
-        libraryId: Int,
+        queryKey: String,
     ): PagingSource<Int, SeriesEntity>
+
+    @Query("DELETE FROM query_items WHERE serverId = :serverId AND queryKey = :queryKey")
+    suspend fun clearQuery(
+        serverId: Long,
+        queryKey: String,
+    )
+
+    @Upsert
+    suspend fun upsertQueryItems(rows: List<QueryItemEntity>)
+
+    /** One server page of a query: a refresh replaces the query's rows, an append adds after [offset]. */
+    @Transaction
+    suspend fun saveQueryPage(
+        serverId: Long,
+        queryKey: String,
+        offset: Int,
+        series: List<SeriesEntity>,
+    ) {
+        if (offset == 0) clearQuery(serverId, queryKey)
+        upsertSeries(series)
+        upsertQueryItems(series.mapIndexed { i, s -> QueryItemEntity(serverId, queryKey, offset + i, s.id) })
+    }
 
     @Upsert
     suspend fun upsertSeries(rows: List<SeriesEntity>)

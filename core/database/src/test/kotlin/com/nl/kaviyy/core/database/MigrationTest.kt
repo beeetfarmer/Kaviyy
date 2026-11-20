@@ -27,7 +27,7 @@ class MigrationTest {
                 "INSERT INTO servers (id, name, url, allowInsecure, lastUsedAt) VALUES (7, 'k', 'https://k.lan', 0, 1)",
             )
         }
-        // Runs 1→2→3 and validates against the latest exported schema.
+        // Runs every migration and validates against the latest exported schema.
         helper.runMigrationsAndValidate(DB, LATEST, true).use { db ->
             db.query("SELECT name FROM servers WHERE id = 7").use { c ->
                 c.moveToFirst()
@@ -106,6 +106,6 @@ class MigrationTest {
 
     private companion object {
         const val DB = "migration-test"
-        const val LATEST = 4
+        const val LATEST = 5
     }
 }

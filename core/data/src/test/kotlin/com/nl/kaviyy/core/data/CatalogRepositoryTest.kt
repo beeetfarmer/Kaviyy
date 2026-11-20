@@ -74,7 +74,7 @@ class CatalogRepositoryTest {
                 failWith?.let { throw it }
                 seriesPages += pageNumber to
                     filter.statements
-                        .single()
+                        .first()
                         .value
                         .toInt()
                 val from = (pageNumber - 1) * pageSize
@@ -114,7 +114,7 @@ class CatalogRepositoryTest {
     fun mediatorAppendsPagesUntilAShortPage() =
         runTest {
             seriesTotal = SERIES_PAGE_SIZE + 5
-            val mediator = LibrarySeriesMediator(server, 3, api, dao)
+            val mediator = LibrarySeriesMediator(server, LibraryQuery(3, SeriesSort.Title), api, dao)
             val state = PagingState<Int, SeriesEntity>(emptyList(), null, PagingConfig(SERIES_PAGE_SIZE), 0)
             assertEquals(RemoteMediator.InitializeAction.LAUNCH_INITIAL_REFRESH, mediator.initialize())
             val first = assertIs<RemoteMediator.MediatorResult.Success>(mediator.load(LoadType.REFRESH, state))
@@ -122,16 +122,43 @@ class CatalogRepositoryTest {
             val second = assertIs<RemoteMediator.MediatorResult.Success>(mediator.load(LoadType.APPEND, state))
             assertTrue(second.endOfPaginationReached)
             assertEquals(listOf(1 to 3, 2 to 3), seriesPages)
-            val page = dao.seriesInLibrary(serverId, 3).load(PagingSource.LoadParams.Refresh(null, 100, false))
+            val page =
+                dao
+                    .seriesForQuery(
+                        serverId,
+                        LibraryQuery(3, SeriesSort.Title).key,
+                    ).load(PagingSource.LoadParams.Refresh(null, 100, false))
             assertEquals(SERIES_PAGE_SIZE + 5, (page as PagingSource.LoadResult.Page).data.size)
             assertEquals("S000", page.data.first().name)
+        }
+
+    @Test
+    fun eachQueryKeepsItsOwnRowsAndARefreshReplacesThem() =
+        runTest {
+            val state = PagingState<Int, SeriesEntity>(emptyList(), null, PagingConfig(SERIES_PAGE_SIZE), 0)
+            val byTitle = LibraryQuery(3, SeriesSort.Title)
+            val unread = byTitle.copy(unreadOnly = true)
+
+            suspend fun rows(q: LibraryQuery) =
+                (
+                    dao.seriesForQuery(serverId, q.key).load(PagingSource.LoadParams.Refresh(null, 100, false))
+                        as PagingSource.LoadResult.Page
+                ).data.size
+            seriesTotal = 3
+            LibrarySeriesMediator(server, byTitle, api, dao).load(LoadType.REFRESH, state)
+            seriesTotal = 2
+            LibrarySeriesMediator(server, unread, api, dao).load(LoadType.REFRESH, state)
+            assertEquals(3 to 2, rows(byTitle) to rows(unread))
+            seriesTotal = 1
+            LibrarySeriesMediator(server, byTitle, api, dao).load(LoadType.REFRESH, state)
+            assertEquals(1 to 2, rows(byTitle) to rows(unread))
         }
 
     @Test
     fun mediatorFailureKeepsCacheAndReportsTheError() =
         runTest {
             failWith = IOException("offline")
-            val mediator = LibrarySeriesMediator(server, 3, api, dao)
+            val mediator = LibrarySeriesMediator(server, LibraryQuery(3, SeriesSort.Title), api, dao)
             val state = PagingState<Int, SeriesEntity>(emptyList(), null, PagingConfig(SERIES_PAGE_SIZE), 0)
             val error = assertIs<RemoteMediator.MediatorResult.Error>(mediator.load(LoadType.REFRESH, state))
             assertEquals(AppError.Network, assertIs<AppErrorException>(error.throwable).error)

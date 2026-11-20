@@ -38,6 +38,18 @@ interface KavitaApi {
         @Path("seriesId") seriesId: Int,
     ): SeriesDto
 
+    /** Genres in the given libraries (comma-separated ids). */
+    @GET("api/Metadata/genres")
+    suspend fun genres(
+        @Query("libraryIds") libraryIds: String,
+    ): List<GenreTagDto>
+
+    /** Publication statuses present in the given libraries. */
+    @GET("api/Metadata/publication-status")
+    suspend fun publicationStatuses(
+        @Query("libraryIds") libraryIds: String,
+    ): List<MetadataValueDto>
+
     /** The user's Home layout. */
     @GET("api/Stream/dashboard")
     suspend fun dashboard(

@@ -18,7 +18,6 @@ import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.result.map
 import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.network.KavitaApi
-import com.nl.kaviyy.core.network.SeriesFilterV2Dto
 import com.nl.kaviyy.core.network.apiCall
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -51,11 +50,23 @@ interface CatalogRepository {
 
     suspend fun refreshLibraries(server: Server): AppResult<Unit>
 
-    /** Library grid: Room pages, filled from the server as it scrolls. */
+    /** Library grid: Room pages in the server's order for [query], filled from the server as it scrolls. */
     fun librarySeries(
         server: Server,
-        libraryId: Int,
+        query: LibraryQuery,
     ): Flow<PagingData<SeriesEntity>>
+
+    /** Genre chip options (network only). */
+    suspend fun genres(
+        server: Server,
+        libraryId: Int,
+    ): AppResult<List<FilterOption>>
+
+    /** Status chip options (network only). */
+    suspend fun publicationStatuses(
+        server: Server,
+        libraryId: Int,
+    ): AppResult<List<FilterOption>>
 
     fun seriesDetail(
         server: Server,
@@ -86,13 +97,31 @@ class OfflineFirstCatalogRepository
         @OptIn(ExperimentalPagingApi::class)
         override fun librarySeries(
             server: Server,
-            libraryId: Int,
+            query: LibraryQuery,
         ): Flow<PagingData<SeriesEntity>> =
             Pager(
                 config = PagingConfig(pageSize = SERIES_PAGE_SIZE, enablePlaceholders = false),
-                remoteMediator = LibrarySeriesMediator(server, libraryId, apis.api(server), dao),
-                pagingSourceFactory = { dao.seriesInLibrary(server.id.value, libraryId) },
+                remoteMediator = LibrarySeriesMediator(server, query, apis.api(server), dao),
+                pagingSourceFactory = { dao.seriesForQuery(server.id.value, query.key) },
             ).flow
+
+        override suspend fun genres(
+            server: Server,
+            libraryId: Int,
+        ): AppResult<List<FilterOption>> =
+            apiCall { apis.api(server).genres(libraryId.toString()) }.map { list ->
+                list
+                    .mapNotNull { g -> g.title?.takeIf { it.isNotBlank() }?.let { FilterOption(g.id, it) } }
+                    .sortedBy { it.title.lowercase() }
+            }
+
+        override suspend fun publicationStatuses(
+            server: Server,
+            libraryId: Int,
+        ): AppResult<List<FilterOption>> =
+            apiCall { apis.api(server).publicationStatuses(libraryId.toString()) }.map { list ->
+                list.map { FilterOption(it.value, it.title?.takeIf { t -> t.isNotBlank() } ?: it.value.toString()) }
+            }
 
         override fun seriesDetail(
             server: Server,
@@ -130,14 +159,13 @@ class OfflineFirstCatalogRepository
 
 /**
  * Appends server pages into Room as the grid scrolls. Pages are numbered from 1 (Kavita `PageNumber`); the end is a
- * short page (the `Pagination` header isn't in the API spec). Rows are upserted, never cleared, so the grid works
- * offline. ponytail: series deleted on the server stay cached until a full resync (later milestone); sort is fixed
- * to sort name, matching the Room query. Other sorts (M6) need a per-query order table.
+ * short page (the `Pagination` header isn't in the API spec). Each query keeps its own ordered rows (`query_items`):
+ * a refresh replaces them, appends add after, and the cache stays readable offline.
  */
 @OptIn(ExperimentalPagingApi::class)
 internal class LibrarySeriesMediator(
     private val server: Server,
-    private val libraryId: Int,
+    private val query: LibraryQuery,
     private val api: KavitaApi,
     private val dao: SeriesDao,
 ) : RemoteMediator<Int, SeriesEntity>() {
@@ -156,14 +184,15 @@ internal class LibrarySeriesMediator(
                 LoadType.APPEND -> nextPage
             }
         return when (
-            val result = apiCall { api.series(SeriesFilterV2Dto.library(libraryId), page, SERIES_PAGE_SIZE) }
+            val result = apiCall { api.series(query.toFilter(), page, SERIES_PAGE_SIZE) }
         ) {
             is AppResult.Failure -> {
                 MediatorResult.Error(AppErrorException(result.error))
             }
 
             is AppResult.Success -> {
-                dao.upsertSeries(result.value.map { it.toEntity(server.id.value) })
+                val id = server.id.value
+                dao.saveQueryPage(id, query.key, (page - 1) * SERIES_PAGE_SIZE, result.value.map { it.toEntity(id) })
                 nextPage = page + 1
                 MediatorResult.Success(endOfPaginationReached = result.value.size < SERIES_PAGE_SIZE)
             }

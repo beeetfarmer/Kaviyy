@@ -1,6 +1,8 @@
 package com.nl.kaviyy.feature.library
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -57,6 +59,7 @@ class LibraryScreenTest {
         assertEquals(1, toggled)
         compose.onNodeWithText("North of Quiet").performClick()
         assertEquals(2, opened)
+        compose.onNodeWithText("Recently Added").assertExists() // default sort chip
     }
 
     @Test
@@ -71,6 +74,29 @@ class LibraryScreenTest {
             }
         }
         compose.onNodeWithText("No libraries").assertExists()
+    }
+
+    @Test
+    fun chipsReportTheirActions() {
+        var unread = 0
+        var sheet: LibrarySheet? = null
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) {
+                val items =
+                    flowOf(
+                        PagingData.from(previewSeries, LoadStates(done, done, done)),
+                    ).collectAsLazyPagingItems()
+                LibraryScreen(
+                    LibraryUiState(null, previewLibraries, 1),
+                    items,
+                    LibraryActions(onToggleUnread = { unread++ }, onShowSheet = { sheet = it }),
+                )
+            }
+        }
+        compose.onAllNodesWithText("Unread").onFirst().performClick() // the chip; cards also say "Unread"
+        assertEquals(1, unread)
+        compose.onNodeWithText("Genre").performClick()
+        assertEquals(LibrarySheet.Genre, sheet)
     }
 
     @Test

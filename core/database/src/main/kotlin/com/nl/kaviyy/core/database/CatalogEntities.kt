@@ -100,3 +100,16 @@ data class ChapterEntity(
     /** Parent volume's title (e.g. "5"), for "Volume 5 · Chapter 49". */
     val volumeTitle: String? = null,
 )
+
+/** One library query's results in server order (sort + filters), so offline paging keeps that order. */
+@Entity(
+    tableName = "query_items",
+    primaryKeys = [SERVER, "queryKey", "position"],
+    foreignKeys = [ForeignKey(ServerEntity::class, ["id"], [SERVER], onDelete = ForeignKey.CASCADE)],
+)
+data class QueryItemEntity(
+    val serverId: Long,
+    val queryKey: String,
+    val position: Int,
+    val seriesId: Int,
+)
