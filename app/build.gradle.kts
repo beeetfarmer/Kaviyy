@@ -7,6 +7,10 @@ plugins {
 android {
     namespace = "com.nl.kaviyy"
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.nl.kaviyy"
         versionCode = 1
@@ -42,4 +46,5 @@ dependencies {
     ).forEach { implementation(it) }
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.kotlinx.coroutines.android)
 }

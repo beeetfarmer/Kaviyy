@@ -11,6 +11,8 @@ complexity:
   LongMethod:
     ignoreAnnotated: ['Composable']
 style:
+  ThrowsCount:
+    excludes: ['**/test/**']
   MagicNumber:
     ignorePropertyDeclaration: true
     ignoreAnnotated: ['Preview', 'Composable']
