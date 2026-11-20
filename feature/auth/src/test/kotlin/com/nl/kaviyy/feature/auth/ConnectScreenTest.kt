@@ -63,6 +63,56 @@ class ConnectScreenTest {
     }
 
     @Test
+    fun ssoSheetExplainsTheBrowserStep() {
+        val found =
+            Reachability.Found(
+                (
+                    com.nl.kaviyy.core.model.server.ServerUrl.parse(
+                        "https://k.lan",
+                    ) as com.nl.kaviyy.core.model.server.ServerUrlResult.Valid
+                ).url,
+                "0.9.0.2",
+                true,
+                com.nl.kaviyy.core.network
+                    .SsoInfo("Authelia", passwordLoginDisabled = true),
+            )
+        compose.setContent {
+            KavitaTheme {
+                androidx.compose.foundation.layout.Column {
+                    AuthKeySheetContent(
+                        ConnectUiState(found, authKeySheetOpen = true, authKeyViaSso = true),
+                        TextFieldState(),
+                        {},
+                        {},
+                    )
+                }
+            }
+        }
+        compose.onNodeWithText("Open Kavita in Browser").assertExists()
+        compose.onNodeWithText("Sign in with Authelia", substring = true).assertExists()
+    }
+
+    @Test
+    fun passwordDisabledHidesAccountSection() {
+        val found =
+            Reachability.Found(
+                (
+                    com.nl.kaviyy.core.model.server.ServerUrl.parse(
+                        "https://k.lan",
+                    ) as com.nl.kaviyy.core.model.server.ServerUrlResult.Valid
+                ).url,
+                "0.9.0.2",
+                true,
+                com.nl.kaviyy.core.network
+                    .SsoInfo(null, passwordLoginDisabled = true),
+            )
+        show(ConnectUiState(found))
+        compose.onNodeWithText("Continue with SSO").assertExists()
+        compose.onNodeWithText("Username").assertDoesNotExist()
+        compose.onNodeWithText("Sign In").assertDoesNotExist()
+    }
+
+    @Test
     fun screenshotLight() =
         captureRoboImage("src/test/screenshots/connect_light.png") { ConnectPreview(Appearance.Light) }
 

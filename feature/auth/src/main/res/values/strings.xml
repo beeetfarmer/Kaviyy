@@ -20,6 +20,9 @@
     <string name="auth_key_placeholder">Paste your key</string>
     <string name="auth_key_help">For single sign-on accounts. Create a key in Kavita under Settings › Account › Auth Keys, copy it, and paste it here.</string>
     <string name="auth_cancel">Cancel</string>
+    <string name="auth_sso_generic">single sign-on</string>
+    <string name="auth_sso_help">Sign in with %1$s in your browser, then create a key under Settings › Account › Auth Keys, copy it, and paste it here.</string>
+    <string name="auth_sso_open_browser">Open Kavita in Browser</string>
     <string name="auth_error_wrong_key">That key wasn’t accepted. Check it or create a new one.</string>
     <string name="auth_footnote">Self-hosted. Your library never leaves your server.</string>
     <string name="auth_reachable">Server reachable</string>

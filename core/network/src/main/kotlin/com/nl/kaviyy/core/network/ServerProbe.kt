@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.Request
+import okhttp3.Response
 import java.net.HttpURLConnection.HTTP_FORBIDDEN
 import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 import javax.inject.Inject
@@ -29,9 +30,24 @@ internal data class ServerInfoSlimDto(
  */
 data class ServerInfo(
     val version: KavitaVersion?,
+    /** Set when the server has OIDC single sign-on enabled (`api/Settings/oidc`). */
+    val sso: SsoInfo? = null,
 ) {
     val isSupported: Boolean get() = version?.isSupported == true
 }
+
+/** `GET api/Settings/oidc` (OidcPublicConfigDto, public). */
+@Serializable
+internal data class OidcPublicConfigDto(
+    val enabled: Boolean = false,
+    val providerName: String? = null,
+    val disablePasswordAuthentication: Boolean = false,
+)
+
+data class SsoInfo(
+    val providerName: String?,
+    val passwordLoginDisabled: Boolean,
+)
 
 /** Reachability + version check (the seam ViewModels depend on; [ServerProbe] is the implementation). */
 fun interface ServerProber {
@@ -47,37 +63,63 @@ class ServerProbe
     ) : ServerProber {
         override suspend fun probe(server: Server): AppResult<ServerInfo> =
             withContext(io) {
-                val request = Request.Builder().url(server.url.resolve("api/Server/server-info-slim")).build()
-                // ponytail: blocking execute on IO; cancellation doesn't abort the call (bounded by timeouts).
-                val response = appResult { clients.create(server).newCall(request).execute() }
-                when (response) {
-                    is AppResult.Failure -> {
-                        response
-                    }
+                when (val info = version(server)) {
+                    is AppResult.Success -> AppResult.Success(info.value.copy(sso = sso(server)))
+                    is AppResult.Failure -> info
+                }
+            }
 
-                    is AppResult.Success -> {
-                        response.value.use { r ->
-                            if (r.code == HTTP_UNAUTHORIZED || r.code == HTTP_FORBIDDEN) {
-                                // Reached a server that wants auth for this call: reachable, version unknown.
-                                AppResult.Success(ServerInfo(version = null))
-                            } else if (!r.isSuccessful) {
-                                AppResult.Failure(AppError.fromHttpCode(r.code))
-                            } else {
-                                appResult {
-                                    val dto = json.decodeFromString<ServerInfoSlimDto>(r.body.string())
-                                    // A non-Kavita server answering 200 with other JSON must not pass as Kavita.
-                                    require(
-                                        dto.installId != null || dto.kavitaVersion != null,
-                                    ) { "Not a Kavita server" }
-                                    ServerInfo(KavitaVersion.parse(dto.kavitaVersion))
-                                }
-                            }
-                        }
+        /** Best effort: any failure means "no SSO info" (older servers lack the endpoint). */
+        private fun sso(server: Server): SsoInfo? {
+            val request = Request.Builder().url(server.url.resolve("api/Settings/oidc")).build()
+            val dto =
+                runCatching {
+                    clients.create(server).newCall(request).execute().use { r ->
+                        if (r.isSuccessful) json.decodeFromString<OidcPublicConfigDto>(r.body.string()) else null
+                    }
+                }.getOrNull()
+            return dto
+                ?.takeIf {
+                    it.enabled
+                }?.let { SsoInfo(it.providerName?.take(MAX_PROVIDER_NAME), it.disablePasswordAuthentication) }
+        }
+
+        private fun version(server: Server): AppResult<ServerInfo> {
+            val request = Request.Builder().url(server.url.resolve("api/Server/server-info-slim")).build()
+            // ponytail: blocking execute on IO; cancellation doesn't abort the call (bounded by timeouts).
+            val response = appResult { clients.create(server).newCall(request).execute() }
+            return if (response is AppResult.Success) {
+                response.value.use(
+                    ::parseVersion,
+                )
+            } else {
+                response as AppResult.Failure
+            }
+        }
+
+        private fun parseVersion(r: Response): AppResult<ServerInfo> =
+            when {
+                // Reached a server that wants auth for this call: reachable, version unknown.
+                r.code == HTTP_UNAUTHORIZED || r.code == HTTP_FORBIDDEN -> {
+                    AppResult.Success(ServerInfo(version = null))
+                }
+
+                !r.isSuccessful -> {
+                    AppResult.Failure(AppError.fromHttpCode(r.code))
+                }
+
+                else -> {
+                    appResult {
+                        val dto = json.decodeFromString<ServerInfoSlimDto>(r.body.string())
+                        // A non-Kavita server answering 200 with other JSON must not pass as Kavita.
+                        require(dto.installId != null || dto.kavitaVersion != null) { "Not a Kavita server" }
+                        ServerInfo(KavitaVersion.parse(dto.kavitaVersion))
                     }
                 }
             }
 
         private companion object {
+            const val MAX_PROVIDER_NAME = 40
             val json = Json { ignoreUnknownKeys = true }
         }
     }

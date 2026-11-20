@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
@@ -87,12 +88,31 @@ internal fun AuthKeySheetContent(
         Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp).imePadding(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        val found = state.reachability as? Reachability.Found
+        val provider = state.sso?.providerName ?: stringResource(R.string.auth_sso_generic)
         Text(
-            stringResource(R.string.auth_key_help),
+            if (state.authKeyViaSso) {
+                stringResource(
+                    R.string.auth_sso_help,
+                    provider,
+                )
+            } else {
+                stringResource(R.string.auth_key_help)
+            },
             style = Kavita.type.footnote,
             color = Kavita.colors.labelSecondary,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
+        if (state.authKeyViaSso && found != null) {
+            val uriHandler = LocalUriHandler.current
+            // Opens the user's own server in their browser (no in-app WebView: no second HTTP stack, no phishing UI).
+            SecondaryButton(
+                stringResource(R.string.auth_sso_open_browser),
+                { uriHandler.openUri(found.url.value) },
+                Modifier.fillMaxWidth(),
+                size = ButtonSize.Medium,
+            )
+        }
         GroupedList {
             GroupedInputRow(
                 label = stringResource(R.string.auth_key_label),

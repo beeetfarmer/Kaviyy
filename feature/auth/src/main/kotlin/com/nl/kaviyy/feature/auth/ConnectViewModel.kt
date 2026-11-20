@@ -15,6 +15,7 @@ import com.nl.kaviyy.core.model.server.ServerUrlError
 import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.LoginMethod
 import com.nl.kaviyy.core.network.ServerProber
+import com.nl.kaviyy.core.network.SsoInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,6 +47,7 @@ sealed interface Reachability {
         val url: ServerUrl,
         val version: String?,
         val supported: Boolean,
+        val sso: SsoInfo? = null,
     ) : Reachability
 
     data class Failed(
@@ -60,9 +62,16 @@ data class ConnectUiState(
     val signingIn: Boolean = false,
     val signInError: AppError? = null,
     val authKeySheetOpen: Boolean = false,
+    /** The sheet was opened from "Continue with SSO": explain the browser step. */
+    val authKeyViaSso: Boolean = false,
 ) {
+    val sso: SsoInfo? get() = (reachability as? Reachability.Found)?.sso
+
+    /** False when the server disabled password sign-in in favour of SSO. */
+    val passwordLogin: Boolean get() = sso?.passwordLoginDisabled != true
+
     val canUseAuthKey: Boolean get() = reachability is Reachability.Found && !signingIn
-    val canSignIn: Boolean get() = canUseAuthKey && credentialsEntered
+    val canSignIn: Boolean get() = canUseAuthKey && credentialsEntered && passwordLogin
 }
 
 internal const val ADDRESS_DEBOUNCE_MS = 600L
@@ -111,14 +120,20 @@ class ConnectViewModel
             }
         }
 
-        /** Auth Key sign-in (SSO users): paste only; QR scanning deferred by the user. */
-        fun openAuthKey() {
-            if (_state.value.canUseAuthKey) _state.update { it.copy(authKeySheetOpen = true, signInError = null) }
+        /**
+         * Auth Key sign-in, paste only (QR deferred by the user).
+         * [viaSso]: opened from "Continue with SSO". Kavita's OIDC flow ends in a cookie for its own web UI, which a
+         * native app can't receive (spike M3.4), so SSO users sign in on the web, create an Auth Key and paste it.
+         */
+        fun openAuthKey(viaSso: Boolean = false) {
+            if (_state.value.canUseAuthKey) {
+                _state.update { it.copy(authKeySheetOpen = true, authKeyViaSso = viaSso, signInError = null) }
+            }
         }
 
         fun closeAuthKey() {
             authKey.clearText()
-            _state.update { it.copy(authKeySheetOpen = false, signInError = null) }
+            _state.update { it.copy(authKeySheetOpen = false, authKeyViaSso = false, signInError = null) }
         }
 
         fun signInWithAuthKey() {
@@ -169,7 +184,12 @@ class ConnectViewModel
             // Not saved yet: a throwaway Server with the strict defaults (HTTPS, no pin).
             when (val result = prober.probe(Server(ServerId(0), url.host, url))) {
                 is AppResult.Success -> {
-                    Reachability.Found(url, result.value.version?.toString(), result.value.isSupported)
+                    Reachability.Found(
+                        url,
+                        result.value.version?.toString(),
+                        result.value.isSupported,
+                        result.value.sso,
+                    )
                 }
 
                 is AppResult.Failure -> {

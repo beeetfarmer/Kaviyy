@@ -49,6 +49,28 @@ class ServerProbeTest {
     }
 
     @Test
+    fun ssoConfigIsReadWhenEnabled() {
+        mock.enqueue(MockResponse(body = """{"installId":"a","kavitaVersion":"0.9.0.2"}"""))
+        mock.enqueue(
+            MockResponse(body = """{"enabled":true,"providerName":"Authelia","disablePasswordAuthentication":true}"""),
+        )
+        val info = (probe() as AppResult.Success).value
+        assertEquals(SsoInfo("Authelia", passwordLoginDisabled = true), info.sso)
+        mock.takeRequest()
+        assertEquals("/api/Settings/oidc", mock.takeRequest().url.encodedPath)
+    }
+
+    @Test
+    fun ssoDisabledOrMissingEndpointMeansNoSso() {
+        mock.enqueue(MockResponse(body = """{"installId":"a","kavitaVersion":"0.9.0.2"}"""))
+        mock.enqueue(MockResponse(body = """{"enabled":false,"providerName":"X"}"""))
+        assertEquals(null, (probe() as AppResult.Success).value.sso)
+        mock.enqueue(MockResponse(body = """{"installId":"a","kavitaVersion":"0.9.0.2"}"""))
+        mock.enqueue(MockResponse(code = 404))
+        assertEquals(null, (probe() as AppResult.Success).value.sso)
+    }
+
+    @Test
     fun oldServerIsReachableButUnsupported() {
         val info = (probe("""{"installId":"abc","kavitaVersion":"0.8.6.0"}""") as AppResult.Success).value
         assertFalse(info.isSupported)

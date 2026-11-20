@@ -55,13 +55,13 @@ import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlError
 import com.nl.kaviyy.core.model.server.ServerUrlResult
+import com.nl.kaviyy.core.network.SsoInfo
 
 private val AddressKeyboard =
     KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next, autoCorrectEnabled = false)
 
 @Composable
 fun ConnectRoute(
-    onSso: () -> Unit,
     modifier: Modifier = Modifier,
     onLogoLongPress: (() -> Unit)? = null,
     viewModel: ConnectViewModel = hiltViewModel(),
@@ -74,8 +74,8 @@ fun ConnectRoute(
         password = viewModel.password,
         onStaySignedIn = viewModel::setStaySignedIn,
         onSignIn = viewModel::signIn,
-        onSso = onSso,
-        onAuthKey = viewModel::openAuthKey,
+        onSso = { viewModel.openAuthKey(viaSso = true) },
+        onAuthKey = { viewModel.openAuthKey() },
         modifier = modifier,
         onLogoLongPress = onLogoLongPress,
     )
@@ -128,22 +128,28 @@ fun ConnectScreen(
                 )
             }
             ReachabilityText(state.reachability)
-            Spacer(Modifier.height(6.dp))
-            SectionHeader(stringResource(R.string.auth_section_account))
-            GroupedList {
-                GroupedInputRow(
-                    label = stringResource(R.string.auth_username),
-                    state = username,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next, autoCorrectEnabled = false),
-                    divider = true,
-                )
-                GroupedInputRow(
-                    label = stringResource(R.string.auth_password),
-                    state = password,
-                    placeholder = stringResource(R.string.auth_required),
-                    secure = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                )
+            if (state.passwordLogin) {
+                Spacer(Modifier.height(6.dp))
+                SectionHeader(stringResource(R.string.auth_section_account))
+                GroupedList {
+                    GroupedInputRow(
+                        label = stringResource(R.string.auth_username),
+                        state = username,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next, autoCorrectEnabled = false),
+                        divider = true,
+                    )
+                    GroupedInputRow(
+                        label = stringResource(R.string.auth_password),
+                        state = password,
+                        placeholder = stringResource(R.string.auth_required),
+                        secure = true,
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Done,
+                            ),
+                    )
+                }
             }
             Spacer(Modifier.height(6.dp))
             GroupedList {
@@ -168,20 +174,25 @@ fun ConnectScreen(
         }
         Spacer(Modifier.weight(1f))
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            PrimaryButton(
-                stringResource(if (state.signingIn) R.string.auth_signing_in else R.string.auth_sign_in),
-                onSignIn,
-                Modifier.fillMaxWidth(),
-                size = ButtonSize.Large,
-                enabled = state.canSignIn,
-            )
-            SecondaryButton(
-                stringResource(R.string.auth_continue_sso),
-                onSso,
-                Modifier.fillMaxWidth(),
-                size = ButtonSize.Large,
-                leadingIcon = KavitaIcons.Lock,
-            )
+            if (state.passwordLogin) {
+                PrimaryButton(
+                    stringResource(if (state.signingIn) R.string.auth_signing_in else R.string.auth_sign_in),
+                    onSignIn,
+                    Modifier.fillMaxWidth(),
+                    size = ButtonSize.Large,
+                    enabled = state.canSignIn,
+                )
+            }
+            // [derived] Only offered when the server reports OIDC enabled.
+            if (state.sso != null) {
+                SecondaryButton(
+                    stringResource(R.string.auth_continue_sso),
+                    onSso,
+                    Modifier.fillMaxWidth(),
+                    size = ButtonSize.Large,
+                    leadingIcon = KavitaIcons.Lock,
+                )
+            }
             SecondaryButton(
                 stringResource(R.string.auth_use_auth_key),
                 onAuthKey,
@@ -368,4 +379,5 @@ private val previewFound =
         url = (ServerUrl.parse("https://kavita.home.lan:5000") as ServerUrlResult.Valid).url,
         version = "0.9.0.2",
         supported = true,
+        sso = SsoInfo(providerName = "Authelia", passwordLoginDisabled = false),
     )

@@ -13,6 +13,7 @@ import com.nl.kaviyy.core.model.server.ServerUrlError
 import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.LoginMethod
 import com.nl.kaviyy.core.network.ServerInfo
+import com.nl.kaviyy.core.network.SsoInfo
 import com.nl.kaviyy.core.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -204,6 +205,25 @@ class ConnectViewModelTest {
             ready.signInWithAuthKey()
             runCurrent()
             assertTrue(signIns.isEmpty())
+        }
+
+    @Test
+    fun ssoServerWithPasswordDisabledOnlyOffersTheKeyFlow() =
+        runTest {
+            answer =
+                AppResult.Success(
+                    ServerInfo(KavitaVersion.parse("0.9.0.2"), SsoInfo("Authelia", passwordLoginDisabled = true)),
+                )
+            val vm = readyToSignIn()
+            assertFalse(vm.state.value.passwordLogin)
+            assertFalse(vm.state.value.canSignIn)
+            vm.signIn()
+            vm.openAuthKey(viaSso = true)
+            runCurrent()
+            assertTrue(signIns.isEmpty())
+            assertTrue(vm.state.value.authKeySheetOpen && vm.state.value.authKeyViaSso)
+            vm.closeAuthKey()
+            assertFalse(vm.state.value.authKeyViaSso)
         }
 
     @Test

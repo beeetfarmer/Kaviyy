@@ -59,7 +59,6 @@ private fun KaviyyApp(viewModel: AppViewModel = hiltViewModel()) {
 
             AppState.SignedOut -> {
                 ConnectRoute(
-                    onSso = {}, // TODO(M3.4): SSO spike
                     // Debug builds: long-press the logo for the component catalogue.
                     onLogoLongPress = if (BuildConfig.DEBUG) ({ catalogue = true }) else null,
                 )
