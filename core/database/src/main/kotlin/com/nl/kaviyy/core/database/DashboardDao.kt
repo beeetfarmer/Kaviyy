@@ -14,6 +14,9 @@ interface DashboardDao {
     @Query("SELECT * FROM dashboard_streams WHERE serverId = :serverId AND visible = 1 ORDER BY position, id")
     fun observeStreams(serverId: Long): Flow<List<DashboardStreamEntity>>
 
+    @Query("SELECT * FROM dashboard_streams WHERE serverId = :serverId ORDER BY position, id")
+    suspend fun streams(serverId: Long): List<DashboardStreamEntity>
+
     @Query("SELECT * FROM dashboard_items WHERE serverId = :serverId ORDER BY streamId, position")
     fun observeItems(serverId: Long): Flow<List<DashboardItemEntity>>
 

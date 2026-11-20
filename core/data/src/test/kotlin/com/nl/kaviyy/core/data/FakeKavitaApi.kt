@@ -1,6 +1,8 @@
 package com.nl.kaviyy.core.data
 
 import com.nl.kaviyy.core.network.ChapterDto
+import com.nl.kaviyy.core.network.DashboardStreamDto
+import com.nl.kaviyy.core.network.DecodeFilterDto
 import com.nl.kaviyy.core.network.GroupedSeriesDto
 import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.LibraryDto
@@ -39,6 +41,16 @@ open class FakeKavitaApi : KavitaApi {
     ): List<SeriesDto> = error("unused")
 
     override suspend fun continuePoint(seriesId: Int): ChapterDto = error("unused")
+
+    override suspend fun dashboard(visibleOnly: Boolean): List<DashboardStreamDto> = error("unused")
+
+    override suspend fun decodeFilter(body: DecodeFilterDto): JsonObject = error("unused")
+
+    override suspend fun seriesByFilter(
+        filter: JsonObject,
+        pageNumber: Int,
+        pageSize: Int,
+    ): List<SeriesDto> = error("unused")
 
     override suspend fun readingProfile(
         libraryId: Int,

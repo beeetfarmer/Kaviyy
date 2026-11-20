@@ -10,6 +10,8 @@ import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.result.getOrNull
 import com.nl.kaviyy.core.model.result.map
 import com.nl.kaviyy.core.model.server.Server
+import com.nl.kaviyy.core.network.DashboardStreamDto
+import com.nl.kaviyy.core.network.DecodeFilterDto
 import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
 import com.nl.kaviyy.core.network.apiCall
@@ -18,6 +20,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.intOrNull
 import javax.inject.Inject
 
 /** Kavita `DashboardStreamType`. */
@@ -59,6 +63,15 @@ data class Home(
 
 internal const val RAIL_SIZE = 20
 
+/** Kavita `FilterEntityType.Series`. */
+private const val ENTITY_SERIES = 0
+
+/** Visible stream types this app renders (On Deck … Smart Filter); others (e.g. More In Genre) are skipped. */
+private fun DashboardStreamDto.toEntity(serverId: Long): DashboardStreamEntity? =
+    takeIf { visible && streamType in StreamType.ON_DECK..StreamType.SMART_FILTER }?.let {
+        DashboardStreamEntity(serverId, id, name.orEmpty(), order, streamType, true, smartFilterEncoded)
+    }
+
 /** Continue-point lookups per refresh (one request each), for the On Deck subtitles and the Continue card. */
 internal const val CONTINUE_LOOKUPS = 10
 
@@ -90,10 +103,21 @@ class OfflineFirstHomeRepository
         }
 
         override suspend fun refresh(server: Server): AppResult<Unit> {
-            val streams = builtInStreams(server.id.value)
-            dashboard.replaceStreams(server.id.value, streams)
+            val id = server.id.value
             val api = apis.api(server)
-            val results = streams.map { refreshStream(server.id.value, api, it) }
+            val layout = apiCall { api.dashboard() }
+            val streams =
+                when (layout) {
+                    is AppResult.Success -> {
+                        layout.value.mapNotNull { it.toEntity(id) }.also { dashboard.replaceStreams(id, it) }
+                    }
+
+                    // Offline / failed: keep the cached layout; first run falls back to the built-ins.
+                    is AppResult.Failure -> {
+                        dashboard.streams(id).ifEmpty { builtInStreams(id).also { dashboard.replaceStreams(id, it) } }
+                    }
+                }
+            val results = listOf(layout.map {}) + streams.map { refreshStream(id, api, it) }
             return results.firstOrNull { it is AppResult.Failure } ?: AppResult.Success(Unit)
         }
 
@@ -145,9 +169,43 @@ class OfflineFirstHomeRepository
                     }
                 }
 
+                StreamType.SMART_FILTER -> {
+                    stream.smartFilterEncoded?.let { refreshSmartFilter(serverId, api, stream.id, it) }
+                        ?: AppResult.Success(Unit)
+                }
+
                 else -> {
                     AppResult.Success(Unit)
                 }
+            }
+        }
+
+        /** Decode the stream's filter on the server, then list its series. Non-series filters are skipped. */
+        private suspend fun refreshSmartFilter(
+            serverId: Long,
+            api: KavitaApi,
+            streamId: Int,
+            encoded: String,
+        ): AppResult<Unit> {
+            val decoded = apiCall { api.decodeFilter(DecodeFilterDto(encoded)) }
+            val filter = decoded.getOrNull() ?: return decoded.map {}
+            val isSeries = ((filter["entityType"] as? JsonPrimitive)?.intOrNull ?: ENTITY_SERIES) == ENTITY_SERIES
+            val list =
+                if (isSeries) {
+                    apiCall {
+                        api.seriesByFilter(
+                            filter,
+                            1,
+                            RAIL_SIZE,
+                        )
+                    }
+                } else {
+                    AppResult.Success(emptyList())
+                }
+            return list.map { found ->
+                series.upsertSeries(found.map { it.toEntity(serverId) })
+                val rows = found.mapIndexed { i, s -> DashboardItemEntity(serverId, streamId, i, s.id) }
+                dashboard.replaceItems(serverId, streamId, rows)
             }
         }
 
@@ -163,7 +221,7 @@ class OfflineFirstHomeRepository
                     }.awaitAll()
             }
 
-        /** ponytail: fixed built-in streams until the server's dashboard layout is used (M5.2). */
+        /** Used only before the server's layout has ever loaded (first refresh while offline). */
         private fun builtInStreams(serverId: Long) =
             listOf(StreamType.ON_DECK, StreamType.RECENTLY_UPDATED, StreamType.NEWLY_ADDED).mapIndexed { i, type ->
                 DashboardStreamEntity(serverId, id = -type, name = "", position = i, streamType = type, visible = true)

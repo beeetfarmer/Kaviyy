@@ -106,6 +106,11 @@ data class DashboardStreamDto(
 )
 
 @Serializable
+data class DecodeFilterDto(
+    val encodedFilter: String,
+)
+
+@Serializable
 data class SeriesFilterStatementDto(
     /** Kavita `FilterComparison`. */
     val comparison: Int,

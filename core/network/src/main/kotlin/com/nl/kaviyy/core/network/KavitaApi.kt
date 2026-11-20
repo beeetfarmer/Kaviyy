@@ -21,6 +21,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /** Kavita endpoints we use, verified against api/openapi.json. Add methods only when a feature needs them. */
+@Suppress("TooManyFunctions") // one function per endpoint, like a DAO
 interface KavitaApi {
     @GET("api/Library/libraries")
     suspend fun libraries(): List<LibraryDto>
@@ -36,6 +37,26 @@ interface KavitaApi {
     suspend fun series(
         @Path("seriesId") seriesId: Int,
     ): SeriesDto
+
+    /** The user's Home layout. */
+    @GET("api/Stream/dashboard")
+    suspend fun dashboard(
+        @Query("visibleOnly") visibleOnly: Boolean = true,
+    ): List<DashboardStreamDto>
+
+    /** Decodes a smart filter's encoded string into its filter object (kept raw, see [seriesByFilter]). */
+    @POST("api/Filter/decode")
+    suspend fun decodeFilter(
+        @Body body: DecodeFilterDto,
+    ): JsonObject
+
+    /** `api/Series/v2` with a server-made filter (a decoded smart filter), sent back unchanged. */
+    @POST("api/Series/v2")
+    suspend fun seriesByFilter(
+        @Body filter: JsonObject,
+        @Query("PageNumber") pageNumber: Int,
+        @Query("PageSize") pageSize: Int,
+    ): List<SeriesDto>
 
     /** Series with reading progress, most recently read first. `libraryId` 0 = all libraries. */
     @POST("api/Series/on-deck")

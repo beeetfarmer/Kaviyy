@@ -10,12 +10,18 @@ import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.ChapterDto
+import com.nl.kaviyy.core.network.DashboardStreamDto
+import com.nl.kaviyy.core.network.DecodeFilterDto
 import com.nl.kaviyy.core.network.GroupedSeriesDto
 import com.nl.kaviyy.core.network.SeriesDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,8 +46,33 @@ class HomeRepositoryTest {
     private val onDeck =
         listOf(SeriesDto(1, libraryId = 2, name = "Ember Road", pages = 100, pagesRead = 62), SeriesDto(2, name = "B"))
 
+    private var layout =
+        listOf(
+            DashboardStreamDto(10, "On Deck", 0, StreamType.ON_DECK),
+            DashboardStreamDto(11, "Recently Updated", 1, StreamType.RECENTLY_UPDATED),
+            DashboardStreamDto(12, "Newly Added", 2, StreamType.NEWLY_ADDED),
+        )
+    private var sentFilter: JsonObject? = null
+
     private val api =
         object : FakeKavitaApi() {
+            override suspend fun dashboard(visibleOnly: Boolean) = if (offline) throw IOException("offline") else layout
+
+            override suspend fun decodeFilter(body: DecodeFilterDto) =
+                buildJsonObject {
+                    put("name", body.encodedFilter)
+                    put("entityType", if (body.encodedFilter == "people") 1 else 0)
+                }
+
+            override suspend fun seriesByFilter(
+                filter: JsonObject,
+                pageNumber: Int,
+                pageSize: Int,
+            ): List<SeriesDto> {
+                sentFilter = filter
+                return listOf(SeriesDto(7, name = "Filtered"))
+            }
+
             override suspend fun onDeck(
                 pageNumber: Int,
                 pageSize: Int,
@@ -87,6 +118,51 @@ class HomeRepositoryTest {
             assertEquals(listOf("Ember Road", "Fresh"), updated.map { it.title }) // partial row kept the full one
             assertEquals(listOf(9, 3), updated.map { it.newChapters })
             assertEquals(listOf("New"), home.rails[2].items.map { it.title })
+        }
+
+    @Test
+    fun followsServerLayoutAndDecodesSmartFilters() =
+        runTest {
+            layout =
+                listOf(
+                    DashboardStreamDto(20, "Favourites", 0, StreamType.SMART_FILTER, smartFilterEncoded = "fav"),
+                    DashboardStreamDto(21, "People", 1, StreamType.SMART_FILTER, smartFilterEncoded = "people"),
+                    DashboardStreamDto(22, "More in Genre", 2, streamType = 5),
+                    DashboardStreamDto(10, "On Deck", 3, StreamType.ON_DECK),
+                    DashboardStreamDto(12, "Hidden", 4, StreamType.NEWLY_ADDED, visible = false),
+                )
+            assertEquals(AppResult.Success(Unit), repo.refresh(server))
+            val home = repo.home(server).first()
+            assertEquals(listOf(20, 21, 10), home.rails.map { it.streamId })
+            assertEquals(listOf("Filtered"), home.rails[0].items.map { it.title })
+            assertEquals("fav", (sentFilter?.get("name") as JsonPrimitive).content) // decoded filter sent unchanged
+            assertTrue(home.rails[1].items.isEmpty()) // non-series smart filter skipped
+        }
+
+    @Test
+    fun offlineFirstRunFallsBackToBuiltInRails() =
+        runTest {
+            offline = true
+            repo.refresh(server)
+            val types = listOf(StreamType.ON_DECK, StreamType.RECENTLY_UPDATED, StreamType.NEWLY_ADDED)
+            assertEquals(
+                types,
+                repo
+                    .home(server)
+                    .first()
+                    .rails
+                    .map { it.type },
+            )
+            offline = false
+            repo.refresh(server)
+            assertEquals(
+                listOf(10, 11, 12),
+                repo
+                    .home(server)
+                    .first()
+                    .rails
+                    .map { it.streamId },
+            ) // built-ins replaced
         }
 
     @Test
