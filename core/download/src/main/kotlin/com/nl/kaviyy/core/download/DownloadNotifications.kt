@@ -55,6 +55,44 @@ class DownloadNotifications
             return id to notification
         }
 
+        /** [derived] One notification per server listing the series; tapping opens the app. */
+        fun newChapters(
+            serverId: Long,
+            names: List<String>,
+        ) {
+            if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+            context.getSystemService(NotificationManager::class.java)?.createNotificationChannel(
+                NotificationChannel(
+                    NEW_CHAPTERS,
+                    context.getString(R.string.new_chapters_channel),
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                ),
+            )
+            val text = names.joinToString(", ")
+            val notification =
+                NotificationCompat
+                    .Builder(context, NEW_CHAPTERS)
+                    .setSmallIcon(R.drawable.ic_download_notification)
+                    .setContentTitle(context.getString(R.string.new_chapters_title))
+                    .setContentText(text)
+                    .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                    .setContentIntent(openApp())
+                    .setAutoCancel(true)
+                    .build()
+            // One per server, replacing itself; a clash with a chapter id only swaps which notice shows.
+            runCatching {
+                NotificationManagerCompat
+                    .from(
+                        context,
+                    ).notify("$NEW_CHAPTERS:$serverId".hashCode(), notification)
+            }
+        }
+
+        private fun openApp(): PendingIntent? =
+            context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
+                PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE)
+            }
+
         /** Completed or failed; tapping opens the app. Skipped when the user hasn't allowed notifications. */
         fun finished(
             row: DownloadEntity,
@@ -63,10 +101,6 @@ class DownloadNotifications
         ) {
             if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
             ensureChannel()
-            val open =
-                context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
-                    PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE)
-                }
             val notification =
                 NotificationCompat
                     .Builder(context, CHANNEL)
@@ -74,7 +108,7 @@ class DownloadNotifications
                     .setContentTitle(
                         context.getString(if (ok) R.string.download_done else R.string.download_failed),
                     ).setContentText(seriesName)
-                    .setContentIntent(open)
+                    .setContentIntent(openApp())
                     .setAutoCancel(true)
                     .setGroup(CHANNEL)
                     .build()
@@ -115,6 +149,7 @@ class DownloadNotifications
 
         private companion object {
             const val CHANNEL = "downloads"
+            const val NEW_CHAPTERS = "new_chapters"
             const val PROGRESS_MAX = 100
             const val ID_PRIME = 1_000_003L
             const val EVEN_POSITIVE = 0x7FFFFFFE

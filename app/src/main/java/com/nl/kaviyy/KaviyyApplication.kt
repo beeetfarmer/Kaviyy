@@ -2,6 +2,7 @@ package com.nl.kaviyy
 
 import android.app.Application
 import com.nl.kaviyy.core.download.AutoDownloader
+import com.nl.kaviyy.core.download.NewChapterWorker
 import com.nl.kaviyy.core.download.ReadCleanup
 import com.nl.kaviyy.core.model.log.Log
 import com.nl.kaviyy.core.sync.Sync
@@ -19,6 +20,7 @@ class KaviyyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         autoDownloader.start()
+        NewChapterWorker.schedule(this)
         readCleanup.start()
         sync.start()
         // Release builds never set a sink, so logging is a no-op there (and R8 strips the calls).

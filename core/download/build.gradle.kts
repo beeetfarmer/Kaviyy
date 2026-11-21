@@ -7,6 +7,8 @@ plugins {
 android {
     // WorkManager reads its own resources when initialized in Robolectric tests.
     testOptions.unitTests.isIncludeAndroidResources = true
+    // WorkManager is a process-wide singleton: a fresh JVM per test class keeps one class's jobs out of the next.
+    testOptions.unitTests.all { it.forkEvery = 1 }
 }
 
 dependencies {

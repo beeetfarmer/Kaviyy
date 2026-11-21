@@ -51,6 +51,15 @@ class DownloadNotificationsTest {
     }
 
     @Test
+    fun newChaptersListsTheSeriesAndReplacesItselfPerServer() {
+        notifications.newChapters(1, listOf("Ember Road"))
+        notifications.newChapters(1, listOf("Ember Road", "Salt & Signal"))
+        val posted = shadowOf(manager).allNotifications.single()
+        assertEquals("Ember Road, Salt & Signal", posted.extras.getString(NotificationCompat.EXTRA_TEXT))
+        assertEquals("new_chapters", posted.channelId)
+    }
+
+    @Test
     fun nothingIsPostedWhenNotificationsAreOff() {
         shadowOf(manager).setNotificationsEnabled(false)
         notifications.finished(row, "Ember Road", ok = true)

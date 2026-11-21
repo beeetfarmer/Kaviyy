@@ -83,6 +83,12 @@ interface SeriesDao {
     @Upsert
     suspend fun upsertSeries(rows: List<SeriesEntity>)
 
+    @Query("SELECT * FROM series WHERE serverId = :serverId AND id IN (:ids)")
+    suspend fun seriesRows(
+        serverId: Long,
+        ids: List<Int>,
+    ): List<SeriesEntity>
+
     @Query("SELECT id FROM chapters WHERE serverId = :serverId AND seriesId = :seriesId")
     suspend fun chapterIdsOfSeries(
         serverId: Long,
