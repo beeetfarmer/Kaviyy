@@ -67,4 +67,6 @@ abstract class KaviyyDatabase : RoomDatabase() {
     abstract fun readingListDao(): ReadingListDao
 
     abstract fun dashboardDao(): DashboardDao
+
+    abstract fun downloadDao(): DownloadDao
 }

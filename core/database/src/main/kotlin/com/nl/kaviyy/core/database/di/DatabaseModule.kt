@@ -6,6 +6,7 @@ import com.nl.kaviyy.core.database.AnnotationDao
 import com.nl.kaviyy.core.database.BookmarkDao
 import com.nl.kaviyy.core.database.CollectionDao
 import com.nl.kaviyy.core.database.DashboardDao
+import com.nl.kaviyy.core.database.DownloadDao
 import com.nl.kaviyy.core.database.KaviyyDatabase
 import com.nl.kaviyy.core.database.LibraryDao
 import com.nl.kaviyy.core.database.OutboxDao
@@ -66,4 +67,7 @@ object DatabaseModule {
 
     @Provides
     fun dashboardDao(db: KaviyyDatabase): DashboardDao = db.dashboardDao()
+
+    @Provides
+    fun downloadDao(db: KaviyyDatabase): DownloadDao = db.downloadDao()
 }
