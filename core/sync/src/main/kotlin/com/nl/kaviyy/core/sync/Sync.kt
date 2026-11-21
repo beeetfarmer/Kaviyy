@@ -12,10 +12,12 @@ import androidx.work.WorkManager
 import com.nl.kaviyy.core.database.OutboxDao
 import com.nl.kaviyy.core.model.dispatch.Dispatcher
 import com.nl.kaviyy.core.model.dispatch.KaviyyDispatchers
+import com.nl.kaviyy.core.model.server.Server
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
@@ -36,7 +38,11 @@ class Sync
         @param:ApplicationContext private val context: Context,
         private val outbox: OutboxDao,
         @param:Dispatcher(KaviyyDispatchers.IO) private val io: CoroutineDispatcher,
-    ) {
+    ) : SyncStatus {
+        override fun pending(server: Server): Flow<Int> = outbox.observePending(server.id.value)
+
+        override fun syncNow() = requestNow()
+
         // Not initialised in host-side tests of the Application; the app's startup provider always initialises it.
         private val work get() = runCatching { WorkManager.getInstance(context) }.getOrNull()
 

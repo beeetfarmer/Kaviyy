@@ -77,4 +77,10 @@
     <string name="download_settings_original">Original</string>
     <string name="download_settings_quality_note">Kavita serves pages at their original quality.</string>
     <string name="downloads_remove_read">Remove Read Downloads</string>
+    <plurals name="downloads_pending">
+        <item quantity="one">%d change waiting to sync</item>
+        <item quantity="other">%d changes waiting to sync</item>
+    </plurals>
+    <string name="downloads_synced">All progress synced</string>
+    <string name="downloads_sync_now">Sync now</string>
 </resources>

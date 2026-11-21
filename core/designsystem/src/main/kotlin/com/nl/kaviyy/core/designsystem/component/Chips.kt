@@ -1,6 +1,7 @@
 package com.nl.kaviyy.core.designsystem.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,5 +88,39 @@ fun StatusChip(
     ) {
         if (leadingIcon != null) Icon(leadingIcon, null, Modifier.size(12.dp), tint = leadingIconTint ?: fg)
         Text(text, style = Kavita.type.caption.copy(fontWeight = FontWeight.SemiBold), color = fg, maxLines = 1)
+    }
+}
+
+/**
+ * [derived] DESIGN.md §11 sync line: pending changes as an accent-container pill whose [action] ("Sync now") is
+ * the tap target; with nothing pending, [text] alone in secondary.
+ */
+@Composable
+fun SyncPill(
+    text: String,
+    action: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (action == null) {
+        Text(
+            text,
+            modifier.padding(horizontal = 4.dp),
+            style = Kavita.type.footnote,
+            color = Kavita.colors.labelSecondary,
+        )
+        return
+    }
+    Row(
+        modifier
+            .minimumInteractiveComponentSize()
+            .clip(KavitaShapes.pill)
+            .background(Kavita.colors.accentContainer)
+            .clickable(role = Role.Button, onClickLabel = action, onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("$text · ", style = Kavita.type.footnote, color = Kavita.colors.accent)
+        Text(action, style = Kavita.type.footnote.copy(fontWeight = FontWeight.SemiBold), color = Kavita.colors.accent)
     }
 }

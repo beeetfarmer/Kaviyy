@@ -7,6 +7,7 @@ import com.nl.kaviyy.core.download.DownloadControls
 import com.nl.kaviyy.core.download.DownloadItem
 import com.nl.kaviyy.core.download.DownloadState
 import com.nl.kaviyy.core.model.server.Server
+import com.nl.kaviyy.core.sync.SyncStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +42,8 @@ data class DownloadsUiState(
     /** Bytes on disk across all downloads. */
     val usedBytes: Long = 0,
     val storage: List<Pair<StorageKind, Long>> = emptyList(),
+    /** Local changes not on the server yet. */
+    val pendingChanges: Int = 0,
 )
 
 data class DownloadsActions(
@@ -55,6 +58,7 @@ data class DownloadsActions(
     val onResumeAll: () -> Unit = {},
     val onSettings: () -> Unit = {},
     val onRemoveRead: () -> Unit = {},
+    val onSyncNow: () -> Unit = {},
 )
 
 /** Running or waiting: can be paused. */
@@ -92,6 +96,7 @@ class DownloadsViewModel
     constructor(
         private val session: AuthSession,
         private val controls: DownloadControls,
+        private val sync: SyncStatus,
     ) : ViewModel() {
         private val segment = MutableStateFlow(0)
 
@@ -101,7 +106,9 @@ class DownloadsViewModel
                     if (s == null) {
                         flowOf(DownloadsUiState(loading = false))
                     } else {
-                        combine(controls.downloads(s), segment) { items, seg -> items.toUiState(s, seg) }
+                        combine(controls.downloads(s), segment, sync.pending(s)) { items, seg, pending ->
+                            items.toUiState(s, seg).copy(pendingChanges = pending)
+                        }
                     }
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), DownloadsUiState())
 
@@ -125,6 +132,8 @@ class DownloadsViewModel
             }
 
         fun removeRead() = act { controls.removeRead(it) }
+
+        fun syncNow() = sync.syncNow()
 
         private fun queued() = state.value.queue
 

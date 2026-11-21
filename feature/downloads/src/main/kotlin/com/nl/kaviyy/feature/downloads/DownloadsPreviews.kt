@@ -78,7 +78,11 @@ internal fun DownloadsPreview(
     segment: Int = 0,
     items: List<DownloadItem> = previewItems,
 ) = KavitaTheme(appearance = appearance) {
-    DownloadsScreen(items.toUiState(previewServer, segment), DownloadsActions(), freeBytes = 28_400 * MB)
+    DownloadsScreen(
+        items.toUiState(previewServer, segment).copy(pendingChanges = 3),
+        DownloadsActions(),
+        freeBytes = 28_400 * MB,
+    )
 }
 
 @Preview(name = "Downloaded · light")

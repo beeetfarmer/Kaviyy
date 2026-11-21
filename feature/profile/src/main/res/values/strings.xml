@@ -166,4 +166,8 @@
     <string name="about_licenses">Open-source licenses</string>
     <string name="about_kavita_note">Kaviyy is an independent client for Kavita servers.</string>
     <string name="you_settings_downloads">Downloads</string>
+    <plurals name="you_downloads_pending">
+        <item quantity="one">%d to sync</item>
+        <item quantity="other">%d to sync</item>
+    </plurals>
 </resources>

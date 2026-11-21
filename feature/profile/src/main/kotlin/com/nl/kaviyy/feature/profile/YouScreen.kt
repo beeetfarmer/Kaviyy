@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -94,11 +95,15 @@ fun YouScreen(
             stringResource(R.string.you_settings_downloads),
             actions.onDownloads,
             value =
-                state.downloadBytes.takeIf { it > 0 }?.let {
-                    Formatter.formatShortFileSize(
-                        LocalContext.current,
-                        it,
-                    )
+                if (state.pendingChanges > 0) {
+                    pluralStringResource(R.plurals.you_downloads_pending, state.pendingChanges, state.pendingChanges)
+                } else {
+                    state.downloadBytes.takeIf { it > 0 }?.let {
+                        Formatter.formatShortFileSize(
+                            LocalContext.current,
+                            it,
+                        )
+                    }
                 },
         )
     }

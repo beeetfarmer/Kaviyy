@@ -6,6 +6,7 @@ import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.ProfileRepository
 import com.nl.kaviyy.core.data.WeekStats
 import com.nl.kaviyy.core.database.DownloadDao
+import com.nl.kaviyy.core.database.OutboxDao
 import com.nl.kaviyy.core.datastore.AppSettings
 import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.model.result.AppError
@@ -98,12 +99,20 @@ class YouViewModelTest {
     fun loadsTheAccountThenThisWeekForThatUser() =
         runTest {
             val vm =
-                YouViewModel(session, profile, clock, AppSettingsStore(InMemoryDataStore(AppSettings())), noDownloads)
+                YouViewModel(
+                    session,
+                    profile,
+                    clock,
+                    AppSettingsStore(InMemoryDataStore(AppSettings())),
+                    noDownloads,
+                    twoQueued,
+                )
             runCurrent()
             val st = vm.state.value
             assertEquals("neo" to 3, st.account?.username to st.week?.chapters)
             assertEquals(listOf("week 42 2026-11-21 ${WeekFields.of(Locale.getDefault()).firstDayOfWeek} UTC"), asked)
             assertEquals(false, st.statsFailed)
+            assertEquals(2, st.pendingChanges)
         }
 
     @Test
@@ -111,7 +120,14 @@ class YouViewModelTest {
         runTest {
             weekResult = AppResult.Failure(AppError.Network)
             val vm =
-                YouViewModel(session, profile, clock, AppSettingsStore(InMemoryDataStore(AppSettings())), noDownloads)
+                YouViewModel(
+                    session,
+                    profile,
+                    clock,
+                    AppSettingsStore(InMemoryDataStore(AppSettings())),
+                    noDownloads,
+                    twoQueued,
+                )
             runCurrent()
             assertEquals(true to null, vm.state.value.statsFailed to vm.state.value.week)
         }
@@ -131,3 +147,9 @@ private val noDownloads: DownloadDao =
     Proxy.newProxyInstance(DownloadDao::class.java.classLoader, arrayOf(DownloadDao::class.java)) { _, m, _ ->
         if (m.name == "observeTotalBytes") flowOf(0L) else error("unused: ${m.name}")
     } as DownloadDao
+
+/** Two changes waiting to sync. */
+private val twoQueued: OutboxDao =
+    Proxy.newProxyInstance(OutboxDao::class.java.classLoader, arrayOf(OutboxDao::class.java)) { _, m, _ ->
+        if (m.name == "observeCount") flowOf(2) else error("unused: ${m.name}")
+    } as OutboxDao

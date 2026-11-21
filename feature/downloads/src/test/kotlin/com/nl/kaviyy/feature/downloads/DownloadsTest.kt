@@ -1,5 +1,7 @@
 package com.nl.kaviyy.feature.downloads
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -14,6 +16,7 @@ import com.nl.kaviyy.core.download.DownloadControls
 import com.nl.kaviyy.core.download.DownloadItem
 import com.nl.kaviyy.core.download.DownloadState
 import com.nl.kaviyy.core.model.server.Server
+import com.nl.kaviyy.core.sync.SyncStatus
 import com.nl.kaviyy.core.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -66,10 +69,10 @@ class DownloadsTest {
     fun viewModelFollowsTheActiveServerAndSegment() =
         runTest {
             val downloads = MutableStateFlow(previewItems)
-            val vm = DownloadsViewModel(session(previewServer), controls(downloads))
+            val vm = DownloadsViewModel(session(previewServer), controls(downloads), FakeSync())
             vm.state.test {
                 runCurrent()
-                assertEquals(4, expectMostRecentItem().queue.size)
+                assertEquals(4 to 3, expectMostRecentItem().let { it.queue.size to it.pendingChanges })
                 vm.select(1)
                 downloads.value = previewItems.filter { it.state == DownloadState.COMPLETED }
                 runCurrent()
@@ -98,7 +101,8 @@ class DownloadsTest {
     fun queueControlsAndPauseAllReachTheRightChapters() =
         runTest {
             val calls = mutableListOf<String>()
-            val vm = DownloadsViewModel(session(previewServer), controls(MutableStateFlow(previewItems), calls))
+            val vm =
+                DownloadsViewModel(session(previewServer), controls(MutableStateFlow(previewItems), calls), FakeSync())
             vm.state.test {
                 runCurrent()
                 vm.pause(4)
@@ -141,6 +145,19 @@ class DownloadsTest {
         compose.onNodeWithText("12 of 28 pages").assertExists()
         compose.onNodeWithText("Paused · 9 of 30 pages").assertExists()
         compose.onNodeWithText("Failed · Retry").assertExists()
+    }
+
+    @Test
+    fun syncLineOffersSyncNowOnlyWithChangesWaiting() {
+        var synced = 0
+        var pending by androidx.compose.runtime.mutableIntStateOf(3)
+        compose.setContent { KavitaTheme { SyncLine(pending) { synced++ } } }
+        compose.onNodeWithText("3 changes waiting to sync · ").assertExists()
+        compose.onNodeWithText("Sync now").performClick()
+        assertEquals(1, synced)
+        pending = 0
+        compose.onNodeWithText("All progress synced").assertExists()
+        compose.onNodeWithText("Sync now").assertDoesNotExist()
     }
 
     @Test
@@ -217,4 +234,10 @@ private fun controls(
     override suspend fun removeRead(serverId: Long) {
         calls += "removeRead $serverId"
     }
+}
+
+private class FakeSync : SyncStatus {
+    override fun pending(server: Server) = flowOf(3)
+
+    override fun syncNow() = Unit
 }

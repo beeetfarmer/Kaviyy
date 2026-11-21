@@ -4,4 +4,5 @@ plugins {
 
 dependencies {
     implementation(projects.core.download)
+    implementation(projects.core.sync)
 }

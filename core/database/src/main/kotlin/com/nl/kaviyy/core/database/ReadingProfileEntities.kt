@@ -102,6 +102,9 @@ interface OutboxDao {
     @Query("UPDATE outbox SET attempts = attempts + 1 WHERE id = :id")
     suspend fun bumpAttempts(id: Long)
 
+    @Query("SELECT COUNT(*) FROM outbox WHERE serverId = :serverId")
+    fun observePending(serverId: Long): kotlinx.coroutines.flow.Flow<Int>
+
     /** Changes waiting on every server. */
     @Query("SELECT COUNT(*) FROM outbox")
     fun observeCount(): kotlinx.coroutines.flow.Flow<Int>

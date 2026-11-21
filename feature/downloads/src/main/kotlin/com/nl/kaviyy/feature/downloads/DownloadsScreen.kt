@@ -38,6 +38,7 @@ import com.nl.kaviyy.core.designsystem.component.LargeTitleHeader
 import com.nl.kaviyy.core.designsystem.component.ProgressBar
 import com.nl.kaviyy.core.designsystem.component.SecondaryButton
 import com.nl.kaviyy.core.designsystem.component.SegmentedControl
+import com.nl.kaviyy.core.designsystem.component.SyncPill
 import com.nl.kaviyy.core.designsystem.component.coverColorFor
 import com.nl.kaviyy.core.designsystem.component.rowDivider
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
@@ -72,6 +73,7 @@ fun DownloadsRoute(
             viewModel::resumeAll,
             onSettings,
             viewModel::removeRead,
+            viewModel::syncNow,
         )
     DownloadsScreen(state, actions, freeBytes = free)
 }
@@ -96,6 +98,7 @@ fun DownloadsScreen(
 ) {
     item { LargeTitleHeader(stringResource(R.string.downloads_title)) { MoreMenu(state, actions) } }
     if (state.usedBytes > 0) item { StorageCard(state.usedBytes, freeBytes, state.storage) }
+    if (state.pendingChanges > 0 || state.usedBytes > 0) item { SyncLine(state.pendingChanges, actions.onSyncNow) }
     item {
         SegmentedControl(
             listOf(
@@ -173,4 +176,18 @@ internal fun Thumb(
     imageUrl = imageUrl,
     shape = KavitaShapes.rowThumb,
     modifier = Modifier.size(40.dp, 60.dp),
+)
+
+@Composable
+internal fun SyncLine(
+    pending: Int,
+    onSyncNow: () -> Unit,
+) = SyncPill(
+    if (pending > 0) {
+        pluralStringResource(R.plurals.downloads_pending, pending, pending)
+    } else {
+        stringResource(R.string.downloads_synced)
+    },
+    stringResource(R.string.downloads_sync_now).takeIf { pending > 0 },
+    onSyncNow,
 )
