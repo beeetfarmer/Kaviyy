@@ -94,7 +94,8 @@ fun AccountScreen(
             }, divider = true)
             GroupedRow(stringResource(R.string.account_change_email), onClick = {
                 actions.onSheet(AccountSheet.Email)
-            })
+            }, divider = true)
+            GroupedRow(stringResource(R.string.account_auth_keys), onClick = actions.onAuthKeys)
         }
         state.notice?.let { Note(noticeText(it)) }
         GroupedList {

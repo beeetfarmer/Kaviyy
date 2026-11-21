@@ -121,4 +121,27 @@
     <string name="account_password_changed">Password changed.</string>
     <string name="account_email_sent">Check the new address for a confirmation link.</string>
     <string name="account_email_not_sent">Your server couldn\'t send the confirmation e-mail. Ask your server admin.</string>
+    <string name="keys_intro">Auth Keys sign in apps and tools without your password, such as this app with SSO.</string>
+    <string name="keys_offline">Auth Keys are stored on your server. Connect to it to see them.</string>
+    <string name="keys_new">New Auth Key</string>
+    <string name="keys_create">Create</string>
+    <string name="keys_done">Done</string>
+    <string name="keys_name_hint">Tablet</string>
+    <string name="keys_expiry">Expires</string>
+    <string name="keys_never">Never</string>
+    <string name="keys_30_days">30 days</string>
+    <string name="keys_1_year">1 year</string>
+    <string name="keys_system">System</string>
+    <string name="keys_expires">expires %s</string>
+    <string name="keys_created">Created</string>
+    <string name="keys_last_used">Last used</string>
+    <string name="keys_never_used">Never</string>
+    <string name="keys_warning">Rotating or deleting a key signs out everything that uses it, including this app if it signed in with this key.</string>
+    <string name="keys_rotate">Rotate key</string>
+    <string name="keys_rotate_confirm">Tap again to rotate</string>
+    <string name="keys_delete">Delete key</string>
+    <string name="keys_delete_confirm">Tap again to delete</string>
+    <string name="keys_reveal_title">Your new key</string>
+    <string name="keys_reveal_note">Copy it now: you won\'t see it again.</string>
+    <string name="keys_copy">Copy Key</string>
 </resources>

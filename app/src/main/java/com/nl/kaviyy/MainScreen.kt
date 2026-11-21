@@ -45,6 +45,7 @@ import com.nl.kaviyy.feature.lists.WantToReadActions
 import com.nl.kaviyy.feature.lists.WantToReadRoute
 import com.nl.kaviyy.feature.profile.AccountRoute
 import com.nl.kaviyy.feature.profile.AllStatsRoute
+import com.nl.kaviyy.feature.profile.AuthKeysRoute
 import com.nl.kaviyy.feature.profile.DevicesRoute
 import com.nl.kaviyy.feature.profile.ReaderPrefsRoute
 import com.nl.kaviyy.feature.profile.ScrobblingRoute
@@ -124,6 +125,9 @@ private data object ScrobblingDestination
 
 @Serializable
 private data object AccountDestination
+
+@Serializable
+private data object AuthKeysDestination
 
 @Serializable
 private data class ReadingListDestination(
@@ -227,7 +231,14 @@ internal fun MainScreen(
             composable<ReaderPrefsDestination> { ReaderPrefsRoute(onBack = { nav.popBackStack() }) }
             composable<DevicesDestination> { DevicesRoute(onBack = { nav.popBackStack() }) }
             composable<AccountDestination> {
-                AccountRoute(onBack = { nav.popBackStack() }, onAuthKeys = {}, onSignOut = onSignOut)
+                AccountRoute(
+                    onBack = { nav.popBackStack() },
+                    onAuthKeys = { nav.navigate(AuthKeysDestination) },
+                    onSignOut = onSignOut,
+                )
+            }
+            composable<AuthKeysDestination> {
+                AuthKeysRoute(onBack = { nav.popBackStack() })
             }
             composable<ScrobblingDestination> {
                 ScrobblingRoute(

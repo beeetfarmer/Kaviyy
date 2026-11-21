@@ -38,4 +38,37 @@ class AccountRepositoryTest {
     fun passwordsNeverReachToString() {
         assertFalse("secret" in ResetPasswordDto("neo", "secret", "secret").toString())
     }
+
+    @Test
+    fun authKeysKeepOnlyAHintAndShowNewSecretsOnce() =
+        runTest {
+            api.keys =
+                listOf(
+                    com.nl.kaviyy.core.network.AuthKeyDto(
+                        1,
+                        "abcdefgh1234",
+                        "Phone",
+                        "2026-01-02T03:04:05Z",
+                        provider = 0,
+                    ),
+                    com.nl.kaviyy.core.network
+                        .AuthKeyDto(2, "zzzzOPDS", "OPDS", provider = 1),
+                )
+            val keys = (repo.authKeys(server) as AppResult.Success).value
+            assertEquals(listOf("1234", "OPDS"), keys.map { it.hint })
+            assertEquals(listOf(false, true), keys.map { it.system })
+            assertEquals(
+                java.time.Instant
+                    .parse("2026-01-02T03:04:05Z")
+                    .toEpochMilli(),
+                keys[0].createdAt,
+            )
+            val created = repo.createAuthKey(server, "Tablet", java.time.Instant.parse("2027-01-01T00:00:00Z"))
+            val new = (created as AppResult.Success).value
+            assertEquals(32, new.secret.length)
+            assertFalse(new.secret in new.toString())
+            repo.rotateAuthKey(server, keys[0])
+            repo.deleteAuthKey(server, 1)
+            assertEquals(listOf("create Tablet 32 2027-01-01T00:00:00Z", "rotate 1", "delete 1"), api.keyCalls)
+        }
 }

@@ -726,3 +726,25 @@ data class EmailChangeDto(
     val emailSent: Boolean = false,
     val invalidEmail: Boolean = false,
 )
+
+/** Kavita `AuthKeyDto`; provider 0 = User, 1 = System (managed by the server). */
+@Serializable
+data class AuthKeyDto(
+    val id: Int,
+    val key: String? = null,
+    val name: String? = null,
+    val createdAtUtc: String? = null,
+    val expiresAtUtc: String? = null,
+    val lastAccessedAtUtc: String? = null,
+    val provider: Int = 0,
+) {
+    override fun toString() = "AuthKeyDto(id=$id, name=$name, <redacted>)"
+}
+
+/** Kavita `RotateAuthKeyRequestDto`: keyLength 8–32; expiresUtc ISO instant or null (never). */
+@Serializable
+data class AuthKeyRequestDto(
+    val keyLength: Int,
+    val name: String,
+    val expiresUtc: String? = null,
+)

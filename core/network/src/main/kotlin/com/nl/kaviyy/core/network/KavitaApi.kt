@@ -102,6 +102,27 @@ interface KavitaApi {
         @Body body: UpdateEmailDto,
     ): EmailChangeDto
 
+    /** The user's Auth Keys (the response includes each full key: keep only a hint). */
+    @GET("api/Account/auth-keys")
+    suspend fun authKeys(): List<AuthKeyDto>
+
+    @POST("api/Account/create-auth-key")
+    suspend fun createAuthKey(
+        @Body body: AuthKeyRequestDto,
+    ): AuthKeyDto
+
+    /** Replaces the key's secret; the old one stops working. */
+    @POST("api/Account/rotate-auth-key")
+    suspend fun rotateAuthKey(
+        @Query("authKeyId") id: Int,
+        @Body body: AuthKeyRequestDto,
+    ): AuthKeyDto
+
+    @DELETE("api/Account/auth-key")
+    suspend fun deleteAuthKey(
+        @Query("authKeyId") id: Int,
+    )
+
     /** Kavita+ is active on the server (scrobbling needs it). */
     @GET("api/License/valid-license")
     suspend fun validLicense(): Boolean

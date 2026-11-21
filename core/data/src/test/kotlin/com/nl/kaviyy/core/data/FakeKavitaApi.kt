@@ -2,6 +2,8 @@ package com.nl.kaviyy.core.data
 
 import com.nl.kaviyy.core.network.AccountDto
 import com.nl.kaviyy.core.network.AnnotationDto
+import com.nl.kaviyy.core.network.AuthKeyDto
+import com.nl.kaviyy.core.network.AuthKeyRequestDto
 import com.nl.kaviyy.core.network.BookmarkDto
 import com.nl.kaviyy.core.network.CblFinalizeDto
 import com.nl.kaviyy.core.network.CblImportSummaryDto
@@ -188,6 +190,25 @@ open class FakeKavitaApi : KavitaApi {
     }
 
     override suspend fun changeEmail(body: UpdateEmailDto) = emailResult.also { accountCalls += "email ${body.email}" }
+
+    var keys = listOf<AuthKeyDto>()
+    val keyCalls = mutableListOf<String>()
+
+    override suspend fun authKeys() = keys
+
+    override suspend fun createAuthKey(body: AuthKeyRequestDto) =
+        AuthKeyDto(5, "N".repeat(body.keyLength), body.name, expiresAtUtc = body.expiresUtc).also {
+            keyCalls += "create ${body.name} ${body.keyLength} ${body.expiresUtc}"
+        }
+
+    override suspend fun rotateAuthKey(
+        id: Int,
+        body: AuthKeyRequestDto,
+    ) = AuthKeyDto(id, "R".repeat(body.keyLength), body.name).also { keyCalls += "rotate $id" }
+
+    override suspend fun deleteAuthKey(id: Int) {
+        keyCalls += "delete $id"
+    }
 
     var licensed = true
     var aniList = ""

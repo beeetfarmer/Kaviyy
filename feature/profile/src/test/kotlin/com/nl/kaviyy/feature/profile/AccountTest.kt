@@ -73,6 +73,24 @@ class AccountTest {
                 calls += "email $email $password"
                 return AppResult.Success(emailResult)
             }
+
+            override suspend fun authKeys(server: Server) = error("unused")
+
+            override suspend fun createAuthKey(
+                server: Server,
+                name: String,
+                expiresAt: java.time.Instant?,
+            ) = error("unused")
+
+            override suspend fun rotateAuthKey(
+                server: Server,
+                key: com.nl.kaviyy.core.data.AuthKey,
+            ) = error("unused")
+
+            override suspend fun deleteAuthKey(
+                server: Server,
+                id: Int,
+            ) = error("unused")
         }
 
     private val profile =
