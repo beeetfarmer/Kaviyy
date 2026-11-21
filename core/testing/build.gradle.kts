@@ -7,4 +7,5 @@ dependencies {
     api(libs.kotlin.test)
     api(libs.kotlinx.coroutines.test)
     api(libs.turbine)
+    implementation(libs.androidx.datastore)
 }

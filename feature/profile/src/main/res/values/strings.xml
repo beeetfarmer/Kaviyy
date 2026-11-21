@@ -21,4 +21,18 @@
     <string name="you_sign_out">Sign Out</string>
     <string name="you_delete_local_data">Delete Local Data</string>
     <string name="you_delete_local_data_confirm">Tap again to delete all local data</string>
+    <string name="you_settings_theme">Theme</string>
+    <string name="theme_title">Theme</string>
+    <string name="theme_appearance">Appearance</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_accent">Accent</string>
+    <string name="theme_accent_green">Kavita Green</string>
+    <string name="theme_accent_ocean">Ocean</string>
+    <string name="theme_accent_ember">Ember</string>
+    <string name="theme_accent_plum">Plum</string>
+    <string name="theme_accent_slate">Slate</string>
+    <string name="theme_dynamic">Use wallpaper colors</string>
+    <string name="theme_language">Language</string>
 </resources>

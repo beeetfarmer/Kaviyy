@@ -178,16 +178,16 @@ enum class AccentPreset(
     ),
 }
 
-fun KavitaColors.withAccent(preset: AccentPreset): KavitaColors {
-    val a = if (isDark) preset.dark else preset.light
-    return copy(
+fun KavitaColors.withAccent(preset: AccentPreset): KavitaColors = withAccent(if (isDark) preset.dark else preset.light)
+
+fun KavitaColors.withAccent(a: AccentColors): KavitaColors =
+    copy(
         accent = a.accent,
         accentPressed = a.accentPressed,
         accentContainer = a.accentContainer,
         onAccentContainer = a.onAccentContainer,
         onAccent = a.onAccent,
     )
-}
 
 /** Settings tile colors (white glyph on top). Same in both themes. */
 object SettingsTileColors {

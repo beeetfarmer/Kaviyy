@@ -44,6 +44,7 @@ import com.nl.kaviyy.feature.lists.ReadingListRoute
 import com.nl.kaviyy.feature.lists.WantToReadActions
 import com.nl.kaviyy.feature.lists.WantToReadRoute
 import com.nl.kaviyy.feature.profile.AllStatsRoute
+import com.nl.kaviyy.feature.profile.ThemeRoute
 import com.nl.kaviyy.feature.profile.YouActions
 import com.nl.kaviyy.feature.profile.YouRoute
 import com.nl.kaviyy.feature.readerepub.EpubReaderRoute
@@ -106,6 +107,9 @@ private data object ReadingListsDestination
 private data object AllStatsDestination
 
 @Serializable
+private data object ThemeDestination
+
+@Serializable
 private data class ReadingListDestination(
     val readingListId: Int,
 )
@@ -162,6 +166,7 @@ internal fun MainScreen(
                         onOpenReadingList = { nav.navigate(ReadingListDestination(it)) },
                         onSeeAllReadingLists = { nav.navigate(ReadingListsDestination) },
                         onAllStats = { nav.navigate(AllStatsDestination) },
+                        onTheme = { nav.navigate(ThemeDestination) },
                     ),
                 ) { filterFor = it }
             }
@@ -199,6 +204,7 @@ internal fun MainScreen(
             composable<EpubDestination> { EpubReaderRoute(onClose = { nav.popBackStack() }) }
             composable<BrowseDestination> { BrowseRoute(onBack = { nav.popBackStack() }, onOpenSeries = openSeries) }
             composable<AllStatsDestination> { AllStatsRoute(onBack = { nav.popBackStack() }) }
+            composable<ThemeDestination> { ThemeRoute(onBack = { nav.popBackStack() }) }
             composable<ReadingListsDestination> {
                 AllReadingListsRoute(
                     onBack = { nav.popBackStack() },
@@ -271,6 +277,7 @@ private data class TabNav(
     val onOpenReadingList: (Int) -> Unit,
     val onSeeAllReadingLists: () -> Unit,
     val onAllStats: () -> Unit,
+    val onTheme: () -> Unit,
 )
 
 @Suppress("LongParameterList")
@@ -315,7 +322,12 @@ private fun TabContent(
 
         Tab.You -> {
             YouRoute(
-                YouActions(onAllStats = lists.onAllStats, onSignOut = onSignOut, onDeleteLocalData = onDeleteLocalData),
+                YouActions(
+                    onAllStats = lists.onAllStats,
+                    onTheme = lists.onTheme,
+                    onSignOut = onSignOut,
+                    onDeleteLocalData = onDeleteLocalData,
+                ),
             )
         }
 

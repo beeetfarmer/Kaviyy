@@ -12,6 +12,11 @@ android {
         buildConfig = true
     }
 
+    // Per-app language (Android 13+ system setting) lists the locales we ship strings for.
+    androidResources {
+        generateLocaleConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.nl.kaviyy"
         versionCode = 1

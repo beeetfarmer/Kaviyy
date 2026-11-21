@@ -31,15 +31,19 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nl.kaviyy.core.data.WeekStats
+import com.nl.kaviyy.core.datastore.ThemeMode
 import com.nl.kaviyy.core.designsystem.component.Avatar
 import com.nl.kaviyy.core.designsystem.component.Chevron
 import com.nl.kaviyy.core.designsystem.component.GroupedList
 import com.nl.kaviyy.core.designsystem.component.GroupedRow
 import com.nl.kaviyy.core.designsystem.component.LargeTitleHeader
+import com.nl.kaviyy.core.designsystem.component.SettingsRow
 import com.nl.kaviyy.core.designsystem.component.StatBars
+import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaShapes
 import com.nl.kaviyy.core.designsystem.theme.KavitaSpacing
+import com.nl.kaviyy.core.designsystem.theme.SettingsTileColors
 import java.time.format.TextStyle
 
 @Composable
@@ -69,6 +73,15 @@ fun YouScreen(
     LargeTitleHeader(stringResource(R.string.you_title), Modifier.padding(top = KavitaSpacing.topBelowStatusBar))
     ProfileCard(state, actions.onProfile)
     WeekCard(state.week, state.statsFailed, actions.onAllStats)
+    GroupedList {
+        SettingsRow(
+            KavitaIcons.Moon,
+            SettingsTileColors.theme,
+            stringResource(R.string.you_settings_theme),
+            actions.onTheme,
+            value = stringResource(themeLabel(state.theme)),
+        )
+    }
     AccountGroup(actions)
     Spacer(Modifier.height(KavitaSpacing.contentBottomPadding))
 }
@@ -209,3 +222,10 @@ private fun AccountGroup(actions: YouActions) {
         )
     }
 }
+
+internal fun themeLabel(mode: ThemeMode) =
+    when (mode) {
+        ThemeMode.System -> R.string.theme_system
+        ThemeMode.Light -> R.string.theme_light
+        ThemeMode.Dark -> R.string.theme_dark
+    }

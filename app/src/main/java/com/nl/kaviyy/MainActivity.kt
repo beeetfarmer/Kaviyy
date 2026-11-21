@@ -27,9 +27,12 @@ import androidx.fragment.app.FragmentActivity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nl.kaviyy.core.data.ServerImages
+import com.nl.kaviyy.core.datastore.ThemeMode
 import com.nl.kaviyy.core.designsystem.component.LocalCoverImageLoader
 import com.nl.kaviyy.core.designsystem.component.SecondaryButton
 import com.nl.kaviyy.core.designsystem.component.ServerPill
+import com.nl.kaviyy.core.designsystem.theme.AccentPreset
+import com.nl.kaviyy.core.designsystem.theme.Appearance
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
 import com.nl.kaviyy.core.model.server.Server
@@ -58,6 +61,7 @@ private fun KaviyyApp(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val servers by viewModel.servers.collectAsStateWithLifecycle()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
     var switcher by rememberSaveable { mutableStateOf(false) }
     // ponytail: "Add Server" reuses the activity-scoped ConnectViewModel; a NavHost entry gives it a fresh one (M4).
     var adding by rememberSaveable { mutableStateOf(false) }
@@ -68,7 +72,11 @@ private fun KaviyyApp(
         DevHome()
         return
     }
-    KavitaTheme {
+    KavitaTheme(
+        appearance = settings.theme.appearance(),
+        accent = AccentPreset.entries.firstOrNull { it.name == settings.accent } ?: AccentPreset.KavitaGreen,
+        dynamicAccent = settings.dynamicColor,
+    ) {
         when (val s = state) {
             AppState.Loading -> {
                 Box(Modifier.fillMaxSize().background(Kavita.colors.background))
@@ -117,3 +125,10 @@ private fun KaviyyApp(
         }
     }
 }
+
+private fun ThemeMode.appearance() =
+    when (this) {
+        ThemeMode.System -> Appearance.System
+        ThemeMode.Light -> Appearance.Light
+        ThemeMode.Dark -> Appearance.Dark
+    }

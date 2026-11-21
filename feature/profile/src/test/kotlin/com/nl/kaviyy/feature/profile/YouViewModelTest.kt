@@ -5,6 +5,8 @@ import com.nl.kaviyy.core.data.AllStats
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.ProfileRepository
 import com.nl.kaviyy.core.data.WeekStats
+import com.nl.kaviyy.core.datastore.AppSettings
+import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
@@ -12,6 +14,7 @@ import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.LoginMethod
+import com.nl.kaviyy.core.testing.InMemoryDataStore
 import com.nl.kaviyy.core.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -91,7 +94,7 @@ class YouViewModelTest {
     @Test
     fun loadsTheAccountThenThisWeekForThatUser() =
         runTest {
-            val vm = YouViewModel(session, profile, clock)
+            val vm = YouViewModel(session, profile, clock, AppSettingsStore(InMemoryDataStore(AppSettings())))
             runCurrent()
             val st = vm.state.value
             assertEquals("neo" to 3, st.account?.username to st.week?.chapters)
@@ -103,7 +106,7 @@ class YouViewModelTest {
     fun failedStatsAreFlagged() =
         runTest {
             weekResult = AppResult.Failure(AppError.Network)
-            val vm = YouViewModel(session, profile, clock)
+            val vm = YouViewModel(session, profile, clock, AppSettingsStore(InMemoryDataStore(AppSettings())))
             runCurrent()
             assertEquals(true to null, vm.state.value.statsFailed to vm.state.value.week)
         }

@@ -7,14 +7,19 @@ import com.nl.kaviyy.core.data.AllStats
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.ProfileRepository
 import com.nl.kaviyy.core.data.WeekStats
+import com.nl.kaviyy.core.datastore.AppSettingsStore
+import com.nl.kaviyy.core.datastore.ThemeMode
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.result.getOrNull
 import com.nl.kaviyy.core.model.server.Server
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Clock
@@ -26,6 +31,7 @@ import javax.inject.Inject
 data class YouActions(
     val onProfile: () -> Unit = {},
     val onAllStats: () -> Unit = {},
+    val onTheme: () -> Unit = {},
     val onSignOut: () -> Unit = {},
     val onDeleteLocalData: () -> Unit = {},
 )
@@ -36,6 +42,7 @@ data class YouUiState(
     val week: WeekStats? = null,
     /** Stats couldn't be loaded (offline, or an older server). */
     val statsFailed: Boolean = false,
+    val theme: ThemeMode = ThemeMode.System,
 )
 
 /** Screen 10: profile card and This Week from the server. */
@@ -46,9 +53,12 @@ class YouViewModel
         session: AuthSession,
         private val profile: ProfileRepository,
         private val clock: Clock,
+        settings: AppSettingsStore,
     ) : ViewModel() {
         private val mutable = MutableStateFlow(YouUiState())
-        val state: StateFlow<YouUiState> = mutable.asStateFlow()
+        val state: StateFlow<YouUiState> =
+            combine(mutable, settings.settings) { s, a -> s.copy(theme = a.theme) }
+                .stateIn(viewModelScope, SharingStarted.Eagerly, YouUiState())
 
         init {
             viewModelScope.launch {

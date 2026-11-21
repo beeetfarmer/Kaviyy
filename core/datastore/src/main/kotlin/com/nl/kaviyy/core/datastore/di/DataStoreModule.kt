@@ -10,6 +10,8 @@ import com.google.crypto.tink.KeyTemplates
 import com.google.crypto.tink.RegistryConfiguration
 import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
+import com.nl.kaviyy.core.datastore.AppSettings
+import com.nl.kaviyy.core.datastore.AppSettingsSerializer
 import com.nl.kaviyy.core.datastore.CredentialFile
 import com.nl.kaviyy.core.datastore.CredentialSerializer
 import com.nl.kaviyy.core.model.dispatch.Dispatcher
@@ -59,5 +61,18 @@ object DataStoreModule {
             corruptionHandler = ReplaceFileCorruptionHandler { CredentialFile() },
             scope = CoroutineScope(io + SupervisorJob()),
             produceFile = { context.dataStoreFile("credentials.pb") },
+        )
+
+    @Provides
+    @Singleton
+    fun appSettingsDataStore(
+        @ApplicationContext context: Context,
+        @Dispatcher(KaviyyDispatchers.IO) io: CoroutineDispatcher,
+    ): DataStore<AppSettings> =
+        DataStoreFactory.create(
+            serializer = AppSettingsSerializer,
+            corruptionHandler = ReplaceFileCorruptionHandler { AppSettings() },
+            scope = CoroutineScope(io + SupervisorJob()),
+            produceFile = { context.dataStoreFile("settings.pb") },
         )
 }

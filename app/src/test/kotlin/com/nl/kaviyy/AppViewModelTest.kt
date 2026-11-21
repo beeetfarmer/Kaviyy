@@ -2,12 +2,15 @@ package com.nl.kaviyy
 
 import app.cash.turbine.test
 import com.nl.kaviyy.core.data.AuthSession
+import com.nl.kaviyy.core.datastore.AppSettings
+import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.LoginMethod
+import com.nl.kaviyy.core.testing.InMemoryDataStore
 import com.nl.kaviyy.core.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -61,7 +64,7 @@ class AppViewModelTest {
     @Test
     fun switchAndRemoveGoThroughTheSession() =
         runTest {
-            val vm = AppViewModel(session)
+            val vm = AppViewModel(session, AppSettingsStore(InMemoryDataStore(AppSettings())))
             vm.switchTo(ServerId(2))
             vm.remove(ServerId(3))
             vm.deleteAllLocalData()
@@ -72,7 +75,7 @@ class AppViewModelTest {
     @Test
     fun followsSessionAndSignsOut() =
         runTest {
-            val vm = AppViewModel(session)
+            val vm = AppViewModel(session, AppSettingsStore(InMemoryDataStore(AppSettings())))
             val server = Server(ServerId(1), "k", (ServerUrl.parse("https://k.lan") as ServerUrlResult.Valid).url)
             vm.state.test {
                 assertEquals(AppState.SignedOut, awaitItem())

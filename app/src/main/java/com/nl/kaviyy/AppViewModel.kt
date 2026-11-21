@@ -3,6 +3,8 @@ package com.nl.kaviyy
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nl.kaviyy.core.data.AuthSession
+import com.nl.kaviyy.core.datastore.AppSettings
+import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.model.server.ServerId
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,7 +32,11 @@ class AppViewModel
     @Inject
     constructor(
         private val session: AuthSession,
+        settingsStore: AppSettingsStore,
     ) : ViewModel() {
+        val settings: StateFlow<AppSettings> =
+            settingsStore.settings.stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())
+
         val state: StateFlow<AppState> =
             session.activeServer
                 .map { server -> server?.let(AppState::SignedIn) ?: AppState.SignedOut }
