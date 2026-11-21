@@ -60,10 +60,11 @@ class SharedPrefsReaderDisplayRepository
                 .apply()
         }
 
-        private companion object {
+        internal companion object {
+            /** Deleted by Delete Local Data. */
             const val FILE = "reader_display"
-            const val KEEP_ON = "keep_screen_on"
-            const val BRIGHTNESS = "brightness"
-            const val BOOK_FONT = "book_font"
+            private const val KEEP_ON = "keep_screen_on"
+            private const val BRIGHTNESS = "brightness"
+            private const val BOOK_FONT = "book_font"
         }
     }

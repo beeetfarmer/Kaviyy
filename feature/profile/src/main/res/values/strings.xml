@@ -144,4 +144,17 @@
     <string name="keys_reveal_title">Your new key</string>
     <string name="keys_reveal_note">Copy it now: you won\'t see it again.</string>
     <string name="keys_copy">Copy Key</string>
+    <string name="you_settings_privacy">Privacy &amp; Security</string>
+    <string name="privacy_title">Privacy &amp; Security</string>
+    <string name="privacy_app_lock">App Lock</string>
+    <string name="privacy_app_lock_note">Ask for your screen lock (PIN, pattern, password or biometrics) when Kaviyy opens.</string>
+    <string name="privacy_no_screen_lock">Set a screen lock in Android settings to use App Lock.</string>
+    <string name="privacy_lock_after">Lock after leaving Kaviyy</string>
+    <string name="privacy_immediately">Immediately</string>
+    <string name="privacy_1_minute">1 minute</string>
+    <string name="privacy_5_minutes">5 minutes</string>
+    <string name="privacy_hide_recents">Hide in Recents</string>
+    <string name="privacy_hide_note">Shows a blank preview in the app switcher.</string>
+    <string name="privacy_hide_note_old">Shows a blank preview in the app switcher and blocks screenshots.</string>
+    <string name="privacy_delete_note">Signs out of every server and removes downloads, cache and settings stored on this device.</string>
 </resources>

@@ -53,6 +53,14 @@ class SessionRepositoryTest {
             .build()
     private val disk = MemoryDataStore()
     private val store = CredentialStore(disk)
+    private val settings =
+        com.nl.kaviyy.core.datastore.AppSettingsStore(
+            com.nl.kaviyy.core.testing
+                .InMemoryDataStore(
+                    com.nl.kaviyy.core.datastore
+                        .AppSettings(appLock = true),
+                ),
+        )
     private val jwt = Credentials.Jwt("aarav", "t", "r", "k")
     private var login: AppResult<LoginResult> = AppResult.Success(LoginResult(jwt, setOf("Download")))
     private val session =
@@ -60,6 +68,7 @@ class SessionRepositoryTest {
             db,
             store,
             { _, _ -> login },
+            settings,
             RuntimeEnvironment.getApplication(),
             Dispatchers.Unconfined,
         )
@@ -159,8 +168,30 @@ class SessionRepositoryTest {
         runTest {
             signIn()
             signIn(stay = false)
-            val cache = java.io.File(RuntimeEnvironment.getApplication().cacheDir, "images/1").apply { mkdirs() }
+            val app = RuntimeEnvironment.getApplication()
+            val cache = java.io.File(app.cacheDir, "images/1").apply { mkdirs() }
+            val book =
+                java.io
+                    .File(
+                        app.cacheDir,
+                        "books/1/2.epub",
+                    ).apply { parentFile?.mkdirs() }
+                    .apply { writeText("x") }
+            val download = java.io.File(app.filesDir, "downloads/1/2/3").apply { mkdirs() }
+            app
+                .getSharedPreferences(SharedPrefsReaderDisplayRepository.FILE, 0)
+                .edit()
+                .putBoolean("k", true)
+                .commit()
             session.deleteAllLocalData()
+            assertFalse(book.exists())
+            assertFalse(download.exists())
+            assertFalse(app.getSharedPreferences(SharedPrefsReaderDisplayRepository.FILE, 0).contains("k"))
+            assertEquals(
+                com.nl.kaviyy.core.datastore
+                    .AppSettings(),
+                settings.settings.first(),
+            )
             assertNull(session.activeServer.first())
             assertNull(session.knownServer(url))
             assertTrue(store.serverIds.first().isEmpty())

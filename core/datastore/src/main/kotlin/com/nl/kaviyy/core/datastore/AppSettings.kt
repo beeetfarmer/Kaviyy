@@ -28,6 +28,12 @@ data class AppSettings(
     @ProtoNumber(2) val accent: String = DEFAULT_ACCENT,
     /** Android 12+: take the accent from the wallpaper. */
     @ProtoNumber(3) val dynamicColor: Boolean = false,
+    /** Ask for the device PIN/biometric on launch and after [lockAfterMinutes] away. */
+    @ProtoNumber(4) val appLock: Boolean = false,
+    /** 0 = as soon as the app leaves the screen. */
+    @ProtoNumber(5) val lockAfterMinutes: Int = 1,
+    /** Blank the Recents thumbnail (and, before Android 13, block screenshots). */
+    @ProtoNumber(6) val hideInRecents: Boolean = false,
 ) {
     companion object {
         const val DEFAULT_ACCENT = "KavitaGreen"

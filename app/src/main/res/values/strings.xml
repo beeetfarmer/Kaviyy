@@ -13,4 +13,7 @@
     <string name="servers_add">Add Server</string>
     <string name="servers_remove">Remove “%1$s”</string>
     <string name="servers_remove_confirm">Tap again to sign out and remove this server’s data</string>
+    <string name="lock_prompt">Unlock Kaviyy</string>
+    <string name="lock_locked">Kaviyy is locked.</string>
+    <string name="lock_unlock">Unlock</string>
 </resources>

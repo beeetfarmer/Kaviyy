@@ -31,7 +31,7 @@ class YouScreenTest {
                         onAllStats = { calls += "stats" },
                         onServers = { calls += "servers" },
                         onAccount = { calls += "account" },
-                        onDeleteLocalData = { calls += "wipe" },
+                        onPrivacy = { calls += "privacy" },
                     ),
                 )
             }
@@ -43,9 +43,8 @@ class YouScreenTest {
         compose.onNodeWithText("All Stats").performClick()
         compose.onNodeWithText("Servers").performClick()
         compose.onNodeWithText("Account").performClick()
-        compose.onNodeWithText("Delete Local Data").performClick() // asks first
-        compose.onNodeWithText("Tap again to delete all local data").performClick()
-        assertEquals(listOf("stats", "servers", "account", "wipe"), calls)
+        compose.onNodeWithText("Privacy & Security").performClick()
+        assertEquals(listOf("stats", "servers", "account", "privacy"), calls)
     }
 
     @Test

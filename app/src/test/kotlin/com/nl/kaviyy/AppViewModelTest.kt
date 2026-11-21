@@ -64,7 +64,7 @@ class AppViewModelTest {
     @Test
     fun switchAndRemoveGoThroughTheSession() =
         runTest {
-            val vm = AppViewModel(session, AppSettingsStore(InMemoryDataStore(AppSettings())))
+            val vm = AppViewModel(session, AppSettingsStore(InMemoryDataStore(AppSettings())), clock)
             vm.switchTo(ServerId(2))
             vm.remove(ServerId(3))
             vm.deleteAllLocalData()
@@ -75,7 +75,7 @@ class AppViewModelTest {
     @Test
     fun followsSessionAndSignsOut() =
         runTest {
-            val vm = AppViewModel(session, AppSettingsStore(InMemoryDataStore(AppSettings())))
+            val vm = AppViewModel(session, AppSettingsStore(InMemoryDataStore(AppSettings())), clock)
             val server = Server(ServerId(1), "k", (ServerUrl.parse("https://k.lan") as ServerUrlResult.Valid).url)
             vm.state.test {
                 assertEquals(AppState.SignedOut, awaitItem())
@@ -84,5 +84,47 @@ class AppViewModelTest {
                 vm.signOut(server)
                 assertEquals(AppState.SignedOut, awaitItem())
             }
+        }
+
+    private var now = 0L
+    private val clock =
+        object : java.time.Clock() {
+            override fun getZone() = java.time.ZoneOffset.UTC
+
+            override fun withZone(zone: java.time.ZoneId?) = this
+
+            override fun instant(): java.time.Instant = java.time.Instant.ofEpochMilli(now)
+        }
+
+    @Test
+    fun appLockLocksOnColdStartAndAfterTheChosenTimeAway() =
+        kotlinx.coroutines.test.runTest {
+            val store = AppSettingsStore(InMemoryDataStore(AppSettings(appLock = true, lockAfterMinutes = 1)))
+            val vm = AppViewModel(session, store, clock)
+            runCurrent()
+            kotlin.test.assertEquals(true, vm.locked.value)
+            vm.onBackground() // the unlock prompt covering the app doesn't count
+            vm.unlocked()
+            vm.onForeground()
+            kotlin.test.assertEquals(false, vm.locked.value)
+            vm.onBackground()
+            now += 59_000
+            vm.onForeground()
+            kotlin.test.assertEquals(false, vm.locked.value)
+            vm.onBackground()
+            now += 60_000
+            vm.onForeground()
+            kotlin.test.assertEquals(true, vm.locked.value)
+        }
+
+    @Test
+    fun withoutAppLockNothingLocks() =
+        kotlinx.coroutines.test.runTest {
+            val vm = AppViewModel(session, AppSettingsStore(InMemoryDataStore(AppSettings())), clock)
+            runCurrent()
+            vm.onBackground()
+            now += 3_600_000
+            vm.onForeground()
+            kotlin.test.assertEquals(false, vm.locked.value)
         }
 }

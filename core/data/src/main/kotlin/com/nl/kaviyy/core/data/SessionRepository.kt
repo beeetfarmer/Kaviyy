@@ -5,6 +5,8 @@ import com.nl.kaviyy.core.database.KaviyyDatabase
 import com.nl.kaviyy.core.database.ServerDao
 import com.nl.kaviyy.core.database.ServerEntity
 import com.nl.kaviyy.core.database.toModel
+import com.nl.kaviyy.core.datastore.AppSettings
+import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.datastore.CredentialStore
 import com.nl.kaviyy.core.model.auth.Credentials
 import com.nl.kaviyy.core.model.dispatch.Dispatcher
@@ -76,6 +78,7 @@ class SessionRepository
         private val db: KaviyyDatabase,
         private val store: CredentialStore,
         private val accounts: AccountApi,
+        private val settings: AppSettingsStore,
         @param:ApplicationContext private val context: Context,
         @param:Dispatcher(KaviyyDispatchers.IO) private val io: CoroutineDispatcher,
     ) : AuthSession {
@@ -102,9 +105,14 @@ class SessionRepository
         override suspend fun deleteAllLocalData() {
             memoryOnly.value = emptyMap()
             store.clearAll()
+            settings.update { AppSettings() }
             withContext(io) {
                 db.clearAllTables()
+                // Everything this app writes outside Room and DataStore: covers, cached books, downloads, reader prefs.
                 File(context.cacheDir, "images").deleteRecursively()
+                File(context.cacheDir, "books").deleteRecursively()
+                File(context.filesDir, "downloads").deleteRecursively()
+                context.deleteSharedPreferences(SharedPrefsReaderDisplayRepository.FILE)
             }
         }
 

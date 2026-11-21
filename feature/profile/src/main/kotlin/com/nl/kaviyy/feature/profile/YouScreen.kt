@@ -16,9 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -233,20 +230,13 @@ private fun androidx.compose.foundation.layout.RowScope.Stat(
     Text(caption, style = Kavita.type.caption, color = Kavita.colors.labelSecondary)
 }
 
-/** [derived] Group 3 (Account / Privacy pages land with M14.4–5): sign out and delete local data (two taps). */
+/** [derived] Group 3: Account, Privacy & Security. */
 @Composable
-private fun AccountGroup(actions: YouActions) {
-    var confirmWipe by rememberSaveable { mutableStateOf(false) }
+private fun AccountGroup(actions: YouActions) =
     GroupedList {
         GroupedRow(stringResource(R.string.you_settings_account), onClick = actions.onAccount, divider = true)
-        GroupedRow(
-            stringResource(if (confirmWipe) R.string.you_delete_local_data_confirm else R.string.you_delete_local_data),
-            onClick = { if (confirmWipe) actions.onDeleteLocalData() else confirmWipe = true },
-            showChevron = false,
-            labelColor = Kavita.colors.destructive,
-        )
+        GroupedRow(stringResource(R.string.you_settings_privacy), onClick = actions.onPrivacy)
     }
-}
 
 internal fun themeLabel(mode: ThemeMode) =
     when (mode) {

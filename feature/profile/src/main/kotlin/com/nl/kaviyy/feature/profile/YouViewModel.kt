@@ -37,7 +37,7 @@ data class YouActions(
     val onDevices: () -> Unit = {},
     val onScrobbling: () -> Unit = {},
     val onAccount: () -> Unit = {},
-    val onDeleteLocalData: () -> Unit = {},
+    val onPrivacy: () -> Unit = {},
 )
 
 data class YouUiState(

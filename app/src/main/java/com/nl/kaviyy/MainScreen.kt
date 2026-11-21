@@ -47,6 +47,7 @@ import com.nl.kaviyy.feature.profile.AccountRoute
 import com.nl.kaviyy.feature.profile.AllStatsRoute
 import com.nl.kaviyy.feature.profile.AuthKeysRoute
 import com.nl.kaviyy.feature.profile.DevicesRoute
+import com.nl.kaviyy.feature.profile.PrivacyRoute
 import com.nl.kaviyy.feature.profile.ReaderPrefsRoute
 import com.nl.kaviyy.feature.profile.ScrobblingRoute
 import com.nl.kaviyy.feature.profile.ThemeRoute
@@ -130,6 +131,9 @@ private data object AccountDestination
 private data object AuthKeysDestination
 
 @Serializable
+private data object PrivacyDestination
+
+@Serializable
 private data class ReadingListDestination(
     val readingListId: Int,
 )
@@ -177,7 +181,6 @@ internal fun MainScreen(
                             it.ordinal
                     },
                     onServerPill,
-                    onDeleteLocalData,
                     TabNav(
                         onOpenWantToRead = { nav.navigate(WantToReadDestination) },
                         onOpenCollection = { nav.navigate(CollectionDestination(it)) },
@@ -190,6 +193,7 @@ internal fun MainScreen(
                         onDevices = { nav.navigate(DevicesDestination) },
                         onScrobbling = { nav.navigate(ScrobblingDestination) },
                         onAccount = { nav.navigate(AccountDestination) },
+                        onPrivacy = { nav.navigate(PrivacyDestination) },
                     ),
                 ) { filterFor = it }
             }
@@ -236,6 +240,9 @@ internal fun MainScreen(
                     onAuthKeys = { nav.navigate(AuthKeysDestination) },
                     onSignOut = onSignOut,
                 )
+            }
+            composable<PrivacyDestination> {
+                PrivacyRoute(onBack = { nav.popBackStack() }, onDeleteLocalData = onDeleteLocalData)
             }
             composable<AuthKeysDestination> {
                 AuthKeysRoute(onBack = { nav.popBackStack() })
@@ -323,6 +330,7 @@ private data class TabNav(
     val onDevices: () -> Unit,
     val onScrobbling: () -> Unit,
     val onAccount: () -> Unit,
+    val onPrivacy: () -> Unit,
 )
 
 @Suppress("LongParameterList")
@@ -333,7 +341,6 @@ private fun TabContent(
     onOpenSeries: (Int) -> Unit,
     onSelect: (Tab) -> Unit,
     onServerPill: () -> Unit,
-    onDeleteLocalData: () -> Unit,
     lists: TabNav,
     onOpenFilter: (Int) -> Unit,
 ) {
@@ -374,7 +381,7 @@ private fun TabContent(
                     onDevices = lists.onDevices,
                     onScrobbling = lists.onScrobbling,
                     onAccount = lists.onAccount,
-                    onDeleteLocalData = onDeleteLocalData,
+                    onPrivacy = lists.onPrivacy,
                 ),
             )
         }
