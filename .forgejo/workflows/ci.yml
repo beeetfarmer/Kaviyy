@@ -33,6 +33,14 @@ jobs:
           git init -q . && git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
           git -c "http.extraheader=Authorization: token $CHECKOUT_TOKEN" fetch -q --depth=1 origin "$GITHUB_SHA"
           git checkout -q FETCH_HEAD
+      - name: Download Gradle
+        # The wrapper (Java) only tries the first address GitHub's download host resolves to, and one of them
+        # doesn't connect from this network, so it times out; curl moves on to the next address. The wrapper
+        # still checks the file against distributionSha256Sum.
+        run: |
+          url=$(sed -n 's/^distributionUrl=//p' gradle/wrapper/gradle-wrapper.properties | sed 's/\\:/:/')
+          curl -sSfL --retry 3 -o /tmp/gradle.zip "$url"
+          sed -i 's|^distributionUrl=.*|distributionUrl=file\\:///tmp/gradle.zip|' gradle/wrapper/gradle-wrapper.properties
       - name: Lint, test and build
         # The same check suite as AGENTS.md, plus the screenshot comparison.
         run: ./gradlew --no-daemon assembleDebug testDebugUnitTest lintDebug detekt spotlessCheck verifyRoborazziDebug
