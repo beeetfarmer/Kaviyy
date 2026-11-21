@@ -19,6 +19,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nl.kaviyy.core.data.ReadTarget
+import com.nl.kaviyy.core.data.SendTarget
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.isAdmin
 import com.nl.kaviyy.core.data.minutesLeft
@@ -77,6 +78,7 @@ internal fun SeriesDetailSheet(
                     volume.pages > 0 && volume.pagesRead >= volume.pages,
                     ReadTarget.Volume(volume.seriesId, volume.id),
                     actions,
+                    SendTarget.Chapters(chapters.map { it.id }),
                 )
                 if (chapters.size > 1) {
                     SectionHeader(stringResource(R.string.series_chapters_header), Modifier.padding(top = 8.dp))
@@ -118,6 +120,11 @@ internal fun SeriesDetailSheet(
                             stringResource(R.string.series_mark_series_unread),
                             onClick = { actions.onMark(ReadTarget.Series(series.id), false) },
                             showChevron = false,
+                            divider = true,
+                        )
+                        GroupedRow(
+                            stringResource(R.string.series_send_series_to_device),
+                            onClick = { actions.onSendToDevice(SendTarget.Series(series.id)) },
                         )
                     }
                     if (server?.isAdmin == true) AdminSection(actions.admin)
@@ -142,6 +149,7 @@ internal fun SeriesDetailSheet(
                     chapter.pages > 0 && chapter.pagesRead >= chapter.pages,
                     ReadTarget.Chapter(chapter.seriesId, chapter.id),
                     actions,
+                    SendTarget.Chapters(listOf(chapter.id)),
                 )
             }
         }
@@ -223,12 +231,15 @@ private fun MarkRow(
     isRead: Boolean,
     target: ReadTarget,
     actions: SeriesActions,
+    send: SendTarget,
 ) = GroupedList {
     GroupedRow(
         stringResource(if (isRead) R.string.series_mark_unread else R.string.series_mark_read),
         onClick = { actions.onMark(target, !isRead) },
         showChevron = false,
+        divider = true,
     )
+    GroupedRow(stringResource(R.string.series_send_to_device), onClick = { actions.onSendToDevice(send) })
 }
 
 /** Text drafts owned by the ViewModel, edited inside sheets. */

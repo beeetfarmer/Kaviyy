@@ -46,6 +46,7 @@ import androidx.core.graphics.toColorInt
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nl.kaviyy.core.data.ReadTarget
+import com.nl.kaviyy.core.data.SendTarget
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.designsystem.component.CircleIconButton
 import com.nl.kaviyy.core.designsystem.component.CoverImage
@@ -75,6 +76,7 @@ data class SeriesActions(
     val onWantToRead: () -> Unit = {},
     val onCollections: () -> Unit = {},
     val onReadingLists: () -> Unit = {},
+    val onSendToDevice: (SendTarget) -> Unit = {},
     val onMark: (ReadTarget, read: Boolean) -> Unit = { _, _ -> },
     val onRate: (Float) -> Unit = {},
     val onSaveReview: () -> Unit = {},
@@ -102,6 +104,8 @@ fun SeriesRoute(
     if (collections) CollectionsSheet(viewModel.seriesId, onDismiss = { collections = false })
     var readingLists by rememberSaveable { mutableStateOf(false) }
     if (readingLists) ReadingListsSheet(viewModel.seriesId, onDismiss = { readingLists = false })
+    var sendTarget by remember { mutableStateOf<SendTarget?>(null) }
+    sendTarget?.let { SendToDeviceSheet(it, onDismiss = { sendTarget = null }) }
     SeriesScreen(
         state,
         SeriesActions(
@@ -114,6 +118,10 @@ fun SeriesRoute(
             onWantToRead = viewModel::toggleWantToRead,
             onCollections = { collections = true },
             onReadingLists = { readingLists = true },
+            onSendToDevice = {
+                viewModel.showSheet(null)
+                sendTarget = it
+            },
             onMark = viewModel::setRead,
             onRate = viewModel::setRating,
             onSaveReview = viewModel::saveReview,

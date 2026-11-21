@@ -147,4 +147,13 @@
     <string name="series_reading_lists_new">New reading list</string>
     <string name="series_reading_lists_name_hint">e.g. Civil War order</string>
     <string name="series_reading_lists_failed">Couldn\'t update reading lists. Check your connection and try again.</string>
+    <string name="series_send_to_device">Send to device</string>
+    <string name="series_send_series_to_device">Send series to device</string>
+    <string name="series_send_title">Send to device</string>
+    <string name="series_send_no_devices">No devices yet. Add one in You › Send to Device.</string>
+    <string name="series_send_offline">Devices are stored on your server. Connect to it to send.</string>
+    <string name="series_send_loading">Loading…</string>
+    <string name="series_sending">Sending…</string>
+    <string name="series_sent">Sent</string>
+    <string name="series_send_failed">The server couldn\'t send it. Check that e-mail is set up on the server and the device accepts this format.</string>
 </resources>
