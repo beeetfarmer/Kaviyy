@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="downloads_title">Downloads</string>
+    <string name="downloads_downloaded">Downloaded</string>
+    <string name="downloads_queue">Queue (%d)</string>
+    <string name="downloads_queue_empty">Nothing waiting to download.</string>
+    <plurals name="downloads_chapters">
+        <item quantity="one">%d chapter</item>
+        <item quantity="other">%d chapters</item>
+    </plurals>
+    <string name="downloads_unknown_series">Unknown series</string>
+    <string name="downloads_chapter">Ch. %s</string>
+    <string name="downloads_pages_of">%1$d of %2$d pages</string>
+    <string name="downloads_bytes_of">%1$s of %2$s</string>
+    <string name="downloads_waiting">Waiting</string>
+    <string name="downloads_paused">Paused</string>
+    <string name="downloads_failed">Failed</string>
+    <string name="downloads_empty_title">Nothing downloaded yet</string>
+    <string name="downloads_empty_body">Tap the download button on any series to read offline.</string>
+    <string name="downloads_browse">Browse Library</string>
+</resources>

@@ -1,6 +1,7 @@
 package com.nl.kaviyy.core.download
 
 import com.nl.kaviyy.core.database.ChapterEntity
+import com.nl.kaviyy.core.database.DownloadEntity
 import com.nl.kaviyy.core.database.OutdatedDownload
 import com.nl.kaviyy.core.database.ReadingListItemEntity
 import com.nl.kaviyy.core.model.server.Server
@@ -51,6 +52,41 @@ interface DownloadQueue {
     suspend fun update(
         server: Server,
         chapters: List<OutdatedDownload>,
+    )
+}
+
+/** One download as the Downloads tab shows it. */
+data class DownloadItem(
+    val row: DownloadEntity,
+    val seriesName: String?,
+    /** The cached chapter, for its title and read state; null if not cached. */
+    val chapter: ChapterEntity?,
+) {
+    val state: DownloadState get() = row.downloadState
+}
+
+/** The Downloads tab's view of downloads and its controls; [Downloads] implements it. */
+interface DownloadControls {
+    fun downloads(server: Server): Flow<List<DownloadItem>>
+
+    suspend fun pause(
+        serverId: Long,
+        chapterId: Int,
+    )
+
+    suspend fun resume(
+        serverId: Long,
+        chapterId: Int,
+    )
+
+    suspend fun retry(
+        serverId: Long,
+        chapterId: Int,
+    )
+
+    suspend fun cancel(
+        serverId: Long,
+        chapterId: Int,
     )
 }
 

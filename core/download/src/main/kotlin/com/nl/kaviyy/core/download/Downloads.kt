@@ -16,6 +16,7 @@ import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.model.server.Server
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -31,7 +32,8 @@ class Downloads
         private val downloader: ChapterDownloader,
         private val dao: DownloadDao,
         private val settings: AppSettingsStore,
-    ) : DownloadQueue {
+    ) : DownloadQueue,
+        DownloadControls {
         private val work get() = WorkManager.getInstance(context)
 
         override suspend fun enqueue(
@@ -57,6 +59,12 @@ class Downloads
             }
         }
 
+        override fun downloads(server: Server): Flow<List<DownloadItem>> =
+            combine(dao.observeWithSeries(server.id.value), dao.observeChapters(server.id.value)) { rows, chapters ->
+                val byId = chapters.associateBy { it.id }
+                rows.map { DownloadItem(it.download, it.seriesName, byId[it.download.chapterId]) }
+            }
+
         override fun outdated(
             server: Server,
             seriesId: Int,
@@ -73,7 +81,7 @@ class Downloads
             }
         }
 
-        suspend fun pause(
+        override suspend fun pause(
             serverId: Long,
             chapterId: Int,
         ) {
@@ -81,14 +89,14 @@ class Downloads
             work.cancelUniqueWork(name(serverId, chapterId))
         }
 
-        suspend fun resume(
+        override suspend fun resume(
             serverId: Long,
             chapterId: Int,
         ) {
             store.apply(serverId, chapterId, DownloadEvent.Resume)?.let { reschedule(serverId, chapterId) }
         }
 
-        suspend fun retry(
+        override suspend fun retry(
             serverId: Long,
             chapterId: Int,
         ) {
@@ -96,7 +104,7 @@ class Downloads
         }
 
         /** Stops it and deletes its row and files (finished or partial). */
-        suspend fun cancel(
+        override suspend fun cancel(
             serverId: Long,
             chapterId: Int,
         ) {
@@ -137,18 +145,6 @@ class Downloads
             work.enqueueUniqueWork(name(serverId, chapterId), ExistingWorkPolicy.KEEP, request)
         }
 
-        private fun DownloadRequest.toEntity(server: Server) =
-            DownloadEntity(
-                server.id.value,
-                chapterId,
-                seriesId,
-                volumeId,
-                DownloadState.QUEUED.name,
-                pageImages,
-                bytesTotal = bytes,
-                serverLastModified = lastModified,
-            )
-
         internal companion object {
             const val TAG = "chapter-download"
             private const val BACKOFF_SECONDS = 30L
@@ -160,3 +156,15 @@ class Downloads
             ) = "download-$serverId-$chapterId"
         }
     }
+
+private fun DownloadRequest.toEntity(server: Server) =
+    DownloadEntity(
+        server.id.value,
+        chapterId,
+        seriesId,
+        volumeId,
+        DownloadState.QUEUED.name,
+        pageImages,
+        bytesTotal = bytes,
+        serverLastModified = lastModified,
+    )

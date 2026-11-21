@@ -1,6 +1,7 @@
 package com.nl.kaviyy.core.database
 
 import androidx.room.Dao
+import androidx.room.Embedded
 import androidx.room.Query
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
@@ -11,8 +12,27 @@ data class OutdatedDownload(
     val lastModified: Long,
 )
 
+/** A download with its series' name (null until the series is cached). */
+data class DownloadWithSeries(
+    @Embedded val download: DownloadEntity,
+    val seriesName: String?,
+)
+
 @Dao
 interface DownloadDao {
+    @Query(
+        "SELECT d.*, s.name AS seriesName FROM downloads d LEFT JOIN series s ON s.serverId = d.serverId AND " +
+            "s.id = d.seriesId WHERE d.serverId = :serverId ORDER BY d.updatedAt",
+    )
+    fun observeWithSeries(serverId: Long): Flow<List<DownloadWithSeries>>
+
+    /** Cached chapters that have a download row (for titles and read state). */
+    @Query(
+        "SELECT c.* FROM chapters c JOIN downloads d ON d.serverId = c.serverId AND d.chapterId = c.id " +
+            "WHERE d.serverId = :serverId",
+    )
+    fun observeChapters(serverId: Long): Flow<List<ChapterEntity>>
+
     @Query("SELECT * FROM downloads WHERE serverId = :serverId ORDER BY updatedAt")
     fun observe(serverId: Long): Flow<List<DownloadEntity>>
 

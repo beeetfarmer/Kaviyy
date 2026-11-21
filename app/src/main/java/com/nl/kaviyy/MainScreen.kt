@@ -32,6 +32,7 @@ import com.nl.kaviyy.core.designsystem.component.TabItem
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaSpacing
+import com.nl.kaviyy.feature.downloads.DownloadsRoute
 import com.nl.kaviyy.feature.filter.FilterSheet
 import com.nl.kaviyy.feature.home.HomeActions
 import com.nl.kaviyy.feature.home.HomeRoute
@@ -178,7 +179,6 @@ internal fun MainScreen(
             composable<TabsDestination> {
                 TabContent(
                     Tab.entries[selected],
-                    tabs[selected].label,
                     openSeries,
                     onSelect = {
                         selected =
@@ -344,7 +344,6 @@ private data class TabNav(
 @Composable
 private fun TabContent(
     tab: Tab,
-    label: String,
     onOpenSeries: (Int) -> Unit,
     onSelect: (Tab) -> Unit,
     onServerPill: () -> Unit,
@@ -394,20 +393,8 @@ private fun TabContent(
             )
         }
 
-        else -> {
-            ComingSoon(label)
+        Tab.Downloads -> {
+            DownloadsRoute(onOpenSeries = onOpenSeries, onBrowse = { onSelect(Tab.Library) })
         }
-    }
-}
-
-/** Tabs whose milestone hasn't landed yet. */
-@Composable
-private fun ComingSoon(title: String) {
-    Column(
-        Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = KavitaSpacing.screenHorizontal),
-        verticalArrangement = Arrangement.spacedBy(KavitaSpacing.sectionGapProfile),
-    ) {
-        LargeTitleHeader(title, Modifier.padding(top = KavitaSpacing.topBelowStatusBar))
-        Text(stringResource(R.string.coming_soon), style = Kavita.type.callout, color = Kavita.colors.labelSecondary)
     }
 }

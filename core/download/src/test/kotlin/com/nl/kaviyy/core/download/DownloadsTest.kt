@@ -9,6 +9,7 @@ import com.nl.kaviyy.core.data.ServerApis
 import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.database.KaviyyDatabase
 import com.nl.kaviyy.core.database.OutdatedDownload
+import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.database.ServerEntity
 import com.nl.kaviyy.core.datastore.AppSettings
 import com.nl.kaviyy.core.datastore.AppSettingsStore
@@ -161,5 +162,20 @@ class DownloadsTest {
                 },
             )
             assertEquals(emptyList(), downloads.outdated(downloader, 2).first())
+        }
+
+    @Test
+    fun theDownloadsListCarriesSeriesNamesAndChapters() =
+        runTest {
+            downloads.enqueue(downloader, listOf(chapter(1), chapter(5)))
+            db.seriesDao().upsertSeries(
+                listOf(SeriesEntity(serverId, 2, 1, "Ember Road", "ember road", format = 1, pages = 1, pagesRead = 0)),
+            )
+            db.seriesDao().upsertChapters(
+                listOf(ChapterEntity(serverId, 1, 3, 2, range = "49", pages = 1, pagesRead = 0, format = 1)),
+            )
+            val items = downloads.downloads(downloader).first().associateBy { it.row.chapterId }
+            assertEquals("Ember Road" to "49", items[1]?.let { it.seriesName to it.chapter?.range })
+            assertNull(items[5]?.chapter) // not cached yet
         }
 }

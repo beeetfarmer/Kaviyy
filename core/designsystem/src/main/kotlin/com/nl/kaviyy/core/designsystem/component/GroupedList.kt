@@ -58,7 +58,7 @@ fun GroupedList(
 
 /** 0.5dp hairline at the bottom, inset from the leading content. */
 @Composable
-private fun Modifier.rowDivider(
+fun Modifier.rowDivider(
     show: Boolean,
     inset: Dp,
     color: Color = Kavita.colors.separator,
