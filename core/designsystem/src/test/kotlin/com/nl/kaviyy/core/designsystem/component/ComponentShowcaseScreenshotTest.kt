@@ -23,6 +23,25 @@ class ComponentShowcaseScreenshotTest {
     @Test
     fun dark() = capture(Appearance.Dark, "dark")
 
+    /** Narrow phone with a large system font: "Downloads" must stay inside its pill (it was clipped both sides). */
+    @Test
+    @Config(qualifiers = "w360dp-h200dp-xhdpi", fontScale = 1.3f)
+    fun tabBarNarrowLargeFont() =
+        captureRoboImage("src/test/screenshots/tab_bar_narrow_font130.png") {
+            KavitaTheme(Appearance.Light) {
+                FloatingTabBar(
+                    items =
+                        listOf("Home", "Library", "Lists", "Downloads", "You").map {
+                            TabItem(it, com.nl.kaviyy.core.designsystem.icon.KavitaIcons.Search)
+                        },
+                    selectedIndex = 3,
+                    onSelect = {},
+                    searchLabel = "Search",
+                    onSearch = {},
+                )
+            }
+        }
+
     private fun capture(
         appearance: Appearance,
         name: String,

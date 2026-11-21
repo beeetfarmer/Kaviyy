@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,22 +20,28 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.BasicText
-import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaShapes
 import com.nl.kaviyy.core.designsystem.theme.KavitaSpacing
+import com.nl.kaviyy.core.designsystem.theme.fixedScale
 
 private const val TAB_ANIM_MS = 220
 
@@ -51,37 +58,42 @@ fun FloatingTabBar(
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = Kavita.colors
     val glass = glass()
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(
-                    start = KavitaSpacing.tabBarSideInset,
-                    end = KavitaSpacing.tabBarSideInset,
-                    bottom = KavitaSpacing.tabBarBottomInset,
-                ),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        // Width left for the five cells: the bar minus side insets, the gap and Search, minus the bar's own padding.
+        val barWidth = maxWidth - KavitaSpacing.tabBarSideInset * 2 - 10.dp - KavitaSpacing.tabBarHeight - 8.dp
         Row(
             modifier =
                 Modifier
-                    .weight(
-                        1f,
-                    ).height(KavitaSpacing.tabBarHeight)
-                    .then(glass)
-                    .padding(4.dp)
-                    .selectableGroup(),
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(
+                        start = KavitaSpacing.tabBarSideInset,
+                        end = KavitaSpacing.tabBarSideInset,
+                        bottom = KavitaSpacing.tabBarBottomInset,
+                    ),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            items.forEachIndexed { index, item ->
-                TabCell(item, index == selectedIndex, { onSelect(index) }, Modifier.weight(1f).height(56.dp))
+            Row(
+                modifier =
+                    Modifier
+                        .weight(
+                            1f,
+                        ).height(KavitaSpacing.tabBarHeight)
+                        .then(glass)
+                        .padding(4.dp)
+                        .selectableGroup(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val labelSize = tabLabelSize(items, cellWidth = barWidth / items.size)
+                items.forEachIndexed { index, item ->
+                    val cell = Modifier.weight(1f).height(56.dp)
+                    TabCell(item, index == selectedIndex, labelSize, { onSelect(index) }, cell)
+                }
             }
+            SearchButton(searchLabel, onSearch, glass)
         }
-        SearchButton(searchLabel, onSearch, glass)
     }
 }
 
@@ -108,8 +120,10 @@ fun FloatingTabRail(
                 .padding(4.dp)
                 .selectableGroup(),
         ) {
+            val labelSize = tabLabelSize(items, cellWidth = KavitaSpacing.tabBarHeight - 8.dp)
             items.forEachIndexed { index, item ->
-                TabCell(item, index == selectedIndex, { onSelect(index) }, Modifier.fillMaxWidth().height(64.dp))
+                val cell = Modifier.fillMaxWidth().height(64.dp)
+                TabCell(item, index == selectedIndex, labelSize, { onSelect(index) }, cell)
             }
         }
     }
@@ -133,6 +147,7 @@ private fun glass(): Modifier {
 private fun TabCell(
     item: TabItem,
     selected: Boolean,
+    labelSize: TextUnit,
     onClick: () -> Unit,
     modifier: Modifier,
 ) {
@@ -154,16 +169,44 @@ private fun TabCell(
         verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
     ) {
         Icon(if (selected) item.selectedIcon else item.icon, null, Modifier.size(24.dp), tint = fg)
-        // Five tabs leave ~53–61dp per label: shrink (11 → 9sp) rather than truncate "Downloads".
         BasicText(
             item.label,
-            style = Kavita.type.tabLabel,
+            Modifier.padding(horizontal = TAB_LABEL_INSET),
+            style = Kavita.type.tabLabel.copy(fontSize = labelSize, textAlign = TextAlign.Center),
             color = { fg },
             maxLines = 1,
-            autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = 11.sp, stepSize = 0.5.sp),
         )
     }
 }
+
+private val TAB_LABEL_INSET = 5.dp
+
+/**
+ * One label size for every tab: the largest (up to the design's 11sp) at which the longest label fits its cell
+ * inside the pill's rounded ends. Per-cell auto-size made "Downloads" smaller than its neighbours, and a fixed size
+ * clipped it on narrow phones or with a large system font. The floor ignores font scale so it can't overflow.
+ */
+@Composable
+private fun tabLabelSize(
+    items: List<TabItem>,
+    cellWidth: Dp,
+): TextUnit {
+    val measurer = rememberTextMeasurer()
+    val style = Kavita.type.tabLabel
+    val density = LocalDensity.current
+    val floor = 7.sp.fixedScale()
+    return remember(items, cellWidth, density, style) {
+        val available = with(density) { (cellWidth - TAB_LABEL_INSET * 2).toPx() }
+        val widest = items.maxOf { measurer.measure(it.label, style, maxLines = 1, softWrap = false).size.width }
+        if (widest <= available) {
+            style.fontSize
+        } else {
+            (style.fontSize.value * available / widest * SAFETY).coerceAtLeast(floor.value).sp
+        }
+    }
+}
+
+private const val SAFETY = 0.97f // glyph widths don't scale exactly linearly with size
 
 @Composable
 private fun SearchButton(

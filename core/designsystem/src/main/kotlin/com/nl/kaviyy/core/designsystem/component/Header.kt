@@ -57,7 +57,8 @@ fun LargeTitleHeader(
                 title,
                 style = Kavita.type.largeTitle,
                 color = Kavita.colors.label,
-                maxLines = 1,
+                // Titles are often user content (series, list names): wrap rather than cut after a few letters.
+                maxLines = TITLE_MAX_LINES,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.semantics { heading() },
             )
@@ -70,6 +71,8 @@ fun LargeTitleHeader(
         )
     }
 }
+
+private const val TITLE_MAX_LINES = 3
 
 /** 36 high pill: status dot + server name + chevron. Opens the server switcher. */
 @Composable
