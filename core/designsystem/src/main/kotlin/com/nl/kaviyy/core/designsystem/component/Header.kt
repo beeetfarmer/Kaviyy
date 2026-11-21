@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaShapes
+import com.nl.kaviyy.core.designsystem.theme.fixedScale
 
 /**
  * Optional uppercase overline (e.g. the date) above a 34sp title, actions bottom-aligned on the right.
@@ -128,14 +129,8 @@ fun Avatar(
             style =
                 Kavita.type.footnote.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize =
-                        if (size >
-                            36.dp
-                        ) {
-                            20.sp
-                        } else {
-                            13.sp
-                        },
+                    // Initials sit in a fixed circle; the name is always shown beside it.
+                    fontSize = (if (size > 36.dp) 20.sp else 13.sp).fixedScale(),
                 ),
             color = colors.onAccent,
         )

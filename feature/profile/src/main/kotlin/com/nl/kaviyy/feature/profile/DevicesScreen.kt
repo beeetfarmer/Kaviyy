@@ -165,7 +165,7 @@ private fun DeviceSheet(
                     ),
                     onClick = actions.onDelete.takeIf { !state.busy },
                     showChevron = false,
-                    labelColor = Kavita.colors.destructive,
+                    labelColor = Kavita.colors.destructiveText,
                 )
             }
         }

@@ -2,9 +2,13 @@ package com.nl.kaviyy.feature.readerimage
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -33,6 +37,30 @@ class ImageReaderScreenTest {
     ) {
         compose.setContent(content)
         compose.onRoot().captureRoboImage("src/test/screenshots/$name.png")
+    }
+
+    @Test
+    fun everyControlHasASpokenLabel0() {
+        compose.setContent { ReaderPreview(previewReader.copy(chromeVisible = true)) }
+        // TalkBack: nothing tappable may be announced without a name.
+        compose
+            .onAllNodes(
+                hasClickAction() and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription),
+            ).assertCountEquals(0)
+    }
+
+    @Test
+    fun everyControlHasASpokenLabel1() {
+        compose.setContent { ReaderPreview(previewReader.copy(settingsOpen = true)) }
+        // TalkBack: nothing tappable may be announced without a name.
+        compose
+            .onAllNodes(
+                hasClickAction() and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription),
+            ).assertCountEquals(0)
     }
 
     @Test

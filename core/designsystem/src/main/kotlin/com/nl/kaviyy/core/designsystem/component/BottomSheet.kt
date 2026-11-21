@@ -19,11 +19,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.nl.kaviyy.core.designsystem.R
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaShapes
 
@@ -98,8 +101,10 @@ fun KavitaBottomSheet(
         shape = KavitaShapes.sheet,
         containerColor = Kavita.colors.background,
         dragHandle = {
+            val handle = stringResource(R.string.sheet_drag_handle)
             Box(
                 Modifier
+                    .semantics { contentDescription = handle }
                     .padding(top = 8.dp)
                     .size(40.dp, 5.dp)
                     .clip(KavitaShapes.pill)

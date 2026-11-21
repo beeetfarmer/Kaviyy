@@ -101,7 +101,7 @@ fun ColumnScope.FilterContent(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         state.error?.let {
-            Text(stringResource(it.label()), style = Kavita.type.footnote, color = Kavita.colors.destructive)
+            Text(stringResource(it.label()), style = Kavita.type.footnote, color = Kavita.colors.destructiveText)
         }
         when (state.page) {
             FilterPage.Main -> {
@@ -293,7 +293,7 @@ private fun RulePage(
         Text(
             stringResource(it.label()),
             style = Kavita.type.footnote,
-            color = Kavita.colors.destructive,
+            color = Kavita.colors.destructiveText,
             modifier = Modifier.padding(start = 16.dp),
         )
     }

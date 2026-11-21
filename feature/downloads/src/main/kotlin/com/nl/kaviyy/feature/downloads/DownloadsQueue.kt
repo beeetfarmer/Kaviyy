@@ -126,7 +126,7 @@ private fun QueueRow(
                 },
             ),
             style = Kavita.type.footnote,
-            color = if (failed) Kavita.colors.destructive else Kavita.colors.labelSecondary,
+            color = if (failed) Kavita.colors.destructiveText else Kavita.colors.labelSecondary,
         )
     }
     RowControls(item, actions)

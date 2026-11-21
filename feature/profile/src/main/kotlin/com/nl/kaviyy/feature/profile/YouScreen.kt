@@ -179,7 +179,7 @@ private fun ProfileCard(
                 listOfNotNull(role, state.server?.url?.host).joinToString(" · "),
                 style = Kavita.type.footnote,
                 color = Kavita.colors.labelSecondary,
-                maxLines = 1,
+                maxLines = 2,
             )
         }
         Chevron()

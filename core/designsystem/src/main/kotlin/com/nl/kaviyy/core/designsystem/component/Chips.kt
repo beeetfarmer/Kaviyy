@@ -5,9 +5,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -18,7 +20,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
@@ -39,7 +44,7 @@ fun FilterChip(
     Row(
         modifier =
             modifier
-                .height(34.dp)
+                .heightIn(min = 34.dp)
                 .clip(KavitaShapes.pill)
                 .background(if (selected) colors.accent else colors.surface)
                 .then(if (selected) Modifier else Modifier.hairline())
@@ -79,7 +84,7 @@ fun StatusChip(
     Row(
         modifier =
             modifier
-                .height(26.dp)
+                .heightIn(min = 26.dp)
                 .clip(KavitaShapes.pill)
                 .background(bg)
                 .padding(horizontal = 10.dp),
@@ -111,16 +116,19 @@ fun SyncPill(
         )
         return
     }
-    Row(
+    // One wrapping text, so large font sizes break onto lines instead of squeezing the action.
+    Text(
+        buildAnnotatedString {
+            append("$text · ")
+            withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(action) }
+        },
         modifier
             .minimumInteractiveComponentSize()
-            .clip(KavitaShapes.pill)
+            .clip(RoundedCornerShape(18.dp))
             .background(Kavita.colors.accentContainer)
             .clickable(role = Role.Button, onClickLabel = action, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("$text · ", style = Kavita.type.footnote, color = Kavita.colors.accent)
-        Text(action, style = Kavita.type.footnote.copy(fontWeight = FontWeight.SemiBold), color = Kavita.colors.accent)
-    }
+        style = Kavita.type.footnote,
+        color = Kavita.colors.accent,
+    )
 }

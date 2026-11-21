@@ -75,7 +75,7 @@ internal fun ReviewsContent(
         Text(
             stringResource(R.string.series_review_failed),
             style = Kavita.type.footnote,
-            color = Kavita.colors.destructive,
+            color = Kavita.colors.destructiveText,
         )
     }
     SecondaryButton(stringResource(R.string.series_review_save), actions.onSaveReview, Modifier.fillMaxWidth())

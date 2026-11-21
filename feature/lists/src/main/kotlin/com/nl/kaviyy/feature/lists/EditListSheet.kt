@@ -53,7 +53,7 @@ internal fun EditListSheet(
                 if (form.confirmDelete) stringResource(R.string.lists_delete_confirm) else form.deleteLabel,
                 onClick = actions.onDelete.takeIf { !form.busy },
                 showChevron = false,
-                labelColor = Kavita.colors.destructive,
+                labelColor = Kavita.colors.destructiveText,
             )
         }
     }

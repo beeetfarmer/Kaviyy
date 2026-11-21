@@ -304,7 +304,7 @@ private fun Body(
             Text(
                 stringResource(noticeText(state.notice)),
                 style = Kavita.type.footnote,
-                color = if (state.notice.isProblem) Kavita.colors.destructive else Kavita.colors.labelSecondary,
+                color = if (state.notice.isProblem) Kavita.colors.destructiveText else Kavita.colors.labelSecondary,
             )
         } else if (state.syncPending) {
             Text(

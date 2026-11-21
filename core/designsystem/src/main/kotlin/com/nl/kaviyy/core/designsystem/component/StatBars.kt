@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nl.kaviyy.core.designsystem.theme.Kavita
+import com.nl.kaviyy.core.designsystem.theme.fixedScale
 
 private val MaxBarHeight = 70.dp
 
@@ -69,7 +70,14 @@ fun StatBars(
                 )
                 Text(
                     labels.getOrElse(i) { "" },
-                    style = Kavita.type.tabLabel.copy(fontWeight = FontWeight.SemiBold),
+                    // Day letters under fixed-height bars; the figures are in the chart's content description.
+                    style =
+                        Kavita.type.tabLabel.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize =
+                                Kavita.type.tabLabel.fontSize
+                                    .fixedScale(),
+                        ),
                     color = colors.labelSecondary,
                 )
             }

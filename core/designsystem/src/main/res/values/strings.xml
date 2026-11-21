@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- TalkBack name for the bottom-sheet grabber (it can expand or dismiss the sheet). -->
+    <string name="sheet_drag_handle">Drag handle</string>
+</resources>

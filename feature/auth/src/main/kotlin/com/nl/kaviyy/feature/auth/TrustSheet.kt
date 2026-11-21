@@ -63,7 +63,7 @@ internal fun TrustSheetContent(
         Text(
             stringResource(body),
             style = Kavita.type.footnote,
-            color = if (canConfirm) Kavita.colors.labelSecondary else Kavita.colors.destructive,
+            color = if (canConfirm) Kavita.colors.labelSecondary else Kavita.colors.destructiveText,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         if (isCertificate) CertificateDetails(certificate)

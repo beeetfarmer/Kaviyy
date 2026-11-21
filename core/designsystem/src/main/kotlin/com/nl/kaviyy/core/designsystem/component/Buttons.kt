@@ -178,6 +178,6 @@ fun SecondaryButton(
     leadingIcon,
     enabled,
     Kavita.colors.surface,
-    if (destructive) Kavita.colors.destructive else Kavita.colors.accent,
+    if (destructive) Kavita.colors.destructiveText else Kavita.colors.accent,
     ring = true,
 )

@@ -2,6 +2,10 @@ package com.nl.kaviyy.feature.downloads
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -38,6 +42,30 @@ class DownloadsTest {
 
     @get:Rule
     val compose = createComposeRule()
+
+    @Test
+    fun everyControlHasASpokenLabel0() {
+        compose.setContent { DownloadsPreview(Appearance.Light) }
+        // TalkBack: nothing tappable may be announced without a name.
+        compose
+            .onAllNodes(
+                hasClickAction() and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription),
+            ).assertCountEquals(0)
+    }
+
+    @Test
+    fun everyControlHasASpokenLabel1() {
+        compose.setContent { DownloadsPreview(Appearance.Light, segment = 1) }
+        // TalkBack: nothing tappable may be announced without a name.
+        compose
+            .onAllNodes(
+                hasClickAction() and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription),
+            ).assertCountEquals(0)
+    }
 
     @Test
     fun finishedDownloadsAreGroupedBySeriesAndTheQueueIsOrdered() {
@@ -152,12 +180,11 @@ class DownloadsTest {
         var synced = 0
         var pending by androidx.compose.runtime.mutableIntStateOf(3)
         compose.setContent { KavitaTheme { SyncLine(pending) { synced++ } } }
-        compose.onNodeWithText("3 changes waiting to sync · ").assertExists()
-        compose.onNodeWithText("Sync now").performClick()
+        compose.onNodeWithText("3 changes waiting to sync · Sync now").performClick()
         assertEquals(1, synced)
         pending = 0
         compose.onNodeWithText("All progress synced").assertExists()
-        compose.onNodeWithText("Sync now").assertDoesNotExist()
+        compose.onNodeWithText("Sync now", substring = true).assertDoesNotExist()
     }
 
     @Test
@@ -165,6 +192,11 @@ class DownloadsTest {
 
     @Test
     fun screenshotDownloadedDark() = shot("downloads_dark") { DownloadsPreview(Appearance.Dark) }
+
+    @Test
+    @Config(qualifiers = "w412dp-h915dp-xhdpi", fontScale = 2f)
+    fun screenshotQueueFontScale200() =
+        shot("downloads_queue_font200") { DownloadsPreview(Appearance.Light, segment = 1) }
 
     @Test
     fun screenshotQueueLight() = shot("downloads_queue_light") { DownloadsPreview(Appearance.Light, segment = 1) }

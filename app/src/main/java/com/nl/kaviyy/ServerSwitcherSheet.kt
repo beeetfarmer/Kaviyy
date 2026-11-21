@@ -100,7 +100,7 @@ internal fun ServerSwitcherContent(
                     stringResource(R.string.servers_remove, name)
                 },
                 style = Kavita.type.body,
-                color = Kavita.colors.destructive,
+                color = Kavita.colors.destructiveText,
                 modifier =
                     Modifier
                         .fillMaxWidth()

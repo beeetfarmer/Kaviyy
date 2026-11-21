@@ -39,6 +39,7 @@ import coil3.compose.AsyncImage
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaShapes
+import com.nl.kaviyy.core.designsystem.theme.fixedScale
 
 /** Placeholder cover colors from the design canvas. */
 val CoverPalette =
@@ -86,14 +87,18 @@ fun CoverImage(
         if (overline != null) {
             Text(
                 overline.uppercase(),
-                style = Kavita.type.overline.copy(fontSize = (titleSize.value * 0.6f).sp, letterSpacing = 0.08.em),
+                style =
+                    Kavita.type.overline.copy(
+                        fontSize = (titleSize.value * 0.6f).sp.fixedScale(),
+                        letterSpacing = 0.08.em,
+                    ),
                 color = Color.White.copy(alpha = 0.85f),
                 modifier = Modifier.align(Alignment.TopStart).padding(start = sideInset - 1.dp, top = sideInset - 1.dp),
             )
         }
         Text(
             title,
-            style = Kavita.type.coverTitle.copy(fontSize = titleSize),
+            style = Kavita.type.coverTitle.copy(fontSize = titleSize.fixedScale()),
             color = Color.White,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,

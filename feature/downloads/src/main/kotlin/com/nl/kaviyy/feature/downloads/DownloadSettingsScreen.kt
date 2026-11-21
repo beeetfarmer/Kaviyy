@@ -211,7 +211,7 @@ private fun Storage(
                 confirm = !confirm
             },
             showChevron = false,
-            labelColor = Kavita.colors.destructive,
+            labelColor = Kavita.colors.destructiveText,
         )
     }
 }

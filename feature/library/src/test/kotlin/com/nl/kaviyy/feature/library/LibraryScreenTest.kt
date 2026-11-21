@@ -1,5 +1,9 @@
 package com.nl.kaviyy.feature.library
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -29,6 +33,30 @@ class LibraryScreenTest {
     val compose = createComposeRule()
 
     private val done = LoadState.NotLoading(endOfPaginationReached = true)
+
+    @Test
+    fun everyControlHasASpokenLabel0() {
+        compose.setContent { LibraryPreview(Appearance.Light) }
+        // TalkBack: nothing tappable may be announced without a name.
+        compose
+            .onAllNodes(
+                hasClickAction() and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription),
+            ).assertCountEquals(0)
+    }
+
+    @Test
+    fun everyControlHasASpokenLabel1() {
+        compose.setContent { LibraryPreview(Appearance.Light, grid = false) }
+        // TalkBack: nothing tappable may be announced without a name.
+        compose
+            .onAllNodes(
+                hasClickAction() and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription),
+            ).assertCountEquals(0)
+    }
 
     @Test
     fun showsLibrariesProgressAndActions() {

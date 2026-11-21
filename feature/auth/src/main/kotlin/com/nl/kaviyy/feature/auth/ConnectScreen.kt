@@ -175,7 +175,7 @@ fun ConnectScreen(
                         },
                     ),
                     style = Kavita.type.footnote,
-                    color = colors.destructive,
+                    color = colors.destructiveText,
                     modifier = Modifier.padding(horizontal = 16.dp).semantics { liveRegion = LiveRegionMode.Assertive },
                 )
             }
@@ -301,7 +301,7 @@ private fun ReachabilityText(
         Text(
             text,
             style = Kavita.type.footnote,
-            color = if (isError) colors.destructive else colors.labelSecondary,
+            color = if (isError) colors.destructiveText else colors.labelSecondary,
             modifier = Modifier.padding(horizontal = 16.dp).semantics { liveRegion = LiveRegionMode.Polite },
         )
     }

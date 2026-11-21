@@ -132,7 +132,7 @@ private fun SignInError(error: AppError) {
     Text(
         stringResource(if (error == AppError.Unauthorized) R.string.auth_error_wrong_key else error.message()),
         style = Kavita.type.footnote,
-        color = Kavita.colors.destructive,
+        color = Kavita.colors.destructiveText,
         modifier = Modifier.padding(horizontal = 16.dp).semantics { liveRegion = LiveRegionMode.Assertive },
     )
 }

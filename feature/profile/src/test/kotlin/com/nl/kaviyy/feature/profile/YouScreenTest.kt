@@ -1,5 +1,9 @@
 package com.nl.kaviyy.feature.profile
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -19,6 +23,18 @@ import kotlin.test.assertEquals
 class YouScreenTest {
     @get:Rule
     val compose = createComposeRule()
+
+    @Test
+    fun everyControlHasASpokenLabel0() {
+        compose.setContent { YouPreview() }
+        // TalkBack: nothing tappable may be announced without a name.
+        compose
+            .onAllNodes(
+                hasClickAction() and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription),
+            ).assertCountEquals(0)
+    }
 
     @Test
     fun showsProfileAndWeekAndRoutesActions() {
@@ -71,6 +87,10 @@ class YouScreenTest {
 
     @Test
     fun screenshotYouLight() = shot("you_light") { YouPreview() }
+
+    @Test
+    @Config(qualifiers = "w412dp-h915dp-xhdpi", fontScale = 2f)
+    fun screenshotYouFontScale200() = shot("you_font200") { YouPreview() }
 
     @Test
     fun screenshotYouDark() = shot("you_dark") { YouPreview(Appearance.Dark) }

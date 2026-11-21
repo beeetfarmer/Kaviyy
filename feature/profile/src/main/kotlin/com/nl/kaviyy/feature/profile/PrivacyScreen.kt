@@ -150,7 +150,7 @@ fun PrivacyScreen(
                 ),
                 onClick = { if (confirmWipe) onDeleteLocalData() else confirmWipe = true },
                 showChevron = false,
-                labelColor = Kavita.colors.destructive,
+                labelColor = Kavita.colors.destructiveText,
             )
         }
         Note(R.string.privacy_delete_note)

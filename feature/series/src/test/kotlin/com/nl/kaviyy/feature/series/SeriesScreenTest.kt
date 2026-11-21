@@ -3,6 +3,9 @@ package com.nl.kaviyy.feature.series
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -29,6 +32,30 @@ import kotlin.test.assertEquals
 class SeriesScreenTest {
     @get:Rule
     val compose = createComposeRule()
+
+    @Test
+    fun everyControlHasASpokenLabel0() {
+        compose.setContent { SeriesPreview(Appearance.Light) }
+        // TalkBack: nothing tappable may be announced without a name.
+        compose
+            .onAllNodes(
+                hasClickAction() and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription),
+            ).assertCountEquals(0)
+    }
+
+    @Test
+    fun everyControlHasASpokenLabel1() {
+        compose.setContent { SeriesPreview(Appearance.Light, previewSeries.copy(tab = SeriesTab.Chapters)) }
+        // TalkBack: nothing tappable may be announced without a name.
+        compose
+            .onAllNodes(
+                hasClickAction() and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription),
+            ).assertCountEquals(0)
+    }
 
     @Test
     fun showsCanvasContentAndContinuesAtTheServerPoint() {
@@ -260,6 +287,10 @@ class SeriesScreenTest {
 
     @Test
     fun screenshotDark() = shot("series_dark") { SeriesPreview(Appearance.Dark) }
+
+    @Test
+    @Config(qualifiers = "w412dp-h915dp-xhdpi", fontScale = 2f)
+    fun screenshotFontScale200() = shot("series_font200") { SeriesPreview(Appearance.Light) }
 
     @Test
     @Config(qualifiers = "w960dp-h600dp-mdpi")

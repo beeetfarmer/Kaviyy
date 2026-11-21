@@ -62,6 +62,10 @@ class ContrastTest {
             Pair("online/surface", c.online, c.surface, Use.Icon),
             Pair("rating/surface", c.rating, c.surface, Use.Icon),
             Pair("destructive/surface", c.destructive, c.surface, Use.Icon),
+            // Text uses added since M16: sync pill, problem notices, destructive buttons.
+            Pair("accent text/accentContainer (sync pill)", c.accent, c.accentContainer, Use.Text),
+            Pair("destructiveText/background (notices)", c.destructiveText, c.background, Use.Text),
+            Pair("destructiveText/surface (Delete All)", c.destructiveText, c.surface, Use.Text),
         )
     }
 

@@ -233,7 +233,7 @@ private fun KeySheet(
             ),
             onClick = actions.onDelete.takeIf { !state.busy },
             showChevron = false,
-            labelColor = Kavita.colors.destructive,
+            labelColor = Kavita.colors.destructiveText,
         )
     }
     if (state.changeFailed) Note(R.string.devices_change_failed)

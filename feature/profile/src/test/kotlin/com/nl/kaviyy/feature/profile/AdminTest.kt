@@ -1,5 +1,9 @@
 package com.nl.kaviyy.feature.profile
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -98,6 +102,18 @@ class AdminTest {
                 null
             }
         }
+
+    @Test
+    fun everyControlHasASpokenLabel0() {
+        compose.setContent { AdminPreview(Appearance.Light) }
+        // TalkBack: nothing tappable may be announced without a name.
+        compose
+            .onAllNodes(
+                hasClickAction() and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.Text) and
+                    SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription),
+            ).assertCountEquals(0)
+    }
 
     @Test
     fun loadsTheOverviewAndReportsScans() =

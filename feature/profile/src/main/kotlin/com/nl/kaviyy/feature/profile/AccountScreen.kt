@@ -103,7 +103,7 @@ fun AccountScreen(
                 stringResource(R.string.you_sign_out),
                 onClick = actions.onSignOut,
                 showChevron = false,
-                labelColor = Kavita.colors.destructive,
+                labelColor = Kavita.colors.destructiveText,
             )
         }
     }

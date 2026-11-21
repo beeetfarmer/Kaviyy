@@ -117,7 +117,7 @@ fun DownloadedSeriesScreen(
                             stringResource(deleteAllLabel(state.confirmDeleteAll)),
                             onClick = actions.onDeleteAll,
                             showChevron = false,
-                            labelColor = Kavita.colors.destructive,
+                            labelColor = Kavita.colors.destructiveText,
                         )
                     }
                 }
