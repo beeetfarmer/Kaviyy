@@ -1,7 +1,9 @@
 package com.nl.kaviyy.core.data
 
+import com.nl.kaviyy.core.database.DownloadDao
 import com.nl.kaviyy.core.database.RecentSearchDao
 import com.nl.kaviyy.core.database.RecentSearchEntity
+import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.result.map
 import com.nl.kaviyy.core.model.server.Server
@@ -54,6 +56,8 @@ data class SearchResults(
     val readingLists: List<SearchList> = emptyList(),
     val files: List<SearchFile> = emptyList(),
     val bookmarks: List<SearchBookmark> = emptyList(),
+    /** The server couldn't be reached: these are downloaded series only. */
+    val offline: Boolean = false,
 )
 
 /** Search (network only) and per-server recent queries (Room). */
@@ -97,14 +101,25 @@ class KavitaSearchRepository
     constructor(
         private val apis: ServerApis,
         private val recents: RecentSearchDao,
+        private val downloads: DownloadDao,
     ) : SearchRepository {
+        /** Server search; when the server can't be reached, downloaded series matching by name instead. */
         override suspend fun search(
             server: Server,
             query: String,
-        ): AppResult<SearchResults> =
-            apiCall {
-                apis.api(server).search(query.trim(), includeChapterAndFiles = true)
-            }.map { it.toDomain() }
+        ): AppResult<SearchResults> {
+            val q = query.trim()
+            val online = apiCall { apis.api(server).search(q, includeChapterAndFiles = true) }.map { it.toDomain() }
+            if (online !is AppResult.Failure || online.error != AppError.Network) return online
+            val like = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+            val hits = downloads.searchDownloaded(server.id.value, like)
+            return AppResult.Success(
+                SearchResults(
+                    series = hits.map { SearchSeries(it.id, it.name, it.libraryName, it.volumes) },
+                    offline = true,
+                ),
+            )
+        }
 
         override suspend fun seriesForChapter(
             server: Server,

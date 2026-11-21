@@ -25,8 +25,32 @@ data class DownloadWithSeries(
     val libraryType: Int?,
 )
 
+/** A downloaded series matching an offline search. */
+data class DownloadedSeriesHit(
+    val id: Int,
+    val name: String,
+    val libraryName: String?,
+    val volumes: Int,
+)
+
 @Dao
 interface DownloadDao {
+    /** Downloaded series whose name, localized or sort name contains [like] (`%text%`, `\` escapes). */
+    @Query(
+        "SELECT s.id, COALESCE(NULLIF(s.localizedName, ''), s.name) AS name, l.name AS libraryName, " +
+            "COUNT(DISTINCT c.volumeId) AS volumes FROM downloads d " +
+            "JOIN series s ON s.serverId = d.serverId AND s.id = d.seriesId " +
+            "LEFT JOIN libraries l ON l.serverId = s.serverId AND l.id = s.libraryId " +
+            "LEFT JOIN chapters c ON c.serverId = d.serverId AND c.id = d.chapterId " +
+            "WHERE d.serverId = :serverId AND d.state = 'COMPLETED' AND (s.name LIKE :like ESCAPE '\\' " +
+            "OR s.localizedName LIKE :like ESCAPE '\\' OR s.sortName LIKE :like ESCAPE '\\') " +
+            "GROUP BY s.id ORDER BY s.sortName COLLATE NOCASE",
+    )
+    suspend fun searchDownloaded(
+        serverId: Long,
+        like: String,
+    ): List<DownloadedSeriesHit>
+
     @Query(
         "SELECT d.*, s.name AS seriesName, l.type AS libraryType FROM downloads d " +
             "LEFT JOIN series s ON s.serverId = d.serverId AND s.id = d.seriesId " +

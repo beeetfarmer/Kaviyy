@@ -93,6 +93,31 @@ class SearchScreenTest {
     }
 
     @Test
+    fun offlineResultsSayTheyAreDownloads() {
+        compose.setContent {
+            SearchPreview(
+                Appearance.Light,
+                SearchUiState(
+                    results =
+                        Results.Loaded(
+                            "ember",
+                            com.nl.kaviyy.core.data.SearchResults(
+                                series =
+                                    listOf(
+                                        com.nl.kaviyy.core.data
+                                            .SearchSeries(7, "Ember Road", "Manga", 2),
+                                    ),
+                                offline = true,
+                            ),
+                        ),
+                ),
+            )
+        }
+        compose.onNodeWithText("Can't reach your server. Showing matching downloads.").assertExists()
+        compose.onNodeWithText("Ember Road").assertExists()
+    }
+
+    @Test
     fun screenshotLight() = shot("search_light") { SearchPreview(Appearance.Light) }
 
     @Test

@@ -45,4 +45,5 @@
     <string name="search_failed">Couldn\'t search. Check your connection.</string>
     <string name="search_no_results">No results for \"%1$s\".</string>
     <string name="search_open_failed">Couldn\'t open that result.</string>
+    <string name="search_offline">Can\'t reach your server. Showing matching downloads.</string>
 </resources>

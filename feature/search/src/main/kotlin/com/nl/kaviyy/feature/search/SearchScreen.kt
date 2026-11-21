@@ -117,6 +117,7 @@ fun SearchScreen(
 
                 is Results.Loaded -> {
                     val groups = groups(r.value, state.scope)
+                    if (r.value.offline) item("offline") { Hint(stringResource(R.string.search_offline)) }
                     if (groups.isEmpty()) {
                         item("empty") { Hint(stringResource(R.string.search_no_results, r.query)) }
                     }
