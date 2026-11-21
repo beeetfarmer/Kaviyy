@@ -166,4 +166,7 @@
         <item quantity="one">Update %d download</item>
         <item quantity="other">Update %d downloads</item>
     </plurals>
+    <string name="series_downloading">Downloading</string>
+    <string name="series_downloaded">Downloaded</string>
+    <string name="series_download_retry">Download failed, tap to retry</string>
 </resources>

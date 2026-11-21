@@ -53,7 +53,12 @@ class Downloads
                 }
 
                 else -> {
-                    val added = chapters.filter { store.enqueue(it.toEntity(server)) }
+                    // A failed chapter asked for again is retried rather than skipped as a duplicate.
+                    val added =
+                        chapters.filter {
+                            store.enqueue(it.toEntity(server)) ||
+                                store.apply(server.id.value, it.chapterId, DownloadEvent.Retry) != null
+                        }
                     added.forEach { schedule(server.id.value, it.chapterId, prefs.downloadWifiOnly) }
                     if (added.isEmpty()) EnqueueResult.NothingNew else EnqueueResult.Queued
                 }
@@ -65,6 +70,11 @@ class Downloads
                 val byId = chapters.associateBy { it.id }
                 rows.map { DownloadItem(it.download, it.seriesName, byId[it.download.chapterId], it.libraryType) }
             }
+
+        override fun seriesDownloads(
+            server: Server,
+            seriesId: Int,
+        ): Flow<List<DownloadEntity>> = dao.observeSeries(server.id.value, seriesId)
 
         override fun outdated(
             server: Server,

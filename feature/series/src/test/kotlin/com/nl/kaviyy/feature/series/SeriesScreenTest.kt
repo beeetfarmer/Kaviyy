@@ -81,7 +81,7 @@ class SeriesScreenTest {
                 )
             }
         }
-        compose.onNodeWithText("The Ash Ledger · 32 pages").assertExists()
+        compose.onNodeWithText("The Ash Ledger · 32 pages · Downloading").assertExists()
         compose.onNodeWithText("14 left").assertExists()
         // The sheet's Read button (row states also say "Read").
         compose.onNode(hasText("Read") and hasClickAction() and !hasText("Crossing", substring = true)).performClick()
@@ -246,6 +246,17 @@ class SeriesScreenTest {
 
     @Test
     fun screenshotLight() = shot("series_light") { SeriesPreview(Appearance.Light) }
+
+    @Test
+    fun screenshotChaptersWithDownloads() =
+        shot("series_chapters_light") { SeriesPreview(Appearance.Light, previewSeries.copy(tab = SeriesTab.Chapters)) }
+
+    @Test
+    fun downloadButtonAndChapterRowsShowDownloadState() {
+        compose.setContent { SeriesPreview(Appearance.Light, previewSeries.copy(tab = SeriesTab.Chapters)) }
+        compose.onNodeWithContentDescription("Downloading").assertExists()
+        compose.onNodeWithText("Downloaded", substring = true).assertExists()
+    }
 
     @Test
     fun screenshotDark() = shot("series_dark") { SeriesPreview(Appearance.Dark) }

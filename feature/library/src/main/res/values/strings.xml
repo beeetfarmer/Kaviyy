@@ -29,4 +29,5 @@
     <string name="library_done">Done</string>
     <string name="library_loading">Loading…</string>
     <string name="library_selected">Selected</string>
+    <string name="library_downloaded">Downloaded</string>
 </resources>

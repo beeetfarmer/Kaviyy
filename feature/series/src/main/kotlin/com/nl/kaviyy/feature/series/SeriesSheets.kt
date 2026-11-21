@@ -129,6 +129,22 @@ internal fun SeriesDetailSheet(
                             divider = true,
                         )
                         GroupedRow(
+                            stringResource(R.string.series_collections_add),
+                            onClick = {
+                                close()
+                                actions.onCollections()
+                            },
+                            divider = true,
+                        )
+                        GroupedRow(
+                            stringResource(R.string.series_reading_lists_add),
+                            onClick = {
+                                close()
+                                actions.onReadingLists()
+                            },
+                            divider = true,
+                        )
+                        GroupedRow(
                             stringResource(R.string.series_download_series),
                             onClick = { actions.onDownload(detail.chapters.map { it.id }) },
                             showChevron = false,

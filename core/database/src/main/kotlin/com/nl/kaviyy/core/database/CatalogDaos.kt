@@ -76,6 +76,10 @@ interface SeriesDao {
         upsertQueryItems(series.mapIndexed { i, s -> QueryItemEntity(serverId, queryKey, offset + i, s.id) })
     }
 
+    /** Series with at least one finished download (cover badges). */
+    @Query("SELECT DISTINCT seriesId FROM downloads WHERE serverId = :serverId AND state = 'COMPLETED'")
+    fun observeDownloadedSeriesIds(serverId: Long): Flow<List<Int>>
+
     @Upsert
     suspend fun upsertSeries(rows: List<SeriesEntity>)
 

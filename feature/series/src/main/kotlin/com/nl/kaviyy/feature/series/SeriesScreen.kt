@@ -47,6 +47,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nl.kaviyy.core.data.ReadTarget
 import com.nl.kaviyy.core.data.SendTarget
+import com.nl.kaviyy.core.data.canDownload
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.designsystem.component.CircleIconButton
 import com.nl.kaviyy.core.designsystem.component.CoverImage
@@ -58,6 +59,7 @@ import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaShapes
 import com.nl.kaviyy.core.designsystem.theme.KavitaSpacing
+import com.nl.kaviyy.core.download.downloadState
 import com.nl.kaviyy.core.network.seriesCoverUrl
 
 private val HERO_HEIGHT = 236.dp
@@ -303,7 +305,19 @@ private fun Body(
         }
         Summary(plainSummary(meta?.summary))
         meta?.let { Credits(it, actions.onBrowse) }
-        state.detail?.let { SeriesTabs(it, state.server, state.tab, state.related, actions) }
+        state.detail?.let {
+            SeriesTabs(
+                it,
+                state.server,
+                state.tab,
+                state.related,
+                actions,
+                state.downloads.associate { d ->
+                    d.chapterId to
+                        d.downloadState
+                },
+            )
+        }
     }
 }
 
@@ -381,10 +395,17 @@ private fun ActionRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PrimaryButton(label, { onRead(next?.id) }, Modifier.weight(1f), leadingIcon = KavitaIcons.Play)
-        // Toggle: M8.3. Download: M15 (behind the Download role).
         WantToRead(state.detail?.metadata?.wantToRead == true, actions.onWantToRead)
-        RoundAction(KavitaIcons.Grid, stringResource(R.string.series_collections_add), actions.onCollections)
-        RoundAction(KavitaIcons.ListIcon, stringResource(R.string.series_reading_lists_add), actions.onReadingLists)
+        if (state.server?.canDownload == true) {
+            DownloadButton(state.download) {
+                actions.onDownload(
+                    state.detail
+                        ?.chapters
+                        .orEmpty()
+                        .map { it.id },
+                )
+            }
+        }
     }
 }
 

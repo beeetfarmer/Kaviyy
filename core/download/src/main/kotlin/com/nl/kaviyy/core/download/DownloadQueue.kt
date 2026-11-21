@@ -6,6 +6,7 @@ import com.nl.kaviyy.core.database.OutdatedDownload
 import com.nl.kaviyy.core.database.ReadingListItemEntity
 import com.nl.kaviyy.core.model.server.Server
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 /** One chapter to download, from whatever list the user picked (chapter, volume, series, reading list). */
 data class DownloadRequest(
@@ -37,6 +38,12 @@ enum class EnqueueResult {
 
 /** Queues downloads; ViewModels depend on this, [Downloads] implements it. */
 interface DownloadQueue {
+    /** This series' download rows (any state), for the series button and chapter rows. */
+    fun seriesDownloads(
+        server: Server,
+        seriesId: Int,
+    ): Flow<List<DownloadEntity>> = flowOf(emptyList())
+
     suspend fun enqueue(
         server: Server,
         chapters: List<DownloadRequest>,

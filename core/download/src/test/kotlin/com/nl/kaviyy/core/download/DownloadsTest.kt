@@ -222,4 +222,14 @@ class DownloadsTest {
             assertEquals(DownloadState.COMPLETED, store.get(serverId, 22)?.downloadState)
             assertEquals(DownloadState.QUEUED, store.get(serverId, 23)?.downloadState)
         }
+
+    @Test
+    fun askingAgainForAFailedChapterRetriesIt() =
+        runTest {
+            downloads.enqueue(downloader, listOf(chapter(31)))
+            store.apply(serverId, 31, DownloadEvent.Start)
+            store.apply(serverId, 31, DownloadEvent.Fail("network"))
+            assertEquals(EnqueueResult.Queued, downloads.enqueue(downloader, listOf(chapter(31))))
+            assertEquals(DownloadState.QUEUED, store.get(serverId, 31)?.downloadState)
+        }
 }

@@ -262,6 +262,21 @@ class CatalogRepositoryTest {
             d = repo.seriesDetail(server, 7).first()
             assertEquals(listOf(10), d.chapters.map { it.id })
         }
+
+    @Test
+    fun downloadedSeriesAreThoseWithAFinishedDownload() =
+        runTest {
+            val d = db.downloadDao()
+            d.upsert(
+                com.nl.kaviyy.core.database
+                    .DownloadEntity(serverId, 1, 7, 1, "COMPLETED", true),
+            )
+            d.upsert(
+                com.nl.kaviyy.core.database
+                    .DownloadEntity(serverId, 2, 8, 1, "QUEUED", true),
+            )
+            assertEquals(setOf(7), repo.downloadedSeries(server).first())
+        }
 }
 
 private val UNREAD_RULE = FilterRule(FilterField.ReadProgress, Comparison.LessThan, listOf(RuleValue("100")))

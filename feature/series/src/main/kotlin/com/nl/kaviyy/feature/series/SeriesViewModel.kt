@@ -15,6 +15,7 @@ import com.nl.kaviyy.core.data.ReviewRepository
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.SeriesReviews
 import com.nl.kaviyy.core.database.ChapterEntity
+import com.nl.kaviyy.core.database.DownloadEntity
 import com.nl.kaviyy.core.database.OutdatedDownload
 import com.nl.kaviyy.core.download.DownloadQueue
 import com.nl.kaviyy.core.download.EnqueueResult
@@ -57,7 +58,11 @@ data class SeriesUiState(
     val notice: SeriesNotice? = null,
     /** Downloaded chapters that changed on the server. */
     val outdated: List<OutdatedDownload> = emptyList(),
+    /** This series' download rows, any state. */
+    val downloads: List<DownloadEntity> = emptyList(),
 ) {
+    val download: SeriesDownload get() = seriesDownload(detail?.chapters.orEmpty(), downloads)
+
     /** The server's continue point, when it's among the cached chapters. */
     val continueChapter: ChapterEntity?
         get() = detail?.metadata?.continueChapterId?.let { id -> detail.chapters.firstOrNull { it.id == id } }
@@ -158,8 +163,8 @@ class SeriesViewModel
                             repository.libraries(s),
                             status,
                             relatedState,
-                            downloads.outdated(s, seriesId),
-                        ) { d, libs, st, rel, outdated ->
+                            combine(downloads.outdated(s, seriesId), downloads.seriesDownloads(s, seriesId), ::Pair),
+                        ) { d, libs, st, rel, (outdated, rows) ->
                             val library = libs.firstOrNull { it.id == d.series?.libraryId }
                             libraryType = library?.type ?: 0
                             SeriesUiState(
@@ -176,6 +181,7 @@ class SeriesViewModel
                                 st.reviewError,
                                 st.notice,
                                 outdated,
+                                rows,
                             )
                         }
                     }

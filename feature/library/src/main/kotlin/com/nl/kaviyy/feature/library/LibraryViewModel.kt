@@ -129,6 +129,12 @@ class LibraryViewModel
         private val saved: SavedStateHandle,
     ) : ViewModel() {
         private val server = session.activeServer.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+        /** Series with downloads, for the cover badge. */
+        val downloaded: StateFlow<Set<Int>> =
+            server
+                .flatMapLatest { s -> s?.let { repository.downloadedSeries(it) } ?: flowOf(emptySet()) }
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptySet())
         private val error = MutableStateFlow<AppError?>(null)
         private val local = MutableStateFlow(saved.restore())
 

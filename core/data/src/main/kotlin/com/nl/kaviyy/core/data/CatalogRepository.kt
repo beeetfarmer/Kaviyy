@@ -21,6 +21,8 @@ import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.apiCall
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 /** The [KavitaApi] for a server, already wired to its credentials. Seam for tests. */
@@ -48,6 +50,9 @@ internal const val SERIES_PAGE_SIZE = 50
  */
 interface CatalogRepository {
     fun libraries(server: Server): Flow<List<LibraryEntity>>
+
+    /** Ids of series with at least one finished download. */
+    fun downloadedSeries(server: Server): Flow<Set<Int>> = flowOf(emptySet())
 
     suspend fun refreshLibraries(server: Server): AppResult<Unit>
 
@@ -90,6 +95,9 @@ class OfflineFirstCatalogRepository
         private val apis: ServerApis,
     ) : CatalogRepository {
         override fun libraries(server: Server): Flow<List<LibraryEntity>> = libraryDao.observeLibraries(server.id.value)
+
+        override fun downloadedSeries(server: Server): Flow<Set<Int>> =
+            dao.observeDownloadedSeriesIds(server.id.value).map { it.toSet() }
 
         override suspend fun refreshLibraries(server: Server): AppResult<Unit> =
             apiCall { apis.api(server).libraries() }.map { list ->

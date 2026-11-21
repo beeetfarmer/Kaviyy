@@ -215,21 +215,3 @@ internal fun CollectionsSheetContent(
         )
     }
 }
-
-/** 50dp round action, like the Want to Read toggle [derived]. */
-@Composable
-internal fun RoundAction(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit,
-) = Box(
-    Modifier
-        .size(50.dp)
-        .clip(CircleShape)
-        .background(Kavita.colors.surface)
-        .border(0.5.dp, Kavita.colors.hairline, CircleShape)
-        .clickable(role = Role.Button, onClick = onClick),
-    contentAlignment = Alignment.Center,
-) {
-    Icon(icon, label, Modifier.size(20.dp), tint = Kavita.colors.accent)
-}

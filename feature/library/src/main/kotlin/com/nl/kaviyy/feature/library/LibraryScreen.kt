@@ -62,6 +62,7 @@ fun LibraryRoute(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val series = viewModel.series.collectAsLazyPagingItems()
+    val downloaded by viewModel.downloaded.collectAsStateWithLifecycle()
     val actions =
         LibraryActions(
             onSelect = viewModel::select,
@@ -75,7 +76,7 @@ fun LibraryRoute(
             onOpenFilter = { onOpenFilter(state.selectedId) },
             onOpenPinned = viewModel::openPinned,
         )
-    LibraryScreen(state, series, actions, modifier)
+    LibraryScreen(state, series, actions, modifier, downloaded)
     LibrarySheets(state, actions)
 }
 
@@ -99,6 +100,7 @@ fun LibraryScreen(
     series: LazyPagingItems<SeriesEntity>,
     actions: LibraryActions,
     modifier: Modifier = Modifier,
+    downloaded: Set<Int> = emptySet(),
 ) {
     val coverUrl: (Int) -> String? = { id -> state.server?.seriesCoverUrl(id) }
     LazyVerticalGrid(
@@ -134,7 +136,7 @@ fun LibraryScreen(
                     fullWidth("libraries") { Libraries(state, actions.onSelect) }
                 }
                 fullWidth("chips") { QuickChips(state.filter, actions, state.pinned) }
-                seriesItems(series, state.grid, coverUrl, actions.onOpenSeries)
+                seriesItems(series, state.grid, coverUrl, actions.onOpenSeries, downloaded)
             }
         }
     }
@@ -150,6 +152,7 @@ private fun LazyGridScope.seriesItems(
     grid: Boolean,
     coverUrl: (Int) -> String?,
     onOpen: (Int) -> Unit,
+    downloaded: Set<Int>,
 ) {
     val refresh = series.loadState.refresh
     if (series.itemCount == 0) {
@@ -170,7 +173,7 @@ private fun LazyGridScope.seriesItems(
     }
     items(series.itemCount, key = series.itemKey { it.id }) { index ->
         val s = series[index] ?: return@items
-        if (grid) GridCard(s, coverUrl(s.id), onOpen) else ListRow(s, coverUrl(s.id), onOpen)
+        if (grid) GridCard(s, coverUrl(s.id), onOpen, s.id in downloaded) else ListRow(s, coverUrl(s.id), onOpen)
     }
     if (series.loadState.append is LoadState.Error) {
         fullWidth("append-error") {
@@ -232,6 +235,7 @@ private fun GridCard(
     s: SeriesEntity,
     imageUrl: String?,
     onOpen: (Int) -> Unit,
+    downloaded: Boolean,
 ) {
     // TODO(api): the canvas badge counts unread chapters; SeriesDto has no such field (only pages/pagesRead),
     // and per-series volume calls would be N requests per page. Progress bar shown instead.
@@ -242,6 +246,7 @@ private fun GridCard(
         onClick = { onOpen(s.id) },
         size = CoverCardSize.Grid,
         progress = s.progressBar(),
+        downloadedDescription = if (downloaded) stringResource(R.string.library_downloaded) else null,
         imageUrl = imageUrl,
     )
 }

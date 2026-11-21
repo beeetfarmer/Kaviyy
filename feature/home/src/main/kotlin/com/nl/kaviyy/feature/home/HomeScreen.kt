@@ -76,6 +76,7 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
 ) {
     val coverUrl: (Int) -> String? = { id -> state.server?.seriesCoverUrl(id) }
+    val isDownloaded: (Int) -> Boolean = { id -> state.home?.downloadedIds?.contains(id) == true }
     LazyColumn(
         modifier = modifier.fillMaxSize().background(Kavita.colors.background),
         contentPadding =
@@ -102,7 +103,7 @@ fun HomeScreen(
             }
         }
         state.home?.rails.orEmpty().filter { it.items.isNotEmpty() }.forEach { rail ->
-            item(key = "rail-${rail.streamId}") { Rail(rail, coverUrl, actions, state::isDimmed) }
+            item(key = "rail-${rail.streamId}") { Rail(rail, coverUrl, actions, state::isDimmed, isDownloaded) }
         }
         if (state.showEmpty) {
             item(key = "empty") { EmptyState(failed = state.error != null, onRetry = onRetry) }
@@ -177,6 +178,7 @@ private fun Rail(
     coverUrl: (Int) -> String?,
     actions: HomeActions,
     dimmed: (Int) -> Boolean,
+    downloaded: (Int) -> Boolean = { false },
 ) {
     val title =
         when (rail.type) {
@@ -207,6 +209,15 @@ private fun Rail(
                     subtitleAccent = updated,
                     progress = item.progress.takeIf { rail.type == StreamType.ON_DECK },
                     unreadCount = item.newChapters.takeIf { updated },
+                    downloadedDescription =
+                        if (downloaded(
+                                item.seriesId,
+                            )
+                        ) {
+                            stringResource(R.string.home_downloaded)
+                        } else {
+                            null
+                        },
                     imageUrl = coverUrl(item.seriesId),
                     // ponytail: no cloud-off hint on tap yet; Series (M8) opens cached data offline.
                     modifier = Modifier.alpha(if (dimmed(item.seriesId)) DIMMED else 1f),

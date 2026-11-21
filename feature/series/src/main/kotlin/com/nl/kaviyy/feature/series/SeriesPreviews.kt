@@ -13,10 +13,12 @@ import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.SeriesMetadata
 import com.nl.kaviyy.core.data.SeriesReviews
 import com.nl.kaviyy.core.database.ChapterEntity
+import com.nl.kaviyy.core.database.DownloadEntity
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.database.VolumeEntity
 import com.nl.kaviyy.core.designsystem.theme.Appearance
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
+import com.nl.kaviyy.core.download.DownloadState
 import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
@@ -26,7 +28,13 @@ import kotlinx.coroutines.flow.flowOf
 /** The canvas example (Ember Road). */
 internal val previewSeries =
     SeriesUiState(
-        server = Server(ServerId(1), "Home", (ServerUrl.parse("https://kavita.example") as ServerUrlResult.Valid).url),
+        server =
+            Server(
+                ServerId(1),
+                "Home",
+                (ServerUrl.parse("https://kavita.example") as ServerUrlResult.Valid).url,
+                roles = setOf("Download"),
+            ),
         detail =
             SeriesDetail(
                 series =
@@ -117,6 +125,11 @@ internal val previewSeries =
             ),
         libraryName = "Manga",
         refreshing = false,
+        downloads =
+            listOf(
+                DownloadEntity(1, 48, 7, 5, DownloadState.COMPLETED.name, true, pagesDone = 34, pagesTotal = 34),
+                DownloadEntity(1, 49, 7, 5, DownloadState.RUNNING.name, true, pagesDone = 10, pagesTotal = 32),
+            ),
     )
 
 internal val previewReviews =
