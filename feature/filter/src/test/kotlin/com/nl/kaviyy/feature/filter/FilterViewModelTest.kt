@@ -8,6 +8,7 @@ import com.nl.kaviyy.core.data.Comparison
 import com.nl.kaviyy.core.data.FilterField
 import com.nl.kaviyy.core.data.FilterPlacement
 import com.nl.kaviyy.core.data.FilterRule
+import com.nl.kaviyy.core.data.FilterScope
 import com.nl.kaviyy.core.data.LibraryFilterStore
 import com.nl.kaviyy.core.data.LibraryQuery
 import com.nl.kaviyy.core.data.OptionSource
@@ -172,6 +173,22 @@ class FilterViewModelTest {
             assertEquals("Fantasy" to FilterPlacement(inLibrary = true), saves.last())
             assertEquals(true, vm.state.value.done)
             assertEquals(false, store.current(server.id).matchAll)
+        }
+
+    @Test
+    fun eachListKeepsItsOwnFilter() =
+        runTest {
+            store.update(server.id) { it.copy(matchAll = false) } // the Library's filter
+            val vm = FilterViewModel(session, store, repo, smart)
+            vm.open(null, FilterScope.WantToRead)
+            runCurrent()
+            assertEquals(true, vm.state.value.draft.matchAll) // Want to Read starts from its own (default) filter
+            vm.setSort(SeriesSort.RecentlyUpdated)
+            vm.apply()
+            runCurrent()
+            assertEquals(SeriesSort.RecentlyUpdated, store.current(server.id, FilterScope.WantToRead).sort)
+            assertEquals(false, store.current(server.id).matchAll)
+            assertEquals(SeriesFilter().sort, store.current(server.id).sort)
         }
 
     @Test

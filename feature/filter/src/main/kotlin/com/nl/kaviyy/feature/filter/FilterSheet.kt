@@ -33,6 +33,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nl.kaviyy.core.data.FieldKind
 import com.nl.kaviyy.core.data.FilterField
+import com.nl.kaviyy.core.data.FilterScope
 import com.nl.kaviyy.core.data.OptionSource
 import com.nl.kaviyy.core.data.RuleValue
 import com.nl.kaviyy.core.data.SeriesSort
@@ -47,14 +48,18 @@ import com.nl.kaviyy.core.designsystem.component.SheetHeader
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 
-/** Screen 09 as a sheet over Library. [currentLibrary] is the grid's library (the default scope). */
+/**
+ * Screen 09 as a sheet over a series list. [currentLibrary] is the grid's library (the default scope; null = all);
+ * [listScope] says which list's filter it edits.
+ */
 @Composable
 fun FilterSheet(
     currentLibrary: Int?,
     onDismiss: () -> Unit,
+    listScope: FilterScope = FilterScope.Library,
     viewModel: FilterViewModel = hiltViewModel(),
 ) {
-    LaunchedEffect(Unit) { viewModel.open(currentLibrary) }
+    LaunchedEffect(Unit) { viewModel.open(currentLibrary, listScope) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(state.done) { if (state.done) onDismiss() }
     val libraries by viewModel.libraries.collectAsStateWithLifecycle()

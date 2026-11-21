@@ -23,6 +23,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.nl.kaviyy.core.data.FilterScope
 import com.nl.kaviyy.core.designsystem.component.FloatingTabBar
 import com.nl.kaviyy.core.designsystem.component.LargeTitleHeader
 import com.nl.kaviyy.core.designsystem.component.PrimaryButton
@@ -36,6 +37,9 @@ import com.nl.kaviyy.feature.filter.FilterSheet
 import com.nl.kaviyy.feature.home.HomeActions
 import com.nl.kaviyy.feature.home.HomeRoute
 import com.nl.kaviyy.feature.library.LibraryRoute
+import com.nl.kaviyy.feature.lists.ListsRoute
+import com.nl.kaviyy.feature.lists.WantToReadActions
+import com.nl.kaviyy.feature.lists.WantToReadRoute
 import com.nl.kaviyy.feature.readerepub.EpubReaderRoute
 import com.nl.kaviyy.feature.readerimage.ImageReaderRoute
 import com.nl.kaviyy.feature.search.SearchDestination
@@ -82,7 +86,14 @@ private data class ReaderDestination(
     val chapterId: Int,
 )
 
+/** Want to Read list (screen 08's card), Library-style grid. */
+@Serializable
+private data object WantToReadDestination
+
 private const val NO_LIBRARY = -1
+
+/** [filterFor] value: the filter sheet is open for the Want to Read list. */
+private const val WANT_TO_READ_FILTER = -2
 
 /** Signed-in shell: tab content + FloatingTabBar (DESIGN.md §6; Downloads is the derived fifth tab). */
 @Composable
@@ -93,7 +104,7 @@ internal fun MainScreen(
     onDeleteLocalData: () -> Unit,
 ) {
     var selected by rememberSaveable { mutableIntStateOf(Tab.Home.ordinal) }
-    // Library id the filter sheet is open for; null = closed.
+    // Library id the filter sheet is open for (or WANT_TO_READ_FILTER); null = closed.
     var filterFor by rememberSaveable { mutableStateOf<Int?>(null) }
     val tabs =
         listOf(
@@ -112,7 +123,9 @@ internal fun MainScreen(
                 TabContent(Tab.entries[selected], server, tabs[selected].label, openSeries, onSelect = {
                     selected =
                         it.ordinal
-                }, onServerPill, onSignOut, onDeleteLocalData) { filterFor = it }
+                }, onServerPill, onSignOut, onDeleteLocalData, onOpenWantToRead = {
+                    nav.navigate(WantToReadDestination)
+                }) { filterFor = it }
             }
             composable<SeriesDestination> {
                 SeriesRoute(
@@ -147,8 +160,23 @@ internal fun MainScreen(
             }
             composable<EpubDestination> { EpubReaderRoute(onClose = { nav.popBackStack() }) }
             composable<BrowseDestination> { BrowseRoute(onBack = { nav.popBackStack() }, onOpenSeries = openSeries) }
+            composable<WantToReadDestination> {
+                WantToReadRoute(
+                    WantToReadActions(
+                        onBack = { nav.popBackStack() },
+                        onOpenSeries = openSeries,
+                        onOpenFilter = { filterFor = WANT_TO_READ_FILTER },
+                    ),
+                )
+            }
         }
-        filterFor?.let { id -> FilterSheet(id.takeIf { it != NO_LIBRARY }, onDismiss = { filterFor = null }) }
+        filterFor?.let { id ->
+            if (id == WANT_TO_READ_FILTER) {
+                FilterSheet(null, onDismiss = { filterFor = null }, listScope = FilterScope.WantToRead)
+            } else {
+                FilterSheet(id.takeIf { it != NO_LIBRARY }, onDismiss = { filterFor = null })
+            }
+        }
         val entry by nav.currentBackStackEntryAsState()
         val fullScreen =
             entry?.destination?.let {
@@ -183,6 +211,7 @@ private fun TabContent(
     onServerPill: () -> Unit,
     onSignOut: () -> Unit,
     onDeleteLocalData: () -> Unit,
+    onOpenWantToRead: () -> Unit,
     onOpenFilter: (Int) -> Unit,
 ) {
     when (tab) {
@@ -200,6 +229,10 @@ private fun TabContent(
 
         Tab.Library -> {
             LibraryRoute(onOpenSeries = onOpenSeries, onOpenFilter = { onOpenFilter(it ?: NO_LIBRARY) })
+        }
+
+        Tab.Lists -> {
+            ListsRoute(onOpenWantToRead = onOpenWantToRead)
         }
 
         Tab.You -> {

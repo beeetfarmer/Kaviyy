@@ -37,6 +37,14 @@ interface KavitaApi {
         @Query("PageSize") pageSize: Int,
     ): List<SeriesDto>
 
+    /** The user's Want to Read series, narrowed by [filter]. */
+    @POST("api/want-to-read/v2")
+    suspend fun wantToRead(
+        @Body filter: SeriesFilterV2Dto,
+        @Query("PageNumber") pageNumber: Int,
+        @Query("PageSize") pageSize: Int,
+    ): List<SeriesDto>
+
     @GET("api/Series/{seriesId}")
     suspend fun series(
         @Path("seriesId") seriesId: Int,

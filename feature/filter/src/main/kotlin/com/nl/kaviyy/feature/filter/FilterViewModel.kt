@@ -10,6 +10,7 @@ import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.FieldKind
 import com.nl.kaviyy.core.data.FilterField
 import com.nl.kaviyy.core.data.FilterPlacement
+import com.nl.kaviyy.core.data.FilterScope
 import com.nl.kaviyy.core.data.LibraryFilterStore
 import com.nl.kaviyy.core.data.OptionSource
 import com.nl.kaviyy.core.data.RuleValue
@@ -87,6 +88,8 @@ data class FilterUiState(
     val options: Options = Options.Loading,
     /** The library the grid is showing: the scope when [SeriesFilter.libraryIds] is empty. */
     val currentLibrary: Int? = null,
+    /** Which list the filter applies to. */
+    val listScope: FilterScope = FilterScope.Library,
     val placement: FilterPlacement = FilterPlacement(),
     /** The user's saved filters (Saved page); null until loaded. */
     val saved: List<SavedFilter>? = null,
@@ -120,11 +123,19 @@ class FilterViewModel
                 .flatMapLatest { s -> if (s == null) flowOf(emptyList()) else repository.libraries(s) }
                 .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-        /** Fresh draft from the grid's current filter each time the sheet opens. */
-        fun open(currentLibrary: Int?) {
+        /** Fresh draft from the list's current filter each time the sheet opens. */
+        fun open(
+            currentLibrary: Int?,
+            listScope: FilterScope = FilterScope.Library,
+        ) {
             viewModelScope.launch {
                 val s = server() ?: return@launch
-                _state.value = FilterUiState(draft = store.current(s.id), currentLibrary = currentLibrary)
+                _state.value =
+                    FilterUiState(
+                        draft = store.current(s.id, listScope),
+                        currentLibrary = currentLibrary,
+                        listScope = listScope,
+                    )
                 nameText.clearText()
             }
         }
@@ -219,7 +230,7 @@ class FilterViewModel
                         smartFilters.save(s, name, st.draft, scope, st.placement)
                     }
                 saved.onSuccess {
-                    store.update(s.id) { st.draft }
+                    store.update(s.id, st.listScope) { st.draft }
                     _state.update { it.copy(done = true) }
                 }
             }

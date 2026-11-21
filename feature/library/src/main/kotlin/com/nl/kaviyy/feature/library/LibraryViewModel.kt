@@ -244,7 +244,7 @@ class LibraryViewModel
         }
 
         private fun filter(transform: (SeriesFilter) -> SeriesFilter) {
-            server.value?.let { store.update(it.id, transform) }
+            server.value?.let { store.update(it.id, transform = transform) }
         }
 
         private fun change(transform: (Local) -> Local) = saved.save(local.updateAndGet(transform))

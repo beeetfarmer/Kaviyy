@@ -119,6 +119,12 @@ open class FakeKavitaApi : KavitaApi {
 
     override suspend fun deleteAnnotation(annotationId: Int): Unit = error("unused")
 
+    override suspend fun wantToRead(
+        filter: SeriesFilterV2Dto,
+        pageNumber: Int,
+        pageSize: Int,
+    ): List<SeriesDto> = error("unused")
+
     override suspend fun progress(chapterId: Int): ProgressDto = error("unused")
 
     override suspend fun saveProgress(body: ProgressDto): Unit = error("unused")

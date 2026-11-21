@@ -16,11 +16,13 @@ import com.nl.kaviyy.core.data.KavitaPersonRepository
 import com.nl.kaviyy.core.data.KavitaReviewRepository
 import com.nl.kaviyy.core.data.KavitaSearchRepository
 import com.nl.kaviyy.core.data.KavitaSmartFilterRepository
+import com.nl.kaviyy.core.data.ListsRepository
 import com.nl.kaviyy.core.data.NetworkMonitor
 import com.nl.kaviyy.core.data.OfflineFirstAnnotationRepository
 import com.nl.kaviyy.core.data.OfflineFirstBookmarkRepository
 import com.nl.kaviyy.core.data.OfflineFirstCatalogRepository
 import com.nl.kaviyy.core.data.OfflineFirstHomeRepository
+import com.nl.kaviyy.core.data.OfflineFirstListsRepository
 import com.nl.kaviyy.core.data.OfflineFirstProgressRepository
 import com.nl.kaviyy.core.data.OfflineFirstReadStateRepository
 import com.nl.kaviyy.core.data.OfflineFirstReaderSettingsRepository
@@ -65,6 +67,9 @@ internal interface DataModule {
 
     @Binds
     fun progress(repository: OfflineFirstProgressRepository): ProgressRepository
+
+    @Binds
+    fun lists(repository: OfflineFirstListsRepository): ListsRepository
 
     @Binds
     fun annotations(repository: OfflineFirstAnnotationRepository): AnnotationRepository

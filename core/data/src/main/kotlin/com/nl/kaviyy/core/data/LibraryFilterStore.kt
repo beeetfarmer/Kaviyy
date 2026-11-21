@@ -9,29 +9,41 @@ import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Which series list a filter belongs to: the Library grid or the Want to Read list. */
+enum class FilterScope { Library, WantToRead }
+
 /**
- * The Library grid's current filter per server, shared by the Library chips and the filter sheet (different feature
- * modules). In memory; the Library screen saves it in its SavedStateHandle for process death.
+ * The current filter per server and [FilterScope], shared by a list's screen and the filter sheet (different feature
+ * modules). In memory; the Library screen saves its filter in its SavedStateHandle for process death.
  */
 @Singleton
 class LibraryFilterStore
     @Inject
     constructor() {
-        private val filters = MutableStateFlow<Map<ServerId, SeriesFilter>>(emptyMap())
+        private val filters = MutableStateFlow<Map<Pair<ServerId, FilterScope>, SeriesFilter>>(emptyMap())
 
-        fun filter(server: ServerId): Flow<SeriesFilter> =
-            filters.map { it[server] ?: SeriesFilter() }.distinctUntilChanged()
+        fun filter(
+            server: ServerId,
+            scope: FilterScope = FilterScope.Library,
+        ): Flow<SeriesFilter> = filters.map { it[server to scope] ?: SeriesFilter() }.distinctUntilChanged()
 
-        fun current(server: ServerId): SeriesFilter = filters.value[server] ?: SeriesFilter()
+        fun current(
+            server: ServerId,
+            scope: FilterScope = FilterScope.Library,
+        ): SeriesFilter = filters.value[server to scope] ?: SeriesFilter()
 
         fun update(
             server: ServerId,
+            scope: FilterScope = FilterScope.Library,
             transform: (SeriesFilter) -> SeriesFilter,
-        ) = filters.update { it + (server to transform(it[server] ?: SeriesFilter())) }
+        ) = filters.update { it + ((server to scope) to transform(it[server to scope] ?: SeriesFilter())) }
 
-        /** Seeds a restored filter unless one is already set this process. */
+        /** Seeds a restored Library filter unless one is already set this process. */
         fun restore(
             server: ServerId,
             filter: SeriesFilter,
-        ) = filters.update { if (server in it) it else it + (server to filter) }
+        ) = filters.update {
+            val key = server to FilterScope.Library
+            if (key in it) it else it + (key to filter)
+        }
     }

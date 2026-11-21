@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lists_title">Lists</string>
+    <string name="lists_want_to_read">Want to Read</string>
+    <plurals name="lists_series">
+        <item quantity="one">%1$d series</item>
+        <item quantity="other">%1$d series</item>
+    </plurals>
+    <string name="lists_series_more">%1$d+ series</string>
+    <string name="lists_summary_updated">%1$s · %2$d updated this week</string>
+    <string name="lists_back">Back</string>
+    <string name="lists_filter">Filter</string>
+    <string name="lists_filter_count">Filter · %1$d</string>
+    <string name="lists_want_to_read_empty">Nothing here yet. Add series to Want to Read from their page.</string>
+    <string name="lists_loading">Loading…</string>
+    <string name="lists_failed">Couldn\'t load the list.</string>
+    <string name="lists_retry">Retry</string>
+    <string name="lists_unread">Unread</string>
+    <string name="lists_read">Read</string>
+    <string name="lists_percent">%1$d%%</string>
+</resources>

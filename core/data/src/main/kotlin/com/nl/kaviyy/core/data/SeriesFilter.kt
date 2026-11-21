@@ -214,8 +214,10 @@ data class LibraryQuery(
     /** Null: every library the user can see (Browse). */
     val libraryId: Int?,
     val filter: SeriesFilter = SeriesFilter(),
+    /** Only the user's Want to Read series (Kavita's want-to-read endpoint, which applies [filter] within it). */
+    val wantToRead: Boolean = false,
 ) {
-    val key: String get() = "lib=$libraryId;${filter.encode()}"
+    val key: String get() = (if (wantToRead) "wtr;" else "") + "lib=$libraryId;${filter.encode()}"
 
     fun toFilter(): SeriesFilterV2Dto = filter.toDto(listOfNotNull(libraryId))
 }

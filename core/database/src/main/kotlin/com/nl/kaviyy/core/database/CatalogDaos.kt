@@ -45,6 +45,15 @@ interface SeriesDao {
         queryKey: String,
     ): PagingSource<Int, SeriesEntity>
 
+    @Query(
+        "SELECT s.* FROM query_items q JOIN series s ON s.serverId = q.serverId AND s.id = q.seriesId " +
+            "WHERE q.serverId = :serverId AND q.queryKey = :queryKey ORDER BY q.position",
+    )
+    fun observeQuery(
+        serverId: Long,
+        queryKey: String,
+    ): Flow<List<SeriesEntity>>
+
     @Query("DELETE FROM query_items WHERE serverId = :serverId AND queryKey = :queryKey")
     suspend fun clearQuery(
         serverId: Long,

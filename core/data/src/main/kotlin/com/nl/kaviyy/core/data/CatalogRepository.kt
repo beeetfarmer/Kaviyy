@@ -262,7 +262,14 @@ internal class LibrarySeriesMediator(
                 LoadType.APPEND -> nextPage
             }
         return when (
-            val result = apiCall { api.series(query.toFilter(), page, SERIES_PAGE_SIZE) }
+            val result =
+                apiCall {
+                    if (query.wantToRead) {
+                        api.wantToRead(query.toFilter(), page, SERIES_PAGE_SIZE)
+                    } else {
+                        api.series(query.toFilter(), page, SERIES_PAGE_SIZE)
+                    }
+                }
         ) {
             is AppResult.Failure -> {
                 MediatorResult.Error(AppErrorException(result.error))
