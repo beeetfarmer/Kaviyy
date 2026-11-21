@@ -90,6 +90,28 @@ interface KavitaApi {
         @Query("role") role: Int,
     ): List<PersonDto>
 
+    /** Kavita+ is active on the server (scrobbling needs it). */
+    @GET("api/License/valid-license")
+    suspend fun validLicense(): Boolean
+
+    /** The user's AniList token; read only to see whether one is set, never kept. */
+    @GET("api/Scrobbling/anilist-token")
+    suspend fun aniListToken(): ResponseBody
+
+    /** MAL account; only the username is decoded (the access token is ignored). */
+    @GET("api/Scrobbling/mal-token")
+    suspend fun malAccount(): MalAccountDto
+
+    /** provider: 1 AniList, 2 MAL. */
+    @GET("api/Scrobbling/token-expired")
+    suspend fun scrobbleTokenExpired(
+        @Query("provider") provider: Int,
+    ): Boolean
+
+    /** Series the user paused scrobbling for. */
+    @GET("api/Scrobbling/holds")
+    suspend fun scrobbleHolds(): List<ScrobbleHoldDto>
+
     /** Send to Device: the user's e-mail devices (Kindle, Kobo, …). */
     @GET("api/Device")
     suspend fun devices(): List<EmailDeviceDto>

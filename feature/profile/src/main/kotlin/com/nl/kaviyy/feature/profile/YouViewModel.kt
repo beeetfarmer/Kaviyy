@@ -35,6 +35,7 @@ data class YouActions(
     val onReaderPrefs: () -> Unit = {},
     val onServers: () -> Unit = {},
     val onDevices: () -> Unit = {},
+    val onScrobbling: () -> Unit = {},
     val onSignOut: () -> Unit = {},
     val onDeleteLocalData: () -> Unit = {},
 )

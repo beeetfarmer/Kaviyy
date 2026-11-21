@@ -17,6 +17,7 @@ import com.nl.kaviyy.core.data.KavitaImageReaderRepository
 import com.nl.kaviyy.core.data.KavitaPersonRepository
 import com.nl.kaviyy.core.data.KavitaProfileRepository
 import com.nl.kaviyy.core.data.KavitaReviewRepository
+import com.nl.kaviyy.core.data.KavitaScrobblingRepository
 import com.nl.kaviyy.core.data.KavitaSearchRepository
 import com.nl.kaviyy.core.data.KavitaSmartFilterRepository
 import com.nl.kaviyy.core.data.ListsRepository
@@ -38,6 +39,7 @@ import com.nl.kaviyy.core.data.ReaderDisplayRepository
 import com.nl.kaviyy.core.data.ReaderSettingsRepository
 import com.nl.kaviyy.core.data.ReadingListRepository
 import com.nl.kaviyy.core.data.ReviewRepository
+import com.nl.kaviyy.core.data.ScrobblingRepository
 import com.nl.kaviyy.core.data.SearchRepository
 import com.nl.kaviyy.core.data.ServerApis
 import com.nl.kaviyy.core.data.SessionRepository
@@ -83,6 +85,9 @@ internal interface DataModule {
 
     @Binds
     fun devices(repository: KavitaDeviceRepository): DeviceRepository
+
+    @Binds
+    fun scrobbling(repository: KavitaScrobblingRepository): ScrobblingRepository
 
     @Binds
     fun profile(repository: KavitaProfileRepository): ProfileRepository

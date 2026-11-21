@@ -89,4 +89,16 @@
     <string name="devices_kobo">Kobo</string>
     <string name="devices_pocketbook">PocketBook</string>
     <string name="devices_other">Other</string>
+    <string name="you_settings_scrobbling">Scrobbling</string>
+    <string name="scrobbling_title">Scrobbling</string>
+    <string name="scrobbling_offline">Scrobbling status comes from your server. Connect to it to see it.</string>
+    <string name="scrobbling_unlicensed">Scrobbling needs Kavita+ on your server.</string>
+    <string name="scrobbling_accounts">Accounts</string>
+    <string name="scrobbling_anilist">AniList</string>
+    <string name="scrobbling_mal">MyAnimeList</string>
+    <string name="scrobbling_connected">Connected</string>
+    <string name="scrobbling_expired">Expired</string>
+    <string name="scrobbling_not_connected">Not connected</string>
+    <string name="scrobbling_web_hint">Connect or renew accounts in Kavita\'s web settings.</string>
+    <string name="scrobbling_holds">Paused series</string>
 </resources>

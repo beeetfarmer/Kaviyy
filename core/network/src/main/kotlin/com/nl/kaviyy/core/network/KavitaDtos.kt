@@ -690,3 +690,15 @@ data class SendSeriesToEmailDeviceDto(
     val deviceId: Int,
     val seriesId: Int,
 )
+
+/** Kavita `MalUserInfoDto`, username only. */
+@Serializable
+data class MalAccountDto(
+    val username: String? = null,
+)
+
+@Serializable
+data class ScrobbleHoldDto(
+    val seriesId: Int,
+    val seriesName: String? = null,
+)

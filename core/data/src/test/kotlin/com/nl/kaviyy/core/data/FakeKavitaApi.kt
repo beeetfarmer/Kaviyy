@@ -25,6 +25,7 @@ import com.nl.kaviyy.core.network.IntStatCountDto
 import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.LanguageDto
 import com.nl.kaviyy.core.network.LibraryDto
+import com.nl.kaviyy.core.network.MalAccountDto
 import com.nl.kaviyy.core.network.MarkReadDto
 import com.nl.kaviyy.core.network.MarkVolumeReadDto
 import com.nl.kaviyy.core.network.MarkVolumesReadDto
@@ -38,6 +39,7 @@ import com.nl.kaviyy.core.network.ReadingListSeriesDto
 import com.nl.kaviyy.core.network.ReadingPaceDto
 import com.nl.kaviyy.core.network.RefreshSeriesDto
 import com.nl.kaviyy.core.network.RelatedSeriesDto
+import com.nl.kaviyy.core.network.ScrobbleHoldDto
 import com.nl.kaviyy.core.network.SearchResultGroupDto
 import com.nl.kaviyy.core.network.SendSeriesToEmailDeviceDto
 import com.nl.kaviyy.core.network.SendToEmailDeviceDto
@@ -57,6 +59,7 @@ import com.nl.kaviyy.core.network.UserReadStatsDto
 import com.nl.kaviyy.core.network.UserReviewDto
 import kotlinx.serialization.json.JsonObject
 import okhttp3.MultipartBody
+import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Response
 
 /** Base fake: every call fails loudly unless a test overrides it. */
@@ -173,6 +176,23 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun readingList(readingListId: Int): ReadingListDto = error("unused")
 
     override suspend fun account(): AccountDto = error("unused")
+
+    var licensed = true
+    var aniList = ""
+    var malUser: String? = null
+    var expired = setOf<Int>()
+    var holds = listOf<ScrobbleHoldDto>()
+    var scrobbleCalls = 0
+
+    override suspend fun validLicense() = licensed.also { scrobbleCalls++ }
+
+    override suspend fun aniListToken() = "\"$aniList\"".toResponseBody().also { scrobbleCalls++ }
+
+    override suspend fun malAccount() = MalAccountDto(malUser).also { scrobbleCalls++ }
+
+    override suspend fun scrobbleTokenExpired(provider: Int) = (provider in expired).also { scrobbleCalls++ }
+
+    override suspend fun scrobbleHolds() = holds.also { scrobbleCalls++ }
 
     var deviceList = listOf<EmailDeviceDto>()
     val deviceCalls = mutableListOf<String>()

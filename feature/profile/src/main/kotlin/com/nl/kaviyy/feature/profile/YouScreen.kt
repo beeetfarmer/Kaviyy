@@ -103,6 +103,13 @@ fun YouScreen(
             SettingsTileColors.sendToDevice,
             stringResource(R.string.you_settings_devices),
             actions.onDevices,
+            divider = true,
+        )
+        SettingsRow(
+            KavitaIcons.Activity,
+            SettingsTileColors.scrobbling,
+            stringResource(R.string.you_settings_scrobbling),
+            actions.onScrobbling,
         )
     }
     AccountGroup(actions)

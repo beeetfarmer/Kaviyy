@@ -46,6 +46,7 @@ import com.nl.kaviyy.feature.lists.WantToReadRoute
 import com.nl.kaviyy.feature.profile.AllStatsRoute
 import com.nl.kaviyy.feature.profile.DevicesRoute
 import com.nl.kaviyy.feature.profile.ReaderPrefsRoute
+import com.nl.kaviyy.feature.profile.ScrobblingRoute
 import com.nl.kaviyy.feature.profile.ThemeRoute
 import com.nl.kaviyy.feature.profile.YouActions
 import com.nl.kaviyy.feature.profile.YouRoute
@@ -118,6 +119,9 @@ private data object ReaderPrefsDestination
 private data object DevicesDestination
 
 @Serializable
+private data object ScrobblingDestination
+
+@Serializable
 private data class ReadingListDestination(
     val readingListId: Int,
 )
@@ -177,6 +181,7 @@ internal fun MainScreen(
                         onTheme = { nav.navigate(ThemeDestination) },
                         onReaderPrefs = { nav.navigate(ReaderPrefsDestination) },
                         onDevices = { nav.navigate(DevicesDestination) },
+                        onScrobbling = { nav.navigate(ScrobblingDestination) },
                     ),
                 ) { filterFor = it }
             }
@@ -217,6 +222,12 @@ internal fun MainScreen(
             composable<ThemeDestination> { ThemeRoute(onBack = { nav.popBackStack() }) }
             composable<ReaderPrefsDestination> { ReaderPrefsRoute(onBack = { nav.popBackStack() }) }
             composable<DevicesDestination> { DevicesRoute(onBack = { nav.popBackStack() }) }
+            composable<ScrobblingDestination> {
+                ScrobblingRoute(
+                    onBack = { nav.popBackStack() },
+                    onOpenSeries = openSeries,
+                )
+            }
             composable<ReadingListsDestination> {
                 AllReadingListsRoute(
                     onBack = { nav.popBackStack() },
@@ -292,6 +303,7 @@ private data class TabNav(
     val onTheme: () -> Unit,
     val onReaderPrefs: () -> Unit,
     val onDevices: () -> Unit,
+    val onScrobbling: () -> Unit,
 )
 
 @Suppress("LongParameterList")
@@ -342,6 +354,7 @@ private fun TabContent(
                     onReaderPrefs = lists.onReaderPrefs,
                     onServers = onServerPill,
                     onDevices = lists.onDevices,
+                    onScrobbling = lists.onScrobbling,
                     onSignOut = onSignOut,
                     onDeleteLocalData = onDeleteLocalData,
                 ),
