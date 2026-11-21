@@ -58,7 +58,19 @@ fun DownloadsRoute(
     val context = LocalContext.current
     // Free space where downloads live; re-read whenever the used total changes.
     val free = remember(state.usedBytes) { runCatching { StatFs(context.filesDir.path).availableBytes }.getOrNull() }
-    DownloadsScreen(state, DownloadsActions(viewModel::select, onOpenSeries, onBrowse), freeBytes = free)
+    val actions =
+        DownloadsActions(
+            viewModel::select,
+            onOpenSeries,
+            onBrowse,
+            viewModel::pause,
+            viewModel::resume,
+            viewModel::retry,
+            viewModel::cancel,
+            viewModel::pauseAll,
+            viewModel::resumeAll,
+        )
+    DownloadsScreen(state, actions, freeBytes = free)
 }
 
 /** [derived] Screen 11: Downloaded (grouped by series) / Queue. */
@@ -79,7 +91,7 @@ fun DownloadsScreen(
         ),
     verticalArrangement = Arrangement.spacedBy(16.dp),
 ) {
-    item { LargeTitleHeader(stringResource(R.string.downloads_title)) }
+    item { LargeTitleHeader(stringResource(R.string.downloads_title)) { MoreMenu(state, actions) } }
     if (state.usedBytes > 0) item { StorageCard(state.usedBytes, freeBytes, state.storage) }
     item {
         SegmentedControl(
@@ -96,7 +108,7 @@ fun DownloadsScreen(
         state.segment == 0 && state.downloaded.isEmpty() -> item { EmptyDownloads(actions.onBrowse) }
         state.segment == 0 -> item { DownloadedList(state, actions) }
         state.queue.isEmpty() -> item { Hint(stringResource(R.string.downloads_queue_empty)) }
-        else -> item { QueueList(state) }
+        else -> item { QueueList(state, actions) }
     }
 }
 

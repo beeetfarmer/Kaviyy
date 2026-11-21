@@ -49,6 +49,9 @@ object KavitaIcons {
     val ChevronLeft = stroke("chevron-left", 2.4f, "m15 5-7 7 7 7")
     val ChevronRight = stroke("chevron-right", 2.6f, "m9 5 7 7-7 7")
     val Play = fill("play", "M7 4.5v15l13-7.5z")
+
+    /** [derived] Two bars, same weight as Play (download queue). */
+    val Pause = fill("pause", "M7 5h3.5v14H7zM13.5 5H17v14h-3.5z")
     val Toc =
         ImageVector
             .Builder("toc", 24.dp, 24.dp, 24f, 24f)

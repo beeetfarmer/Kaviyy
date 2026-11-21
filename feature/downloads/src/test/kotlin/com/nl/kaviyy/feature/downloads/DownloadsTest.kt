@@ -1,6 +1,7 @@
 package com.nl.kaviyy.feature.downloads
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -94,12 +95,51 @@ class DownloadsTest {
     }
 
     @Test
+    fun queueControlsAndPauseAllReachTheRightChapters() =
+        runTest {
+            val calls = mutableListOf<String>()
+            val vm = DownloadsViewModel(session(previewServer), controls(MutableStateFlow(previewItems), calls))
+            vm.state.test {
+                runCurrent()
+                vm.pause(4)
+                vm.resume(6)
+                vm.retry(7)
+                vm.cancel(5)
+                runCurrent()
+                assertEquals(listOf("pause 4", "resume 6", "retry 7", "cancel 5"), calls)
+                calls.clear()
+                vm.pauseAll() // running 4 + waiting 5
+                vm.resumeAll() // paused 6 only, not failed 7
+                runCurrent()
+                assertEquals(listOf("pause 4", "pause 5", "resume 6"), calls)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun queueRowButtonsCallTheirActions() {
+        val calls = mutableListOf<String>()
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) {
+                DownloadsScreen(
+                    previewItems.toUiState(previewServer, 1),
+                    DownloadsActions(onRetry = { calls += "retry $it" }, onPauseAll = { calls += "all" }),
+                )
+            }
+        }
+        compose.onNodeWithText("Failed · Retry").performClick()
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.onNodeWithText("Pause All").performClick()
+        assertEquals(listOf("retry 7", "all"), calls)
+    }
+
+    @Test
     fun queueRowsSayWhatIsHappening() {
         compose.setContent { DownloadsPreview(Appearance.Light, segment = 1) }
         compose.onNodeWithText("Ember Road · Ch. 51").assertExists()
         compose.onNodeWithText("12 of 28 pages").assertExists()
         compose.onNodeWithText("Paused · 9 of 30 pages").assertExists()
-        compose.onNodeWithText("Failed · 2 of 30 pages").assertExists()
+        compose.onNodeWithText("Failed · Retry").assertExists()
     }
 
     @Test
@@ -139,27 +179,37 @@ private fun session(server: Server): AuthSession =
         }
     } as AuthSession
 
-private fun controls(items: MutableStateFlow<List<DownloadItem>>) =
-    object : DownloadControls {
-        override fun downloads(server: Server) = items
+private fun controls(
+    items: MutableStateFlow<List<DownloadItem>>,
+    calls: MutableList<String> = mutableListOf(),
+) = object : DownloadControls {
+    override fun downloads(server: Server) = items
 
-        override suspend fun pause(
-            serverId: Long,
-            chapterId: Int,
-        ) = Unit
-
-        override suspend fun resume(
-            serverId: Long,
-            chapterId: Int,
-        ) = Unit
-
-        override suspend fun retry(
-            serverId: Long,
-            chapterId: Int,
-        ) = Unit
-
-        override suspend fun cancel(
-            serverId: Long,
-            chapterId: Int,
-        ) = Unit
+    override suspend fun pause(
+        serverId: Long,
+        chapterId: Int,
+    ) {
+        calls += "pause $chapterId"
     }
+
+    override suspend fun resume(
+        serverId: Long,
+        chapterId: Int,
+    ) {
+        calls += "resume $chapterId"
+    }
+
+    override suspend fun retry(
+        serverId: Long,
+        chapterId: Int,
+    ) {
+        calls += "retry $chapterId"
+    }
+
+    override suspend fun cancel(
+        serverId: Long,
+        chapterId: Int,
+    ) {
+        calls += "cancel $chapterId"
+    }
+}

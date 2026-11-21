@@ -13,9 +13,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 private const val STOP_TIMEOUT_MS = 5_000L
@@ -45,7 +47,16 @@ data class DownloadsActions(
     val onSegment: (Int) -> Unit = {},
     val onOpenSeries: (seriesId: Int) -> Unit = {},
     val onBrowse: () -> Unit = {},
+    val onPause: (chapterId: Int) -> Unit = {},
+    val onResume: (chapterId: Int) -> Unit = {},
+    val onRetry: (chapterId: Int) -> Unit = {},
+    val onCancel: (chapterId: Int) -> Unit = {},
+    val onPauseAll: () -> Unit = {},
+    val onResumeAll: () -> Unit = {},
 )
+
+/** Running or waiting: can be paused. */
+internal val DownloadItem.pausable get() = state == DownloadState.RUNNING || state == DownloadState.QUEUED
 
 private val QUEUE_ORDER =
     listOf(DownloadState.RUNNING, DownloadState.QUEUED, DownloadState.PAUSED, DownloadState.FAILED)
@@ -77,7 +88,7 @@ internal fun List<DownloadItem>.toUiState(
 class DownloadsViewModel
     @Inject
     constructor(
-        session: AuthSession,
+        private val session: AuthSession,
         private val controls: DownloadControls,
     ) : ViewModel() {
         private val segment = MutableStateFlow(0)
@@ -94,5 +105,26 @@ class DownloadsViewModel
 
         fun select(index: Int) {
             segment.value = index
+        }
+
+        fun pause(chapterId: Int) = act { controls.pause(it, chapterId) }
+
+        fun resume(chapterId: Int) = act { controls.resume(it, chapterId) }
+
+        fun retry(chapterId: Int) = act { controls.retry(it, chapterId) }
+
+        fun cancel(chapterId: Int) = act { controls.cancel(it, chapterId) }
+
+        fun pauseAll() = act { id -> queued().filter { it.pausable }.forEach { controls.pause(id, it.row.chapterId) } }
+
+        fun resumeAll() =
+            act { id ->
+                queued().filter { it.state == DownloadState.PAUSED }.forEach { controls.resume(id, it.row.chapterId) }
+            }
+
+        private fun queued() = state.value.queue
+
+        private fun act(block: suspend (serverId: Long) -> Unit) {
+            viewModelScope.launch { session.activeServer.first()?.let { block(it.id.value) } }
         }
     }
