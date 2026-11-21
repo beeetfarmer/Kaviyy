@@ -18,6 +18,7 @@ import com.nl.kaviyy.core.network.MarkVolumeReadDto
 import com.nl.kaviyy.core.network.MarkVolumesReadDto
 import com.nl.kaviyy.core.network.UpdateRatingDto
 import com.nl.kaviyy.core.network.UpdateWantToReadDto
+import com.nl.kaviyy.core.testing.FakeKavitaApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest

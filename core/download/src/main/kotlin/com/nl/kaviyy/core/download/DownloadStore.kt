@@ -39,6 +39,11 @@ class DownloadStore
                 next
             }
 
+        suspend fun get(
+            serverId: Long,
+            chapterId: Int,
+        ): DownloadEntity? = dao.get(serverId, chapterId)
+
         suspend fun remove(
             serverId: Long,
             chapterId: Int,

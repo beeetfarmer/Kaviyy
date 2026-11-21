@@ -11,6 +11,7 @@ import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.SearchFileDto
 import com.nl.kaviyy.core.network.SearchResultGroupDto
 import com.nl.kaviyy.core.network.SearchSeriesDto
+import com.nl.kaviyy.core.testing.FakeKavitaApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest

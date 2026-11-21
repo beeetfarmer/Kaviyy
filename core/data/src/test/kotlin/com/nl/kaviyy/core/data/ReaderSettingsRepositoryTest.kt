@@ -16,6 +16,7 @@ import com.nl.kaviyy.core.network.ReadingProfileDto
 import com.nl.kaviyy.core.network.SeriesDetailDto
 import com.nl.kaviyy.core.network.SeriesDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
+import com.nl.kaviyy.core.testing.FakeKavitaApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest

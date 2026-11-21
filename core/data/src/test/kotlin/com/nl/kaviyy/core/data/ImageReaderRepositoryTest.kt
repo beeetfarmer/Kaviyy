@@ -8,6 +8,7 @@ import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.ChapterInfoDto
 import com.nl.kaviyy.core.network.FileDimensionDto
 import com.nl.kaviyy.core.network.pageUrl
+import com.nl.kaviyy.core.testing.FakeKavitaApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import kotlin.test.assertEquals

@@ -10,6 +10,7 @@ import com.nl.kaviyy.core.network.RatingDto
 import com.nl.kaviyy.core.network.SeriesDetailPlusDto
 import com.nl.kaviyy.core.network.UpdateUserReviewDto
 import com.nl.kaviyy.core.network.UserReviewDto
+import com.nl.kaviyy.core.testing.FakeKavitaApi
 import kotlinx.coroutines.test.runTest
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Test

@@ -12,6 +12,7 @@ import com.nl.kaviyy.core.network.ReadingPaceDto
 import com.nl.kaviyy.core.network.StringBreakdownDto
 import com.nl.kaviyy.core.network.StringStatCountDto
 import com.nl.kaviyy.core.network.UserReadStatsDto
+import com.nl.kaviyy.core.testing.FakeKavitaApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.DayOfWeek

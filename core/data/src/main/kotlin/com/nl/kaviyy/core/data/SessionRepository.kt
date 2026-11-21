@@ -99,7 +99,11 @@ class SessionRepository
             signOut(serverId)
             dao.delete(serverId.value)
             // Per-server data isolation: everything cached for a server lives under its id (paths from ids only).
-            server?.let { withContext(io) { ServerImageLoaders.cacheDir(context, it).deleteRecursively() } }
+            withContext(io) {
+                server?.let { ServerImageLoaders.cacheDir(context, it).deleteRecursively() }
+                File(context.cacheDir, "books/${serverId.value}").deleteRecursively()
+                File(context.filesDir, "downloads/${serverId.value}").deleteRecursively()
+            }
         }
 
         override suspend fun deleteAllLocalData() {

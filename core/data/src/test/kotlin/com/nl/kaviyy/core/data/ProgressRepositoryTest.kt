@@ -12,6 +12,7 @@ import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.ProgressDto
+import com.nl.kaviyy.core.testing.FakeKavitaApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest

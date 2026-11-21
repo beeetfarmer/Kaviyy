@@ -8,4 +8,6 @@ dependencies {
     api(libs.kotlinx.coroutines.test)
     api(libs.turbine)
     implementation(libs.androidx.datastore)
+    api(projects.core.network)
+    implementation(libs.kotlinx.serialization.json)
 }

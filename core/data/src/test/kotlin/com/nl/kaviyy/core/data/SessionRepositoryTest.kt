@@ -156,7 +156,12 @@ class SessionRepositoryTest {
             assertEquals(a.id, session.activeServer.first()?.id)
             val cache = ServerImageLoaders.cacheDir(RuntimeEnvironment.getApplication(), a).apply { mkdirs() }
             java.io.File(cache, "x").writeText("img")
+            val app = RuntimeEnvironment.getApplication()
+            val downloads = java.io.File(app.filesDir, "downloads/${a.id.value}/1/2").apply { mkdirs() }
+            val otherDownloads = java.io.File(app.filesDir, "downloads/${b.id.value}/1/2").apply { mkdirs() }
             session.remove(a.id)
+            assertFalse(downloads.exists())
+            assertTrue(otherDownloads.exists())
             assertEquals(listOf(b.id), session.servers.first().map { it.id })
             assertNull(store.credentials(a.id).first())
             assertNull(session.knownServer(url))

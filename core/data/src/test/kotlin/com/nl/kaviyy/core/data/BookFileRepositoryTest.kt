@@ -6,6 +6,7 @@ import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
+import com.nl.kaviyy.core.testing.FakeKavitaApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.ResponseBody.Companion.toResponseBody

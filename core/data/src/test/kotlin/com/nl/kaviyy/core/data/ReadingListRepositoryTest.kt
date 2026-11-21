@@ -21,6 +21,7 @@ import com.nl.kaviyy.core.network.ReadingListItemDto
 import com.nl.kaviyy.core.network.ReadingListPositionDto
 import com.nl.kaviyy.core.network.ReadingListSeriesDto
 import com.nl.kaviyy.core.network.UpdateReadingListDto
+import com.nl.kaviyy.core.testing.FakeKavitaApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest

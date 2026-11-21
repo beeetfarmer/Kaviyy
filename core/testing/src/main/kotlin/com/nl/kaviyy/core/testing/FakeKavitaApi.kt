@@ -1,4 +1,6 @@
-package com.nl.kaviyy.core.data
+@file:Suppress("TooManyFunctions", "MagicNumber") // a fake of the whole API
+
+package com.nl.kaviyy.core.testing
 
 import com.nl.kaviyy.core.network.AccountDto
 import com.nl.kaviyy.core.network.AnnotationDto
@@ -141,6 +143,17 @@ open class FakeKavitaApi : KavitaApi {
     ): Int = error("unused")
 
     override suspend fun downloadChapter(chapterId: Int): okhttp3.ResponseBody = error("unused")
+
+    override suspend fun downloadChapterFrom(
+        chapterId: Int,
+        range: String?,
+    ): Response<okhttp3.ResponseBody> = error("unused")
+
+    override suspend fun pageImage(
+        chapterId: Int,
+        page: Int,
+        extractPdf: Boolean,
+    ): okhttp3.ResponseBody = error("unused")
 
     override suspend fun annotations(chapterId: Int): List<AnnotationDto> = error("unused")
 

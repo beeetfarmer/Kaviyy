@@ -18,6 +18,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
@@ -547,6 +548,23 @@ interface KavitaApi {
     @GET("api/Download/chapter")
     suspend fun downloadChapter(
         @Query("chapterId") chapterId: Int,
+    ): ResponseBody
+
+    /** The original file from [range]'s offset (`bytes=N-`); 206 when the server honours it. Download role. */
+    @Streaming
+    @GET("api/Download/chapter")
+    suspend fun downloadChapterFrom(
+        @Query("chapterId") chapterId: Int,
+        @Header("Range") range: String?,
+    ): Response<ResponseBody>
+
+    /** One page image (0-based); PDFs are rendered server-side. `apiKey` is added on the wire by AuthInterceptor. */
+    @Streaming
+    @GET("api/Reader/image")
+    suspend fun pageImage(
+        @Query("chapterId") chapterId: Int,
+        @Query("page") page: Int,
+        @Query("extractPdf") extractPdf: Boolean = true,
     ): ResponseBody
 
     @GET("api/Annotation/all")

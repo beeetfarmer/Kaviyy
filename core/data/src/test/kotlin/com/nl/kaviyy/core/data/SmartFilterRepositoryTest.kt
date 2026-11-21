@@ -14,6 +14,7 @@ import com.nl.kaviyy.core.network.DecodeFilterDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
 import com.nl.kaviyy.core.network.SideNavStreamDto
 import com.nl.kaviyy.core.network.SmartFilterDto
+import com.nl.kaviyy.core.testing.FakeKavitaApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
