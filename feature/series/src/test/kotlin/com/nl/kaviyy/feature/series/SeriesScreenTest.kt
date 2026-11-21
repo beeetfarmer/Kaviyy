@@ -14,6 +14,7 @@ import androidx.compose.ui.test.performScrollTo
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.nl.kaviyy.core.data.FilterField
 import com.nl.kaviyy.core.data.ReadTarget
+import com.nl.kaviyy.core.database.OutdatedDownload
 import com.nl.kaviyy.core.designsystem.theme.Appearance
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
 import org.junit.Rule
@@ -258,6 +259,20 @@ class SeriesScreenTest {
         shot("series_volume_sheet_dark") {
             SeriesPreview(Appearance.Dark, previewSeries.copy(sheet = SeriesSheet.Volume(5)))
         }
+
+    @Test
+    fun screenshotActionsWithUpdatesLight() = actionsShot("series_actions_light", Appearance.Light)
+
+    @Test
+    fun screenshotActionsWithUpdatesDark() = actionsShot("series_actions_dark", Appearance.Dark)
+
+    private fun actionsShot(
+        name: String,
+        appearance: Appearance,
+    ) = shot(name) {
+        val outdated = listOf(OutdatedDownload(48, 2), OutdatedDownload(49, 2))
+        SeriesPreview(appearance, previewSeries.copy(sheet = SeriesSheet.Actions, outdated = outdated))
+    }
 
     private fun shot(
         name: String,

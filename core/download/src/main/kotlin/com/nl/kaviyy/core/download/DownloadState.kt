@@ -39,8 +39,10 @@ sealed interface DownloadEvent {
         val serverLastModified: Long,
     ) : DownloadEvent
 
-    /** The server's copy changed: download it again. */
-    data object Update : DownloadEvent
+    /** The server's copy changed (now at [serverLastModified]): download it again. */
+    data class Update(
+        val serverLastModified: Long,
+    ) : DownloadEvent
 }
 
 val DownloadEntity.downloadState: DownloadState
@@ -79,8 +81,8 @@ fun DownloadEntity.on(
             )
         }
 
-        DownloadEvent.Update -> {
-            base.copy(pagesDone = 0, bytesDone = 0)
+        is DownloadEvent.Update -> {
+            base.copy(pagesDone = 0, bytesDone = 0, serverLastModified = event.serverLastModified)
         }
 
         else -> {
@@ -104,7 +106,7 @@ private fun next(
             is DownloadEvent.Fail -> setOf(DownloadState.RUNNING) to DownloadState.FAILED
             DownloadEvent.Retry -> setOf(DownloadState.FAILED) to DownloadState.QUEUED
             is DownloadEvent.Complete -> setOf(DownloadState.RUNNING) to DownloadState.COMPLETED
-            DownloadEvent.Update -> setOf(DownloadState.COMPLETED) to DownloadState.QUEUED
+            is DownloadEvent.Update -> setOf(DownloadState.COMPLETED) to DownloadState.QUEUED
         }
     return to.takeIf { from in allowed }
 }

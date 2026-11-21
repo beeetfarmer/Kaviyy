@@ -1,8 +1,10 @@
 package com.nl.kaviyy.core.download
 
 import com.nl.kaviyy.core.database.ChapterEntity
+import com.nl.kaviyy.core.database.OutdatedDownload
 import com.nl.kaviyy.core.database.ReadingListItemEntity
 import com.nl.kaviyy.core.model.server.Server
+import kotlinx.coroutines.flow.Flow
 
 /** One chapter to download, from whatever list the user picked (chapter, volume, series, reading list). */
 data class DownloadRequest(
@@ -33,11 +35,23 @@ enum class EnqueueResult {
 }
 
 /** Queues downloads; ViewModels depend on this, [Downloads] implements it. */
-fun interface DownloadQueue {
+interface DownloadQueue {
     suspend fun enqueue(
         server: Server,
         chapters: List<DownloadRequest>,
     ): EnqueueResult
+
+    /** Downloaded chapters of a series that changed on the server ("Update available"). */
+    fun outdated(
+        server: Server,
+        seriesId: Int,
+    ): Flow<List<OutdatedDownload>>
+
+    /** Downloads [chapters] again at their new version. */
+    suspend fun update(
+        server: Server,
+        chapters: List<OutdatedDownload>,
+    )
 }
 
 fun ChapterEntity.toDownload() = DownloadRequest(id, seriesId, volumeId, format, fileBytes, lastModified)

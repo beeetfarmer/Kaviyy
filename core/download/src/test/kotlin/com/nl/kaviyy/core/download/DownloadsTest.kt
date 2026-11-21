@@ -6,7 +6,9 @@ import androidx.work.NetworkType
 import androidx.work.WorkManager
 import com.nl.kaviyy.core.data.DownloadedContent
 import com.nl.kaviyy.core.data.ServerApis
+import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.database.KaviyyDatabase
+import com.nl.kaviyy.core.database.OutdatedDownload
 import com.nl.kaviyy.core.database.ServerEntity
 import com.nl.kaviyy.core.datastore.AppSettings
 import com.nl.kaviyy.core.datastore.AppSettingsStore
@@ -17,6 +19,7 @@ import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.testing.FakeKavitaApi
 import com.nl.kaviyy.core.testing.InMemoryDataStore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -135,5 +138,28 @@ class DownloadsTest {
             assertEquals(DownloadState.PAUSED, store.get(serverId, 1)?.downloadState)
             downloads.resume(serverId, 1)
             assertEquals(DownloadState.QUEUED, store.get(serverId, 1)?.downloadState)
+        }
+
+    @Test
+    fun aChapterChangedOnTheServerIsOfferedAsAnUpdateAndRequeued() =
+        runTest {
+            downloads.enqueue(downloader, listOf(chapter(1).copy(lastModified = 1_000)))
+            store.apply(serverId, 1, DownloadEvent.Start)
+            store.apply(serverId, 1, DownloadEvent.Complete(1_000))
+            val cached = ChapterEntity(serverId, 1, 3, 2, pages = 1, pagesRead = 0, format = 1, lastModified = 1_000)
+            db.seriesDao().upsertChapters(listOf(cached))
+            assertEquals(emptyList(), downloads.outdated(downloader, 2).first())
+            db.seriesDao().upsertChapters(listOf(cached.copy(lastModified = 2_000)))
+            val outdated = downloads.outdated(downloader, 2).first()
+            assertEquals(listOf(OutdatedDownload(1, 2_000)), outdated)
+            downloads.update(downloader, outdated)
+            assertEquals(
+                DownloadState.QUEUED to 2_000L,
+                store.get(serverId, 1)?.let {
+                    it.downloadState to
+                        it.serverLastModified
+                },
+            )
+            assertEquals(emptyList(), downloads.outdated(downloader, 2).first())
         }
 }

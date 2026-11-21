@@ -18,7 +18,7 @@ class DownloadStateTest {
     private fun row(state: DownloadState) = DownloadEntity(1, 10, 2, 3, state.name, pageImages = true)
 
     private val allEvents =
-        listOf(Start, Progress(1, 2, 3, 4), Pause, Resume, Interrupted, Fail("x"), Retry, Complete(5), Update)
+        listOf(Start, Progress(1, 2, 3, 4), Pause, Resume, Interrupted, Fail("x"), Retry, Complete(5), Update(6))
 
     @Test
     fun onlyTheDocumentedTransitionsAreAllowed() {
@@ -28,7 +28,7 @@ class DownloadStateTest {
                 DownloadState.RUNNING to setOf(Progress(1, 2, 3, 4), Pause, Interrupted, Fail("x"), Complete(5)),
                 DownloadState.PAUSED to setOf(Resume),
                 DownloadState.FAILED to setOf(Retry),
-                DownloadState.COMPLETED to setOf(Update),
+                DownloadState.COMPLETED to setOf(Update(6)),
             )
         for ((state, ok) in allowed) {
             for (event in allEvents) {
@@ -62,11 +62,12 @@ class DownloadStateTest {
 
     @Test
     fun updateRestartsProgress() {
-        val again = row(DownloadState.COMPLETED).copy(pagesDone = 20, bytesDone = 9).on(Update, 1)
+        val again = row(DownloadState.COMPLETED).copy(pagesDone = 20, bytesDone = 9).on(Update(77), 1)
         assertEquals(
             Triple(DownloadState.QUEUED, 0, 0L),
             Triple(again?.downloadState, again?.pagesDone, again?.bytesDone),
         )
+        assertEquals(77, again?.serverLastModified)
     }
 
     @Test

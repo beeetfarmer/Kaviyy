@@ -21,11 +21,13 @@ import com.nl.kaviyy.core.data.SeriesSort
 import com.nl.kaviyy.core.data.collectionQuery
 import com.nl.kaviyy.core.database.CollectionEntity
 import com.nl.kaviyy.core.database.LibraryEntity
+import com.nl.kaviyy.core.database.OutdatedDownload
 import com.nl.kaviyy.core.database.ReadingListEntity
 import com.nl.kaviyy.core.database.ReadingListItemEntity
 import com.nl.kaviyy.core.database.ReadingListRow
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.download.DownloadQueue
+import com.nl.kaviyy.core.download.DownloadRequest
 import com.nl.kaviyy.core.download.EnqueueResult
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
@@ -303,10 +305,29 @@ class ListsViewModelTest {
         }
 
     private val queued = mutableListOf<List<Int>>()
+    private val updated = mutableListOf<Int>()
+    private val outdated = MutableStateFlow(emptyList<OutdatedDownload>())
     private val downloads =
-        DownloadQueue { _, chapters ->
-            queued += chapters.map { it.chapterId }
-            EnqueueResult.Queued
+        object : DownloadQueue {
+            override suspend fun enqueue(
+                server: Server,
+                chapters: List<DownloadRequest>,
+            ): EnqueueResult {
+                queued += chapters.map { it.chapterId }
+                return EnqueueResult.Queued
+            }
+
+            override fun outdated(
+                server: Server,
+                seriesId: Int,
+            ) = outdated
+
+            override suspend fun update(
+                server: Server,
+                chapters: List<OutdatedDownload>,
+            ) {
+                updated += chapters.map { it.chapterId }
+            }
         }
 
     @Test

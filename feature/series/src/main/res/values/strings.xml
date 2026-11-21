@@ -162,4 +162,8 @@
     <string name="series_download_nothing_new">Already downloaded or in the queue.</string>
     <string name="series_download_no_role">Your account can\'t download. Ask your server admin for the Download role.</string>
     <string name="series_download_over_limit">Not enough room under your download storage limit.</string>
+    <plurals name="series_update_downloads">
+        <item quantity="one">Update %d download</item>
+        <item quantity="other">Update %d downloads</item>
+    </plurals>
 </resources>

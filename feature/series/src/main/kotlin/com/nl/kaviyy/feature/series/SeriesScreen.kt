@@ -78,6 +78,7 @@ data class SeriesActions(
     val onReadingLists: () -> Unit = {},
     val onSendToDevice: (SendTarget) -> Unit = {},
     val onDownload: (chapterIds: List<Int>) -> Unit = {},
+    val onUpdateDownloads: () -> Unit = {},
     val onMark: (ReadTarget, read: Boolean) -> Unit = { _, _ -> },
     val onRate: (Float) -> Unit = {},
     val onSaveReview: () -> Unit = {},
@@ -124,6 +125,7 @@ fun SeriesRoute(
                 sendTarget = it
             },
             onDownload = viewModel::download,
+            onUpdateDownloads = viewModel::updateDownloads,
             onMark = viewModel::setRead,
             onRate = viewModel::setRating,
             onSaveReview = viewModel::saveReview,

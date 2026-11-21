@@ -34,6 +34,7 @@ import com.nl.kaviyy.core.designsystem.component.SectionHeader
 import com.nl.kaviyy.core.designsystem.component.SheetHeader
 import com.nl.kaviyy.core.designsystem.component.coverColorFor
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
+import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaShapes
 import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.network.chapterCoverUrl
@@ -131,7 +132,20 @@ internal fun SeriesDetailSheet(
                             stringResource(R.string.series_download_series),
                             onClick = { actions.onDownload(detail.chapters.map { it.id }) },
                             showChevron = false,
+                            divider = state.outdated.isNotEmpty(),
                         )
+                        if (state.outdated.isNotEmpty()) {
+                            GroupedRow(
+                                pluralStringResource(
+                                    R.plurals.series_update_downloads,
+                                    state.outdated.size,
+                                    state.outdated.size,
+                                ),
+                                onClick = actions.onUpdateDownloads,
+                                showChevron = false,
+                                labelColor = Kavita.colors.accent,
+                            )
+                        }
                     }
                     if (server?.isAdmin == true) AdminSection(actions.admin)
                 }

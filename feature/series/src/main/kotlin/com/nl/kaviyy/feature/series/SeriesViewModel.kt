@@ -15,6 +15,7 @@ import com.nl.kaviyy.core.data.ReviewRepository
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.SeriesReviews
 import com.nl.kaviyy.core.database.ChapterEntity
+import com.nl.kaviyy.core.database.OutdatedDownload
 import com.nl.kaviyy.core.download.DownloadQueue
 import com.nl.kaviyy.core.download.EnqueueResult
 import com.nl.kaviyy.core.download.toDownload
@@ -54,6 +55,8 @@ data class SeriesUiState(
     /** Saving the review failed (reviews are online only). */
     val reviewError: AppError? = null,
     val notice: SeriesNotice? = null,
+    /** Downloaded chapters that changed on the server. */
+    val outdated: List<OutdatedDownload> = emptyList(),
 ) {
     /** The server's continue point, when it's among the cached chapters. */
     val continueChapter: ChapterEntity?
@@ -155,7 +158,8 @@ class SeriesViewModel
                             repository.libraries(s),
                             status,
                             relatedState,
-                        ) { d, libs, st, rel ->
+                            downloads.outdated(s, seriesId),
+                        ) { d, libs, st, rel, outdated ->
                             val library = libs.firstOrNull { it.id == d.series?.libraryId }
                             libraryType = library?.type ?: 0
                             SeriesUiState(
@@ -171,6 +175,7 @@ class SeriesViewModel
                                 st.reviews,
                                 st.reviewError,
                                 st.notice,
+                                outdated,
                             )
                         }
                     }
@@ -303,6 +308,18 @@ class SeriesViewModel
                         EnqueueResult.OverLimit -> SeriesNotice.StorageLimit
                     }
                 status.update { it.copy(notice = notice) }
+            }
+        }
+
+        /** Re-downloads the chapters that changed on the server. */
+        fun updateDownloads() {
+            val outdated = state.value.outdated
+            if (outdated.isEmpty()) return
+            status.update { it.copy(sheet = null, notice = null) }
+            viewModelScope.launch {
+                val s = session.activeServer.first() ?: return@launch
+                downloads.update(s, outdated)
+                status.update { it.copy(notice = SeriesNotice.DownloadQueued) }
             }
         }
 

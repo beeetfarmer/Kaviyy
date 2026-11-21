@@ -23,8 +23,10 @@ import com.nl.kaviyy.core.data.SeriesMetadata
 import com.nl.kaviyy.core.data.SeriesReviews
 import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.database.LibraryEntity
+import com.nl.kaviyy.core.database.OutdatedDownload
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.download.DownloadQueue
+import com.nl.kaviyy.core.download.DownloadRequest
 import com.nl.kaviyy.core.download.EnqueueResult
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
@@ -108,11 +110,30 @@ class SeriesViewModelTest {
         }
     private val adminCalls = mutableListOf<String>()
     private val queued = mutableListOf<List<Int>>()
+    private val updated = mutableListOf<Int>()
+    private val outdated = MutableStateFlow(emptyList<OutdatedDownload>())
     private var enqueueResult = EnqueueResult.Queued
     private val downloads =
-        DownloadQueue { _, chapters ->
-            queued += chapters.map { it.chapterId }
-            enqueueResult
+        object : DownloadQueue {
+            override suspend fun enqueue(
+                server: Server,
+                chapters: List<DownloadRequest>,
+            ): EnqueueResult {
+                queued += chapters.map { it.chapterId }
+                return enqueueResult
+            }
+
+            override fun outdated(
+                server: Server,
+                seriesId: Int,
+            ) = outdated
+
+            override suspend fun update(
+                server: Server,
+                chapters: List<OutdatedDownload>,
+            ) {
+                updated += chapters.map { it.chapterId }
+            }
         }
     private var adminResult: AppResult<Unit> = AppResult.Success(Unit)
     private val admin =
@@ -499,6 +520,32 @@ class SeriesViewModelTest {
                 vm.download(listOf(49))
                 runCurrent()
                 assertEquals(SeriesNotice.NoDownloadRole, expectMostRecentItem().notice)
+            }
+        }
+
+    @Test
+    fun outdatedDownloadsAreShownAndUpdated() =
+        runTest {
+            val vm =
+                SeriesViewModel(
+                    session,
+                    repo,
+                    readState,
+                    reviews,
+                    admin,
+                    downloads,
+                    SavedStateHandle(
+                        mapOf(SERIES_ID_ARG to 7),
+                    ),
+                )
+            vm.state.test {
+                outdated.value = listOf(OutdatedDownload(49, 2_000))
+                runCurrent()
+                assertEquals(listOf(49), expectMostRecentItem().outdated.map { it.chapterId })
+                vm.updateDownloads()
+                runCurrent()
+                assertEquals(listOf(49), updated)
+                cancelAndIgnoreRemainingEvents()
             }
         }
 }

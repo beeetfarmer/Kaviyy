@@ -11,9 +11,11 @@ import androidx.work.workDataOf
 import com.nl.kaviyy.core.data.canDownload
 import com.nl.kaviyy.core.database.DownloadDao
 import com.nl.kaviyy.core.database.DownloadEntity
+import com.nl.kaviyy.core.database.OutdatedDownload
 import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.model.server.Server
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -51,6 +53,22 @@ class Downloads
                     val added = chapters.filter { store.enqueue(it.toEntity(server)) }
                     added.forEach { schedule(server.id.value, it.chapterId, prefs.downloadWifiOnly) }
                     if (added.isEmpty()) EnqueueResult.NothingNew else EnqueueResult.Queued
+                }
+            }
+        }
+
+        override fun outdated(
+            server: Server,
+            seriesId: Int,
+        ): Flow<List<OutdatedDownload>> = dao.observeOutdated(server.id.value, seriesId)
+
+        override suspend fun update(
+            server: Server,
+            chapters: List<OutdatedDownload>,
+        ) {
+            chapters.forEach { c ->
+                store.apply(server.id.value, c.chapterId, DownloadEvent.Update(c.lastModified))?.let {
+                    reschedule(server.id.value, c.chapterId)
                 }
             }
         }
