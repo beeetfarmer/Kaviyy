@@ -215,6 +215,45 @@ class ListsScreenTest {
     fun screenshotReadingListDark() = shot("reading_list_dark") { ReadingListPreview(Appearance.Dark) }
 
     @Test
+    fun smartFormSelectsChipsAndSwitchesAnyAll() {
+        val toggled = mutableListOf<String>()
+        var all = false
+        compose.setContent {
+            SmartCollectionPreview(
+                actions =
+                    SmartCollectionActions(
+                        onToggleTag = { toggled += it.label },
+                        onToggleGenre = { toggled += it.label },
+                        onMatchAll = { all = it },
+                    ),
+            )
+        }
+        compose.onNodeWithText("23 series match").assertExists()
+        compose.onNodeWithText("Slow Burn").performClick()
+        compose.onNodeWithText("Romance").performClick()
+        compose.onNodeWithText("Match all").performClick()
+        assertEquals(listOf("Slow Burn", "Romance"), toggled)
+        assertEquals(true, all)
+    }
+
+    @Test
+    fun smartCollectionShowsItsRuleNotTheMarker() {
+        compose.setContent { SmartCollectionScreenPreview() }
+        compose.onNodeWithText("Any of: Isekai, Time Travel, Fantasy").assertExists()
+        compose.onNodeWithText("Comfy portal fantasies.").assertExists()
+        compose.onNodeWithText("Update now").assertExists()
+    }
+
+    @Test
+    fun screenshotSmartLight() = shot("smart_collection_new_light") { SmartCollectionPreview() }
+
+    @Test
+    fun screenshotSmartDark() = shot("smart_collection_new_dark") { SmartCollectionPreview(Appearance.Dark) }
+
+    @Test
+    fun screenshotSmartCollection() = shot("smart_collection_light") { SmartCollectionScreenPreview() }
+
+    @Test
     fun screenshotCollection() = shot("collection_light") { CollectionPreview() }
 
     @Test

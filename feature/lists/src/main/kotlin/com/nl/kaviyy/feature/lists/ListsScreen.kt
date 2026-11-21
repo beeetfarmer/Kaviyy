@@ -65,7 +65,29 @@ fun ListsRoute(
     onSeeAllReadingLists: () -> Unit,
     viewModel: ListsViewModel = hiltViewModel(),
     cbl: CblImportViewModel = hiltViewModel(),
+    smart: SmartCollectionViewModel = hiltViewModel(),
 ) {
+    val smartState by smart.state.collectAsStateWithLifecycle()
+    LaunchedEffect(smartState.created) {
+        smartState.created?.let {
+            smart.consumeCreated()
+            onOpenCollection(it)
+        }
+    }
+    if (smartState.open) {
+        SmartCollectionSheet(
+            smartState,
+            smart.name,
+            smart.search,
+            SmartCollectionActions(
+                smart::close,
+                smart::create,
+                smart::setMatchAll,
+                smart::toggleTag,
+                smart::toggleGenre,
+            ),
+        )
+    }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val cblState by cbl.state.collectAsStateWithLifecycle()
     val pick =
@@ -94,6 +116,7 @@ fun ListsRoute(
             viewModel::openNew,
             // CBL has no registered MIME type, so let the user pick any file; Kavita validates it.
             { pick.launch(arrayOf("*/*")) },
+            smart::open,
         ),
     )
     if (state.newList.open) {
@@ -204,12 +227,15 @@ fun CollectionRoute(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(state.deleted) { if (state.deleted) onBack() }
+    val series = viewModel.series.collectAsLazyPagingItems()
+    LaunchedEffect(state.synced) { if (state.synced > 0) series.refresh() }
     CollectionScreen(
         state,
-        viewModel.series.collectAsLazyPagingItems(),
+        series,
         onBack,
         onOpenSeries,
         onEdit = viewModel::startEdit,
+        onSyncSmart = viewModel::syncSmart,
     )
     if (state.editing) {
         EditListSheet(

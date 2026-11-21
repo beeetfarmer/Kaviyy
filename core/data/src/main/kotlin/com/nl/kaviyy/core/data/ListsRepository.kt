@@ -179,7 +179,9 @@ class OfflineFirstListsRepository
             title: String,
             summary: String?,
         ) = changed(server) {
-            updateCollection(collection.toDto().copy(title = title.trim(), summary = summary?.trim()?.ifEmpty { null }))
+            // A smart collection keeps its rule line whatever the user writes above it.
+            val text = SmartRule.summaryWith(summary?.trim()?.ifEmpty { null }, SmartRule.from(collection.summary))
+            updateCollection(collection.toDto().copy(title = title.trim(), summary = text))
         }
 
         override suspend fun deleteCollection(

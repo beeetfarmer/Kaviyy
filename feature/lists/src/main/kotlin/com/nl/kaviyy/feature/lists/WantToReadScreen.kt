@@ -1,6 +1,7 @@
 package com.nl.kaviyy.feature.lists
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,6 +19,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -26,6 +29,7 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import com.nl.kaviyy.core.data.SmartRule
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.designsystem.component.ButtonSize
 import com.nl.kaviyy.core.designsystem.component.CircleIconButton
@@ -207,6 +211,7 @@ fun CollectionScreen(
     onOpenSeries: (Int) -> Unit,
     modifier: Modifier = Modifier,
     onEdit: () -> Unit = {},
+    onSyncSmart: () -> Unit = {},
 ) = SeriesGridScreen(
     state.server,
     series,
@@ -220,9 +225,36 @@ fun CollectionScreen(
         LargeTitleHeader(c?.title.orEmpty(), overline = stringResource(R.string.lists_collection)) {
             if (state.editable) SecondaryButton(stringResource(R.string.lists_edit), onEdit, size = ButtonSize.Small)
         }
-        if (c?.smart == true) SmartBadge()
-        c?.summary?.takeIf { it.isNotBlank() }?.let {
+        val rule = SmartRule.from(c?.summary)
+        if (c?.smart == true || rule != null) SmartBadge()
+        rule?.let { SmartRuleLine(it, state.syncing, onSyncSmart.takeIf { state.editable }) }
+        SmartRule.userSummary(c?.summary)?.let {
             Text(it, style = Kavita.type.callout, color = Kavita.colors.labelBody, maxLines = SUMMARY_LINES)
         }
+    }
+}
+
+/** "Any of Isekai, Time Travel, Fantasy" and, for the owner, "Update now". */
+@Composable
+private fun SmartRuleLine(
+    rule: SmartRule,
+    syncing: Boolean,
+    onSync: (() -> Unit)?,
+) = Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    val names = (rule.tags + rule.genres).joinToString { it.label }
+    Text(
+        stringResource(if (rule.matchAll) R.string.lists_smart_rule_all else R.string.lists_smart_rule_any, names),
+        style = Kavita.type.subhead,
+        color = Kavita.colors.labelSecondary,
+    )
+    if (onSync != null) {
+        Text(
+            stringResource(if (syncing) R.string.lists_smart_updating else R.string.lists_smart_update),
+            Modifier
+                .clickable(enabled = !syncing, role = Role.Button, onClick = onSync)
+                .padding(vertical = 12.dp),
+            style = Kavita.type.callout.copy(fontWeight = FontWeight.Medium),
+            color = Kavita.colors.accent,
+        )
     }
 }

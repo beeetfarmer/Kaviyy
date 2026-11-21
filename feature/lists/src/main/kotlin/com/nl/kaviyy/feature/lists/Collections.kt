@@ -132,6 +132,14 @@ internal fun CollectionsSection(
             style = Kavita.type.title2,
             color = Kavita.colors.label,
         )
+        Text(
+            stringResource(R.string.lists_new_smart_short),
+            Modifier
+                .clickable(role = Role.Button, onClick = actions.onNewSmartCollection)
+                .padding(vertical = 12.dp, horizontal = 8.dp),
+            style = Kavita.type.callout.copy(fontWeight = FontWeight.Medium),
+            color = Kavita.colors.accent,
+        )
         if (state.collections.size > COLLECTIONS_PREVIEW) {
             Text(
                 stringResource(R.string.lists_see_all),

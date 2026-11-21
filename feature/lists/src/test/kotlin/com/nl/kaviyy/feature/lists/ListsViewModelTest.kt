@@ -18,6 +18,7 @@ import com.nl.kaviyy.core.data.RelatedSeries
 import com.nl.kaviyy.core.data.RuleValue
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.SeriesSort
+import com.nl.kaviyy.core.data.SmartCollections
 import com.nl.kaviyy.core.data.collectionQuery
 import com.nl.kaviyy.core.database.CollectionEntity
 import com.nl.kaviyy.core.database.LibraryEntity
@@ -35,13 +36,18 @@ import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
+import com.nl.kaviyy.core.network.CollectionAddDto
+import com.nl.kaviyy.core.network.CollectionDto
 import com.nl.kaviyy.core.network.LoginMethod
+import com.nl.kaviyy.core.network.SeriesDto
+import com.nl.kaviyy.core.network.SeriesFilterV2Dto
 import com.nl.kaviyy.core.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -267,7 +273,16 @@ class ListsViewModelTest {
                 server: Server,
                 source: OptionSource,
                 libraryIds: List<Int>,
-            ): AppResult<List<RuleValue>> = error("unused")
+            ): AppResult<List<RuleValue>> =
+                AppResult.Success(
+                    if (source ==
+                        OptionSource.Tags
+                    ) {
+                        listOf(RuleValue("12", "isekai"), RuleValue("40", "Cooking"))
+                    } else {
+                        listOf(RuleValue("3", "Fantasy"))
+                    },
+                )
 
             override fun seriesDetail(
                 server: Server,
@@ -436,7 +451,18 @@ class ListsViewModelTest {
     @Test
     fun aCollectionPagesItsSeriesByTheCollectionRule() =
         runTest {
-            val vm = CollectionViewModel(session, catalog, lists, SavedStateHandle(mapOf(COLLECTION_ID_ARG to 7)))
+            val vm =
+                CollectionViewModel(
+                    session,
+                    catalog,
+                    lists,
+                    SavedStateHandle(
+                        mapOf(COLLECTION_ID_ARG to 7),
+                    ),
+                    SmartCollections({
+                        error("unused")
+                    }, lists),
+                )
             backgroundScope.launch { vm.series.collect {} }
             vm.state.test {
                 runCurrent()
@@ -449,7 +475,18 @@ class ListsViewModelTest {
     @Test
     fun theOwnerEditsAndDeletesAfterConfirming() =
         runTest {
-            val vm = CollectionViewModel(session, catalog, lists, SavedStateHandle(mapOf(COLLECTION_ID_ARG to 7)))
+            val vm =
+                CollectionViewModel(
+                    session,
+                    catalog,
+                    lists,
+                    SavedStateHandle(
+                        mapOf(COLLECTION_ID_ARG to 7),
+                    ),
+                    SmartCollections({
+                        error("unused")
+                    }, lists),
+                )
             vm.state.test {
                 runCurrent()
                 assertEquals(true, expectMostRecentItem().editable)
@@ -482,7 +519,18 @@ class ListsViewModelTest {
     fun othersCannotEdit() =
         runTest {
             collections.value = listOf(CollectionEntity(1, 7, "Theirs", owner = "trinity"))
-            val vm = CollectionViewModel(session, catalog, lists, SavedStateHandle(mapOf(COLLECTION_ID_ARG to 7)))
+            val vm =
+                CollectionViewModel(
+                    session,
+                    catalog,
+                    lists,
+                    SavedStateHandle(
+                        mapOf(COLLECTION_ID_ARG to 7),
+                    ),
+                    SmartCollections({
+                        error("unused")
+                    }, lists),
+                )
             vm.state.test {
                 runCurrent()
                 assertEquals(false, expectMostRecentItem().editable)
@@ -511,5 +559,47 @@ class ListsViewModelTest {
             runCurrent()
             assertEquals(SeriesSort.RecentlyUpdated, queries.last().filter.sort)
             assertEquals(true, queries.last().wantToRead)
+        }
+
+    @Test
+    fun smartSheetCountsOnceAfterQuickTapsThenCreatesAndOpens() =
+        runTest {
+            val counted = mutableListOf<SeriesFilterV2Dto>()
+            val api =
+                object : com.nl.kaviyy.core.testing.FakeKavitaApi() {
+                    override suspend fun series(
+                        filter: SeriesFilterV2Dto,
+                        pageNumber: Int,
+                        pageSize: Int,
+                    ): List<SeriesDto> {
+                        counted += filter
+                        return listOf(SeriesDto(1), SeriesDto(2))
+                    }
+
+                    override suspend fun addToCollection(body: CollectionAddDto) = Unit
+
+                    override suspend fun collections(sortByLastModified: Boolean) =
+                        listOf(CollectionDto(77, "Picks", owner = "neo"))
+
+                    override suspend fun updateCollection(body: CollectionDto) = body
+                }
+            val vm = SmartCollectionViewModel(session, catalog, SmartCollections({ api }, lists))
+            vm.open()
+            runCurrent()
+            assertEquals(
+                listOf("Cooking", "isekai"),
+                vm.state.value.tags
+                    .map { it.label },
+            ) // sorted, case-insensitive
+            vm.toggleTag(vm.state.value.tags[1])
+            vm.toggleGenre(vm.state.value.genres[0])
+            assertEquals(MatchCount.Checking, vm.state.value.count)
+            advanceUntilIdle()
+            assertEquals(1, counted.size) // debounced
+            assertEquals(MatchCount.Count(2), vm.state.value.count)
+            vm.name.setTextAndPlaceCursorAtEnd("Picks")
+            vm.create()
+            advanceUntilIdle()
+            assertEquals(77, vm.state.value.created)
         }
 }

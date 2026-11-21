@@ -70,4 +70,27 @@
     <string name="lists_download_nothing_new">Already downloaded or in the queue.</string>
     <string name="lists_download_no_role">Your account can\'t download. Ask your server admin for the Download role.</string>
     <string name="lists_download_over_limit">Not enough room under your download storage limit.</string>
+    <string name="lists_new_smart">New Smart Collection</string>
+    <string name="lists_new_smart_short">New Smart</string>
+    <string name="lists_smart_name_hint">e.g. Isekai picks</string>
+    <string name="lists_smart_any">Match any</string>
+    <string name="lists_smart_all">Match all</string>
+    <string name="lists_smart_search">Search</string>
+    <string name="lists_smart_search_hint">Tags and genres</string>
+    <string name="lists_smart_loading">Loading tags…</string>
+    <string name="lists_smart_tags">Tags</string>
+    <string name="lists_smart_genres">Genres</string>
+    <string name="lists_smart_pick">Pick tags or genres</string>
+    <string name="lists_smart_checking">Checking…</string>
+    <string name="lists_smart_none">No series match yet</string>
+    <plurals name="lists_smart_matches">
+        <item quantity="one">%d series matches</item>
+        <item quantity="other">%d series match</item>
+    </plurals>
+    <string name="lists_smart_footnote">Saved to your Kavita server as a normal collection. Kaviyy adds and removes series as tags change, each time it syncs. The rule is kept in the collection’s summary.</string>
+    <!-- %s: tag and genre names. -->
+    <string name="lists_smart_rule_any">Any of: %s</string>
+    <string name="lists_smart_rule_all">All of: %s</string>
+    <string name="lists_smart_update">Update now</string>
+    <string name="lists_smart_updating">Updating…</string>
 </resources>

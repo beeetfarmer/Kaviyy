@@ -16,6 +16,8 @@ import com.nl.kaviyy.core.data.ListSummary
 import com.nl.kaviyy.core.data.ListsRepository
 import com.nl.kaviyy.core.data.ReadingListRepository
 import com.nl.kaviyy.core.data.SeriesFilter
+import com.nl.kaviyy.core.data.SmartCollections
+import com.nl.kaviyy.core.data.SmartRule
 import com.nl.kaviyy.core.data.collectionQuery
 import com.nl.kaviyy.core.data.editableBy
 import com.nl.kaviyy.core.data.wantToReadQuery
@@ -86,6 +88,7 @@ data class ListsActions(
     val onSeeAllReadingLists: () -> Unit = {},
     val onNew: () -> Unit = {},
     val onImportCbl: () -> Unit = {},
+    val onNewSmartCollection: () -> Unit = {},
 )
 
 /** Screen 08. */
@@ -163,6 +166,10 @@ data class CollectionUiState(
     val error: AppError? = null,
     /** Deleted: the screen closes. */
     val deleted: Boolean = false,
+    /** A smart collection is being re-matched ("Update now"). */
+    val syncing: Boolean = false,
+    /** Bumped after each re-match so the grid reloads. */
+    val synced: Int = 0,
 )
 
 private data class Edit(
@@ -171,6 +178,8 @@ private data class Edit(
     val busy: Boolean = false,
     val error: AppError? = null,
     val deleted: Boolean = false,
+    val syncing: Boolean = false,
+    val synced: Int = 0,
 )
 
 /** [derived] One collection: its series in the Library grid (Kavita's collection filter rule); owners edit it. */
@@ -183,6 +192,7 @@ class CollectionViewModel
         repository: CatalogRepository,
         private val lists: ListsRepository,
         saved: SavedStateHandle,
+        private val smart: SmartCollections,
     ) : ViewModel() {
         private val id: Int = checkNotNull(saved.get<Int>(COLLECTION_ID_ARG)) { "missing $COLLECTION_ID_ARG" }
         private val server = session.activeServer.distinctUntilChangedBy { it?.id }
@@ -203,6 +213,8 @@ class CollectionViewModel
                         busy = e.busy,
                         error = e.error,
                         deleted = e.deleted,
+                        syncing = e.syncing,
+                        synced = e.synced,
                     )
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), CollectionUiState())
 
@@ -214,11 +226,24 @@ class CollectionViewModel
         fun startEdit() {
             val c = state.value.collection ?: return
             title.setTextAndPlaceCursorAtEnd(c.title)
-            summary.setTextAndPlaceCursorAtEnd(c.summary.orEmpty())
+            summary.setTextAndPlaceCursorAtEnd(SmartRule.userSummary(c.summary).orEmpty())
             edit.value = Edit(editing = true)
         }
 
-        fun closeEdit() = edit.update { Edit() }
+        fun closeEdit() = edit.update { Edit(synced = it.synced) }
+
+        /** Re-applies a smart collection's rule now (it also runs with every background sync). */
+        fun syncSmart() {
+            if (edit.value.syncing) return
+            viewModelScope.launch {
+                val s = session.activeServer.first() ?: return@launch
+                edit.update { it.copy(syncing = true, error = null) }
+                val r = smart.sync(s, id)
+                edit.update {
+                    it.copy(syncing = false, synced = it.synced + 1, error = (r as? AppResult.Failure)?.error)
+                }
+            }
+        }
 
         fun save() {
             val c = state.value.collection ?: return
