@@ -81,7 +81,12 @@ class ListsViewModelTest {
     private var changeResult: AppResult<Unit> = AppResult.Success(Unit)
     private val refreshed = mutableListOf<ServerId>()
     private val readingRows =
-        MutableStateFlow(listOf(ReadingListRow(ReadingListEntity(1, 3, "Crisis order", itemCount = 4), readCount = 1)))
+        MutableStateFlow(
+            listOf(
+                ReadingListRow(ReadingListEntity(1, 3, "Crisis order", itemCount = 4, owner = "neo"), readCount = 1),
+            ),
+        )
+    private val readingCalls = mutableListOf<String>()
     private val readingItems =
         MutableStateFlow(
             listOf(
@@ -113,6 +118,60 @@ class ListsViewModelTest {
                 server: Server,
                 id: Int,
             ) = itemsResult
+
+            override suspend fun listsWith(
+                server: Server,
+                seriesId: Int,
+            ): AppResult<Set<Int>> = error("unused")
+
+            override suspend fun create(
+                server: Server,
+                title: String,
+            ): AppResult<Int> {
+                readingCalls += "create $title"
+                return if (title == "fail") AppResult.Failure(AppError.Network) else AppResult.Success(9)
+            }
+
+            override suspend fun update(
+                server: Server,
+                id: Int,
+                title: String,
+                summary: String?,
+            ): AppResult<Unit> {
+                readingCalls += "update $id $title"
+                return AppResult.Success(Unit)
+            }
+
+            override suspend fun delete(
+                server: Server,
+                id: Int,
+            ): AppResult<Unit> {
+                readingCalls += "delete $id"
+                return AppResult.Success(Unit)
+            }
+
+            override suspend fun move(
+                server: Server,
+                item: ReadingListItemEntity,
+                to: Int,
+            ): AppResult<Unit> {
+                readingCalls += "move ${item.id} to $to"
+                return AppResult.Success(Unit)
+            }
+
+            override suspend fun remove(
+                server: Server,
+                item: ReadingListItemEntity,
+            ): AppResult<Unit> {
+                readingCalls += "remove ${item.id}"
+                return AppResult.Success(Unit)
+            }
+
+            override suspend fun addSeries(
+                server: Server,
+                id: Int,
+                seriesId: Int,
+            ): AppResult<Unit> = error("unused")
         }
 
     private val lists =
@@ -240,6 +299,57 @@ class ListsViewModelTest {
                 assertEquals("Crisis order", st.list?.list?.title)
                 assertEquals(listOf(100, 101), st.items.map { it.chapterId })
                 assertEquals(AppError.Network, st.error)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun theOwnerArrangesRenamesAndDeletesAReadingList() =
+        runTest {
+            val vm = ReadingListViewModel(session, readingLists, SavedStateHandle(mapOf(READING_LIST_ID_ARG to 3)))
+            vm.state.test {
+                runCurrent()
+                assertEquals(true, expectMostRecentItem().editable)
+                vm.toggleArranging()
+                vm.move(0, -1) // already first: nothing
+                vm.move(0, 1)
+                runCurrent()
+                vm.remove(readingItems.value[1])
+                runCurrent()
+                vm.startEdit()
+                assertEquals("Crisis order", vm.title.text.toString())
+                vm.title.setTextAndPlaceCursorAtEnd("Crisis")
+                vm.save()
+                runCurrent()
+                vm.delete()
+                vm.delete()
+                runCurrent()
+                val st = expectMostRecentItem()
+                assertEquals(true to true, st.arranging to st.deleted)
+                assertEquals(listOf("move 1 to 1", "remove 2", "update 3 Crisis", "delete 3"), readingCalls)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun plusCreatesAReadingListAndOpensItOnce() =
+        runTest {
+            val vm = ListsViewModel(session, lists, readingLists)
+            vm.state.test {
+                runCurrent()
+                vm.openNew()
+                vm.newName.setTextAndPlaceCursorAtEnd("fail")
+                vm.createReadingList()
+                runCurrent()
+                assertEquals(true to true, expectMostRecentItem().newList.let { it.open to it.failed })
+                vm.newName.setTextAndPlaceCursorAtEnd(" Crisis ")
+                vm.createReadingList()
+                runCurrent()
+                assertEquals(9, expectMostRecentItem().newList.created)
+                vm.consumeCreated()
+                runCurrent()
+                assertEquals(NewListState(), expectMostRecentItem().newList)
+                assertEquals(listOf("create fail", "create Crisis"), readingCalls)
                 cancelAndIgnoreRemainingEvents()
             }
         }

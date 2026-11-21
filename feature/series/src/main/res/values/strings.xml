@@ -140,4 +140,11 @@
     <string name="series_collections_name_hint">e.g. Comfort reads</string>
     <string name="series_collections_create">Create with this series</string>
     <string name="series_collections_failed">Couldn\'t update collections. Check your connection and try again.</string>
+    <string name="series_reading_lists_add">Add to reading list</string>
+    <string name="series_reading_lists_title">Reading Lists</string>
+    <string name="series_reading_lists_yours">Your reading lists</string>
+    <string name="series_reading_lists_in">Already in this list</string>
+    <string name="series_reading_lists_new">New reading list</string>
+    <string name="series_reading_lists_name_hint">e.g. Civil War order</string>
+    <string name="series_reading_lists_failed">Couldn\'t update reading lists. Check your connection and try again.</string>
 </resources>

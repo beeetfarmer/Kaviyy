@@ -1,6 +1,7 @@
 package com.nl.kaviyy.core.network
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -493,6 +494,9 @@ data class ReadingListDto(
     val endingYear: Int = 0,
     val endingMonth: Int = 0,
     val ownerUserName: String? = null,
+    val coverImageLocked: Boolean = false,
+    /** Passed back untouched on update. */
+    val tags: JsonElement? = null,
 )
 
 /** Kavita `ReadingListItemDto` (the fields we show). */
@@ -508,4 +512,41 @@ data class ReadingListItemDto(
     val pagesRead: Int = 0,
     val pagesTotal: Int = 0,
     val title: String? = null,
+)
+
+/** Kavita `CreateReadingListDto`. */
+@Serializable
+data class CreateReadingListDto(
+    val title: String,
+)
+
+/** Kavita `UpdateReadingListDto`; everything but title and summary is passed back as the server sent it. */
+@Serializable
+data class UpdateReadingListDto(
+    val readingListId: Int,
+    val title: String,
+    val summary: String?,
+    val promoted: Boolean,
+    val coverImageLocked: Boolean,
+    val startingMonth: Int,
+    val startingYear: Int,
+    val endingMonth: Int,
+    val endingYear: Int,
+    val tags: JsonElement? = null,
+)
+
+/** Kavita `UpdateReadingListPosition` (also the delete-item body). */
+@Serializable
+data class ReadingListPositionDto(
+    val readingListId: Int,
+    val readingListItemId: Int,
+    val fromPosition: Int = 0,
+    val toPosition: Int = 0,
+)
+
+/** Kavita `UpdateReadingListBySeriesDto`. */
+@Serializable
+data class ReadingListSeriesDto(
+    val seriesId: Int,
+    val readingListId: Int,
 )

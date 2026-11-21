@@ -2,6 +2,7 @@ package com.nl.kaviyy.feature.lists
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -124,18 +125,19 @@ class ListsScreenTest {
     fun screenshotEditCollection() =
         shot("collection_edit") {
             CollectionPreview()
-            EditCollectionSheet(
-                CollectionUiState(
-                    collection = previewCollections[0],
-                    editable = true,
-                    editing = true,
+            EditListSheet(
+                EditListForm(
+                    "Edit collection",
+                    "Delete collection",
+                    busy = false,
+                    failed = false,
                     confirmDelete = true,
                 ),
                 androidx.compose.foundation.text.input
                     .TextFieldState("Comfort reads"),
                 androidx.compose.foundation.text.input
                     .TextFieldState(),
-                EditCollectionActions(),
+                EditListActions(),
             )
         }
 
@@ -144,7 +146,7 @@ class ListsScreenTest {
         val calls = mutableListOf<String>()
         compose.setContent {
             com.nl.kaviyy.core.designsystem.theme.KavitaTheme {
-                ReadingListScreen(previewReadingList, {}, { s, c -> calls += "read $s $c" })
+                ReadingListScreen(previewReadingList, ReadingListActions(onRead = { s, c -> calls += "read $s $c" }))
             }
         }
         compose.onNodeWithText("2 of 4 read").assertExists()
@@ -161,6 +163,50 @@ class ListsScreenTest {
         compose.onNodeWithText("Cosmic arcs").performClick()
         assertEquals(3, opened)
     }
+
+    @Test
+    fun ownersArrangeItemsWithMoveAndRemove() {
+        val calls = mutableListOf<String>()
+        compose.setContent {
+            com.nl.kaviyy.core.designsystem.theme.KavitaTheme {
+                ReadingListScreen(
+                    previewReadingList.copy(editable = true, arranging = true),
+                    ReadingListActions(
+                        onMove = { i, by -> calls += "move $i $by" },
+                        onRemove = { calls += "remove ${it.id}" },
+                        onEdit = { calls += "edit" },
+                    ),
+                )
+            }
+        }
+        compose.onNodeWithText("Continue").assertDoesNotExist()
+        compose.onAllNodesWithContentDescription("Move down")[0].performClick()
+        compose.onAllNodesWithContentDescription("Move up")[1].performClick()
+        compose.onAllNodesWithContentDescription("Remove from list")[3].performClick()
+        compose.onNodeWithText("Name & details").performClick()
+        assertEquals(listOf("move 0 1", "move 1 -1", "remove 4", "edit"), calls)
+    }
+
+    @Test
+    fun screenshotReadingListArranging() =
+        shot("reading_list_arranging") {
+            com.nl.kaviyy.core.designsystem.theme.KavitaTheme {
+                ReadingListScreen(previewReadingList.copy(editable = true, arranging = true), ReadingListActions())
+            }
+        }
+
+    @Test
+    fun screenshotNewReadingList() =
+        shot("lists_new_reading_list") {
+            ListsPreview()
+            NewReadingListSheet(
+                NewListState(open = true),
+                androidx.compose.foundation.text.input
+                    .TextFieldState(),
+                {},
+                {},
+            )
+        }
 
     @Test
     fun screenshotReadingListLight() = shot("reading_list_light") { ReadingListPreview() }

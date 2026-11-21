@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -38,8 +39,13 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.nl.kaviyy.core.data.ListSummary
+import com.nl.kaviyy.core.designsystem.component.CircleIconButton
 import com.nl.kaviyy.core.designsystem.component.CoverImage
+import com.nl.kaviyy.core.designsystem.component.GroupedInputRow
+import com.nl.kaviyy.core.designsystem.component.GroupedList
+import com.nl.kaviyy.core.designsystem.component.KavitaBottomSheet
 import com.nl.kaviyy.core.designsystem.component.LargeTitleHeader
+import com.nl.kaviyy.core.designsystem.component.SheetHeader
 import com.nl.kaviyy.core.designsystem.component.coverColorFor
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
@@ -58,10 +64,65 @@ fun ListsRoute(
     viewModel: ListsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(state.newList.created) {
+        state.newList.created?.let {
+            viewModel.consumeCreated()
+            onOpenReadingList(it)
+        }
+    }
     ListsScreen(
         state,
-        ListsActions(onOpenWantToRead, onOpenCollection, onSeeAllCollections, onOpenReadingList, onSeeAllReadingLists),
+        ListsActions(
+            onOpenWantToRead,
+            onOpenCollection,
+            onSeeAllCollections,
+            onOpenReadingList,
+            onSeeAllReadingLists,
+            viewModel::openNew,
+        ),
     )
+    if (state.newList.open) {
+        NewReadingListSheet(
+            state.newList,
+            viewModel.newName,
+            viewModel::closeNew,
+            viewModel::createReadingList,
+        )
+    }
+}
+
+/** [derived] "+": a new reading list (Kavita only creates collections by adding a series, from the series screen). */
+@Composable
+internal fun NewReadingListSheet(
+    state: NewListState,
+    name: TextFieldState,
+    onClose: () -> Unit,
+    onCreate: () -> Unit,
+) = KavitaBottomSheet(onDismiss = onClose) {
+    SheetHeader(
+        stringResource(R.string.lists_new_reading_list),
+        stringResource(R.string.lists_cancel),
+        onClose,
+        applyLabel = stringResource(R.string.lists_create),
+        onApply = { if (!state.busy && name.text.isNotBlank()) onCreate() },
+    )
+    Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp)) {
+        GroupedList {
+            GroupedInputRow(
+                stringResource(R.string.lists_name),
+                name,
+                placeholder = stringResource(R.string.lists_new_reading_list_hint),
+            )
+        }
+        if (state.failed) {
+            Text(
+                stringResource(R.string.lists_change_failed),
+                Modifier.padding(top = 8.dp),
+                style = Kavita.type.footnote,
+                color = Kavita.colors.labelSecondary,
+            )
+        }
+    }
 }
 
 @Composable
@@ -81,7 +142,32 @@ fun ReadingListRoute(
     viewModel: ReadingListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    ReadingListScreen(state, onBack, onRead)
+    LaunchedEffect(state.deleted) { if (state.deleted) onBack() }
+    ReadingListScreen(
+        state,
+        ReadingListActions(
+            onBack,
+            onRead,
+            viewModel::toggleArranging,
+            viewModel::move,
+            viewModel::remove,
+            viewModel::startEdit,
+        ),
+    )
+    if (state.editing) {
+        EditListSheet(
+            EditListForm(
+                stringResource(R.string.lists_edit_reading_list),
+                stringResource(R.string.lists_delete_reading_list),
+                state.busy,
+                state.error != null,
+                state.confirmDelete,
+            ),
+            viewModel.title,
+            viewModel.summary,
+            EditListActions(viewModel::closeEdit, viewModel::save, viewModel::delete),
+        )
+    }
 }
 
 @Composable
@@ -110,11 +196,17 @@ fun CollectionRoute(
         onEdit = viewModel::startEdit,
     )
     if (state.editing) {
-        EditCollectionSheet(
-            state,
+        EditListSheet(
+            EditListForm(
+                stringResource(R.string.lists_edit_collection),
+                stringResource(R.string.lists_delete),
+                state.busy,
+                state.error != null,
+                state.confirmDelete,
+            ),
             viewModel.title,
             viewModel.summary,
-            EditCollectionActions(viewModel::closeEdit, viewModel::save, viewModel::delete),
+            EditListActions(viewModel::closeEdit, viewModel::save, viewModel::delete),
         )
     }
 }
@@ -134,7 +226,9 @@ fun ListsScreen(
         .padding(horizontal = KavitaSpacing.screenHorizontal),
     verticalArrangement = Arrangement.spacedBy(20.dp),
 ) {
-    LargeTitleHeader(stringResource(R.string.lists_title), Modifier.padding(top = KavitaSpacing.topBelowStatusBar))
+    LargeTitleHeader(stringResource(R.string.lists_title), Modifier.padding(top = KavitaSpacing.topBelowStatusBar)) {
+        CircleIconButton(KavitaIcons.Plus, stringResource(R.string.lists_new_reading_list), actions.onNew)
+    }
     WantToReadCard(state.wantToRead, state.server, actions.onOpenWantToRead)
     CollectionsSection(state, actions)
     ReadingListsSection(state, actions)

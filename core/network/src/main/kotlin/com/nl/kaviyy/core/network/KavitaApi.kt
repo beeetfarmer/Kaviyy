@@ -95,6 +95,47 @@ interface KavitaApi {
         @Query("sortByLastModified") sortByLastModified: Boolean = true,
     ): List<ReadingListDto>
 
+    @GET("api/ReadingList")
+    suspend fun readingList(
+        @Query("readingListId") readingListId: Int,
+    ): ReadingListDto
+
+    @POST("api/ReadingList/create")
+    suspend fun createReadingList(
+        @Body body: CreateReadingListDto,
+    ): ReadingListDto
+
+    @POST("api/ReadingList/update")
+    suspend fun updateReadingList(
+        @Body body: UpdateReadingListDto,
+    )
+
+    @DELETE("api/ReadingList")
+    suspend fun deleteReadingList(
+        @Query("readingListId") readingListId: Int,
+    )
+
+    @POST("api/ReadingList/update-position")
+    suspend fun moveReadingListItem(
+        @Body body: ReadingListPositionDto,
+    )
+
+    @POST("api/ReadingList/delete-item")
+    suspend fun deleteReadingListItem(
+        @Body body: ReadingListPositionDto,
+    )
+
+    /** Adds every chapter of a series to the end of a reading list. */
+    @POST("api/ReadingList/update-by-series")
+    suspend fun addSeriesToReadingList(
+        @Body body: ReadingListSeriesDto,
+    )
+
+    @GET("api/ReadingList/lists-for-series")
+    suspend fun readingListsWithSeries(
+        @Query("seriesId") seriesId: Int,
+    ): List<ReadingListDto>
+
     @GET("api/ReadingList/items")
     suspend fun readingListItems(
         @Query("readingListId") readingListId: Int,

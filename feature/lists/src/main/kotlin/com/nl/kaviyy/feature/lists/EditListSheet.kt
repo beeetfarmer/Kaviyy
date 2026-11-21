@@ -16,20 +16,20 @@ import com.nl.kaviyy.core.designsystem.component.KavitaBottomSheet
 import com.nl.kaviyy.core.designsystem.component.SheetHeader
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 
-/** [derived] Edit collection: name and summary (Save), and Delete, which asks once more before deleting. */
+/** [derived] Edit a collection or reading list: name and summary (Save), and Delete, which asks once more. */
 @Composable
-internal fun EditCollectionSheet(
-    state: CollectionUiState,
+internal fun EditListSheet(
+    form: EditListForm,
     title: TextFieldState,
     summary: TextFieldState,
-    actions: EditCollectionActions,
+    actions: EditListActions,
 ) = KavitaBottomSheet(onDismiss = actions.onClose) {
     SheetHeader(
-        stringResource(R.string.lists_edit_collection),
+        form.heading,
         stringResource(R.string.lists_cancel),
         actions.onClose,
         applyLabel = stringResource(R.string.lists_save),
-        onApply = { if (!state.busy && title.text.isNotBlank()) actions.onSave() },
+        onApply = { if (!form.busy && title.text.isNotBlank()) actions.onSave() },
     )
     Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 32.dp)) {
         GroupedList {
@@ -40,7 +40,7 @@ internal fun EditCollectionSheet(
                 placeholder = stringResource(R.string.lists_summary_hint),
             )
         }
-        state.error?.let {
+        if (form.failed) {
             Text(
                 stringResource(R.string.lists_change_failed),
                 Modifier.padding(top = 8.dp),
@@ -50,8 +50,8 @@ internal fun EditCollectionSheet(
         }
         GroupedList(Modifier.padding(top = 24.dp).fillMaxWidth()) {
             GroupedRow(
-                stringResource(if (state.confirmDelete) R.string.lists_delete_confirm else R.string.lists_delete),
-                onClick = actions.onDelete.takeIf { !state.busy },
+                if (form.confirmDelete) stringResource(R.string.lists_delete_confirm) else form.deleteLabel,
+                onClick = actions.onDelete.takeIf { !form.busy },
                 showChevron = false,
                 labelColor = Kavita.colors.destructive,
             )

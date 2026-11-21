@@ -43,4 +43,14 @@
     <string name="lists_reading_continue">Continue</string>
     <string name="lists_reading_again">Read again</string>
     <string name="lists_reading_empty">This reading list has nothing you can see yet.</string>
+    <string name="lists_done">Done</string>
+    <string name="lists_details">Name &amp; details</string>
+    <string name="lists_move_up">Move up</string>
+    <string name="lists_move_down">Move down</string>
+    <string name="lists_remove_item">Remove from list</string>
+    <string name="lists_edit_reading_list">Edit reading list</string>
+    <string name="lists_delete_reading_list">Delete reading list</string>
+    <string name="lists_new_reading_list">New reading list</string>
+    <string name="lists_new_reading_list_hint">e.g. Civil War order</string>
+    <string name="lists_create">Create</string>
 </resources>

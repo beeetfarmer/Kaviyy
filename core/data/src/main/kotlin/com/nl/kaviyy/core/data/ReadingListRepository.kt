@@ -6,9 +6,15 @@ import com.nl.kaviyy.core.database.ReadingListItemEntity
 import com.nl.kaviyy.core.database.ReadingListRow
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.result.map
+import com.nl.kaviyy.core.model.result.onSuccess
 import com.nl.kaviyy.core.model.server.Server
+import com.nl.kaviyy.core.network.CreateReadingListDto
+import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.ReadingListDto
 import com.nl.kaviyy.core.network.ReadingListItemDto
+import com.nl.kaviyy.core.network.ReadingListPositionDto
+import com.nl.kaviyy.core.network.ReadingListSeriesDto
+import com.nl.kaviyy.core.network.UpdateReadingListDto
 import com.nl.kaviyy.core.network.apiCall
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -17,6 +23,7 @@ import javax.inject.Inject
 const val READING_LISTS_PREVIEW = 5
 
 /** Reading lists, cached in Room (offline-first); changes are online-only. */
+@Suppress("TooManyFunctions") // one function per reading list operation
 interface ReadingListRepository {
     fun lists(server: Server): Flow<List<ReadingListRow>>
 
@@ -37,12 +44,58 @@ interface ReadingListRepository {
         server: Server,
         id: Int,
     ): AppResult<Unit>
+
+    /** Ids of the reading lists that already hold some of [seriesId] (network). */
+    suspend fun listsWith(
+        server: Server,
+        seriesId: Int,
+    ): AppResult<Set<Int>>
+
+    /** The new list's id. */
+    suspend fun create(
+        server: Server,
+        title: String,
+    ): AppResult<Int>
+
+    suspend fun update(
+        server: Server,
+        id: Int,
+        title: String,
+        summary: String?,
+    ): AppResult<Unit>
+
+    suspend fun delete(
+        server: Server,
+        id: Int,
+    ): AppResult<Unit>
+
+    suspend fun move(
+        server: Server,
+        item: ReadingListItemEntity,
+        to: Int,
+    ): AppResult<Unit>
+
+    suspend fun remove(
+        server: Server,
+        item: ReadingListItemEntity,
+    ): AppResult<Unit>
+
+    suspend fun addSeries(
+        server: Server,
+        id: Int,
+        seriesId: Int,
+    ): AppResult<Unit>
 }
+
+/** Only the owner changes a reading list (promoted lists from others are read-only). */
+fun ReadingListEntity.editableBy(server: Server): Boolean =
+    owner != null && owner.equals(server.username, ignoreCase = true)
 
 /** The first item not fully read, else the first (read again). */
 fun List<ReadingListItemEntity>.next(): ReadingListItemEntity? =
     firstOrNull { it.pagesTotal == 0 || it.pagesRead < it.pagesTotal } ?: firstOrNull()
 
+@Suppress("TooManyFunctions") // one function per reading list operation
 class OfflineFirstReadingListRepository
     @Inject
     constructor(
@@ -73,6 +126,82 @@ class OfflineFirstReadingListRepository
         ): AppResult<Unit> =
             apiCall { apis.api(server).readingListItems(id) }.map { items ->
                 dao.replaceItems(server.id.value, id, items.map { it.toEntity(server.id.value, id) })
+            }
+
+        override suspend fun listsWith(
+            server: Server,
+            seriesId: Int,
+        ) = apiCall { apis.api(server).readingListsWithSeries(seriesId) }.map { l -> l.map { it.id }.toSet() }
+
+        override suspend fun create(
+            server: Server,
+            title: String,
+        ): AppResult<Int> =
+            apiCall { apis.api(server).createReadingList(CreateReadingListDto(title.trim())).id }
+                .onSuccess { refreshLists(server) }
+
+        /** Fetches the list first so the fields we don't edit go back exactly as they are. */
+        override suspend fun update(
+            server: Server,
+            id: Int,
+            title: String,
+            summary: String?,
+        ) = changed(server, null) {
+            val l = readingList(id)
+            updateReadingList(
+                UpdateReadingListDto(
+                    id,
+                    title.trim(),
+                    summary?.trim()?.ifEmpty { null },
+                    l.promoted,
+                    l.coverImageLocked,
+                    l.startingMonth,
+                    l.startingYear,
+                    l.endingMonth,
+                    l.endingYear,
+                    l.tags,
+                ),
+            )
+        }
+
+        override suspend fun delete(
+            server: Server,
+            id: Int,
+        ) = changed(server, null) { deleteReadingList(id) }.onSuccess { dao.delete(server.id.value, id) }
+
+        override suspend fun move(
+            server: Server,
+            item: ReadingListItemEntity,
+            to: Int,
+        ) = changed(server, item.readingListId) {
+            moveReadingListItem(ReadingListPositionDto(item.readingListId, item.id, item.position, to))
+        }
+
+        override suspend fun remove(
+            server: Server,
+            item: ReadingListItemEntity,
+        ) = changed(server, item.readingListId) {
+            deleteReadingListItem(ReadingListPositionDto(item.readingListId, item.id))
+        }
+
+        override suspend fun addSeries(
+            server: Server,
+            id: Int,
+            seriesId: Int,
+        ) = changed(server, id) { addSeriesToReadingList(ReadingListSeriesDto(seriesId, id)) }
+
+        /**
+         * Reading list changes are online-only (ponytail: no outbox; Kavita validates names and ownership). Afterwards
+         * the lists, and [items] of that list, are refreshed from the server.
+         */
+        private suspend fun changed(
+            server: Server,
+            items: Int?,
+            call: suspend KavitaApi.() -> Unit,
+        ): AppResult<Unit> =
+            apiCall { apis.api(server).call() }.onSuccess {
+                refreshLists(server)
+                items?.let { refreshItems(server, it) }
             }
     }
 

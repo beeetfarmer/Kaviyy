@@ -7,6 +7,7 @@ import com.nl.kaviyy.core.network.ChapterInfoDto
 import com.nl.kaviyy.core.network.CollectionAddDto
 import com.nl.kaviyy.core.network.CollectionDto
 import com.nl.kaviyy.core.network.CollectionRemoveDto
+import com.nl.kaviyy.core.network.CreateReadingListDto
 import com.nl.kaviyy.core.network.DashboardStreamDto
 import com.nl.kaviyy.core.network.DecodeFilterDto
 import com.nl.kaviyy.core.network.GenreTagDto
@@ -23,6 +24,8 @@ import com.nl.kaviyy.core.network.PersonDto
 import com.nl.kaviyy.core.network.ProgressDto
 import com.nl.kaviyy.core.network.ReadingListDto
 import com.nl.kaviyy.core.network.ReadingListItemDto
+import com.nl.kaviyy.core.network.ReadingListPositionDto
+import com.nl.kaviyy.core.network.ReadingListSeriesDto
 import com.nl.kaviyy.core.network.RefreshSeriesDto
 import com.nl.kaviyy.core.network.RelatedSeriesDto
 import com.nl.kaviyy.core.network.SearchResultGroupDto
@@ -34,6 +37,7 @@ import com.nl.kaviyy.core.network.SeriesMetadataDto
 import com.nl.kaviyy.core.network.SideNavStreamDto
 import com.nl.kaviyy.core.network.SmartFilterDto
 import com.nl.kaviyy.core.network.UpdateRatingDto
+import com.nl.kaviyy.core.network.UpdateReadingListDto
 import com.nl.kaviyy.core.network.UpdateUserReviewDto
 import com.nl.kaviyy.core.network.UpdateWantToReadDto
 import com.nl.kaviyy.core.network.UserReviewDto
@@ -150,6 +154,22 @@ open class FakeKavitaApi : KavitaApi {
     ): List<ReadingListDto> = error("unused")
 
     override suspend fun readingListItems(readingListId: Int): List<ReadingListItemDto> = error("unused")
+
+    override suspend fun readingList(readingListId: Int): ReadingListDto = error("unused")
+
+    override suspend fun createReadingList(body: CreateReadingListDto): ReadingListDto = error("unused")
+
+    override suspend fun updateReadingList(body: UpdateReadingListDto): Unit = error("unused")
+
+    override suspend fun deleteReadingList(readingListId: Int): Unit = error("unused")
+
+    override suspend fun moveReadingListItem(body: ReadingListPositionDto): Unit = error("unused")
+
+    override suspend fun deleteReadingListItem(body: ReadingListPositionDto): Unit = error("unused")
+
+    override suspend fun addSeriesToReadingList(body: ReadingListSeriesDto): Unit = error("unused")
+
+    override suspend fun readingListsWithSeries(seriesId: Int): List<ReadingListDto> = error("unused")
 
     override suspend fun progress(chapterId: Int): ProgressDto = error("unused")
 

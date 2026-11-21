@@ -29,7 +29,7 @@ internal val previewReadingList =
 
 @Composable
 internal fun ReadingListPreview(appearance: Appearance = Appearance.Light) =
-    KavitaTheme(appearance = appearance) { ReadingListScreen(previewReadingList, {}, { _, _ -> }) }
+    KavitaTheme(appearance = appearance) { ReadingListScreen(previewReadingList, ReadingListActions()) }
 
 @Preview(widthDp = 412, heightDp = 915)
 @Composable

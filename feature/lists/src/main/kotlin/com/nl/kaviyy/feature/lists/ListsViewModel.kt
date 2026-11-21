@@ -1,6 +1,7 @@
 package com.nl.kaviyy.feature.lists
 
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -51,9 +52,27 @@ data class ListsUiState(
     val wantToRead: ListSummary = ListSummary(0, false, emptyList(), 0),
     val collections: List<CollectionEntity> = emptyList(),
     val readingLists: List<ReadingListRow> = emptyList(),
+    val newList: NewListState = NewListState(),
 )
 
-data class EditCollectionActions(
+/** The "+" sheet: a new reading list. [created] is the new list's id, to open once. */
+data class NewListState(
+    val open: Boolean = false,
+    val busy: Boolean = false,
+    val failed: Boolean = false,
+    val created: Int? = null,
+)
+
+/** What the edit sheet shows besides the fields. */
+data class EditListForm(
+    val heading: String,
+    val deleteLabel: String,
+    val busy: Boolean,
+    val failed: Boolean,
+    val confirmDelete: Boolean,
+)
+
+data class EditListActions(
     val onClose: () -> Unit = {},
     val onSave: () -> Unit = {},
     val onDelete: () -> Unit = {},
@@ -65,6 +84,7 @@ data class ListsActions(
     val onSeeAllCollections: () -> Unit = {},
     val onOpenReadingList: (Int) -> Unit = {},
     val onSeeAllReadingLists: () -> Unit = {},
+    val onNew: () -> Unit = {},
 )
 
 /** Screen 08. */
@@ -78,6 +98,8 @@ class ListsViewModel
         private val readingLists: ReadingListRepository,
     ) : ViewModel() {
         private val server = session.activeServer.distinctUntilChangedBy { it?.id }
+        private val newList = MutableStateFlow(NewListState())
+        val newName = TextFieldState()
 
         val state: StateFlow<ListsUiState> =
             server
@@ -85,11 +107,38 @@ class ListsViewModel
                     if (s == null) {
                         flowOf(ListsUiState())
                     } else {
-                        combine(lists.wantToRead(s), lists.collections(s), readingLists.lists(s)) { w, c, r ->
-                            ListsUiState(s, w, c, r)
+                        combine(
+                            lists.wantToRead(s),
+                            lists.collections(s),
+                            readingLists.lists(s),
+                            newList,
+                        ) { w, c, r, n ->
+                            ListsUiState(s, w, c, r, n)
                         }
                     }
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ListsUiState())
+
+        fun openNew() {
+            newName.clearText()
+            newList.value = NewListState(open = true)
+        }
+
+        fun closeNew() = newList.update { NewListState() }
+
+        fun createReadingList() {
+            val name = newName.text.toString().trim()
+            val s = state.value.server
+            if (name.isEmpty() || s == null || newList.value.busy) return
+            newList.update { it.copy(busy = true, failed = false) }
+            viewModelScope.launch {
+                when (val r = readingLists.create(s, name)) {
+                    is AppResult.Success -> newList.value = NewListState(created = r.value)
+                    is AppResult.Failure -> newList.update { it.copy(busy = false, failed = true) }
+                }
+            }
+        }
+
+        fun consumeCreated() = newList.update { it.copy(created = null) }
 
         init {
             viewModelScope.launch {

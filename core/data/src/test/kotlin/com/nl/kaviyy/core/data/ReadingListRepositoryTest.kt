@@ -2,6 +2,7 @@ package com.nl.kaviyy.core.data
 
 import androidx.room.Room
 import com.nl.kaviyy.core.database.KaviyyDatabase
+import com.nl.kaviyy.core.database.ReadingListEntity
 import com.nl.kaviyy.core.database.ReadingListItemEntity
 import com.nl.kaviyy.core.database.ServerEntity
 import com.nl.kaviyy.core.model.result.AppResult
@@ -9,11 +10,16 @@ import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
+import com.nl.kaviyy.core.network.CreateReadingListDto
 import com.nl.kaviyy.core.network.ReadingListDto
 import com.nl.kaviyy.core.network.ReadingListItemDto
+import com.nl.kaviyy.core.network.ReadingListPositionDto
+import com.nl.kaviyy.core.network.ReadingListSeriesDto
+import com.nl.kaviyy.core.network.UpdateReadingListDto
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,6 +39,7 @@ class ReadingListRepositoryTest {
         Server(ServerId(serverId), "k", (ServerUrl.parse("https://k.lan") as ServerUrlResult.Valid).url)
     private var remote = (1..7).map { ReadingListDto(it, "List $it", itemCount = 3) }
     private val fetched = mutableListOf<Int>()
+    private val calls = mutableListOf<String>()
 
     private val api =
         object : FakeKavitaApi() {
@@ -51,6 +58,37 @@ class ReadingListRepositoryTest {
                     ReadingListItemDto(13 + readingListId * 10, 2, 102, 6, seriesName = "Other", pagesTotal = 0),
                 )
             }
+
+            override suspend fun readingList(readingListId: Int) =
+                ReadingListDto(readingListId, "Old", promoted = true, startingYear = 2006, tags = JsonPrimitive("kept"))
+
+            override suspend fun createReadingList(body: CreateReadingListDto): ReadingListDto {
+                calls += "create ${body.title}"
+                return ReadingListDto(99, body.title)
+            }
+
+            override suspend fun updateReadingList(body: UpdateReadingListDto) {
+                val b = body
+                calls += "update ${b.readingListId} ${b.title} ${b.summary} ${b.promoted} ${b.startingYear} ${b.tags}"
+            }
+
+            override suspend fun deleteReadingList(readingListId: Int) {
+                calls += "delete $readingListId"
+            }
+
+            override suspend fun moveReadingListItem(body: ReadingListPositionDto) {
+                calls += "move ${body.readingListItemId} ${body.fromPosition}->${body.toPosition}"
+            }
+
+            override suspend fun deleteReadingListItem(body: ReadingListPositionDto) {
+                calls += "remove ${body.readingListId}/${body.readingListItemId}"
+            }
+
+            override suspend fun addSeriesToReadingList(body: ReadingListSeriesDto) {
+                calls += "add ${body.seriesId} to ${body.readingListId}"
+            }
+
+            override suspend fun readingListsWithSeries(seriesId: Int) = remote.take(2)
         }
     private val repo = OfflineFirstReadingListRepository({ api }, db.readingListDao())
 
@@ -70,6 +108,40 @@ class ReadingListRepositoryTest {
             repo.refreshLists(server)
             assertEquals(2, repo.lists(server).first().size) // deleted on the server: gone here
         }
+
+    @Test
+    fun changesGoToKavitaPassingUneditedFieldsBack() =
+        runTest {
+            repo.refreshLists(server)
+            val item = repo.items(server, 1).first()[2]
+            assertEquals(AppResult.Success(setOf(1, 2)), repo.listsWith(server, 5))
+            assertEquals(AppResult.Success(99), repo.create(server, " New "))
+            repo.update(server, 1, "Renamed", " ")
+            repo.move(server, item, 0)
+            repo.remove(server, item)
+            repo.addSeries(server, 1, 5)
+            repo.delete(server, 1)
+            assertEquals(
+                listOf(
+                    "create New",
+                    "update 1 Renamed null true 2006 \"kept\"",
+                    "move 23 2->0",
+                    "remove 1/23",
+                    "add 5 to 1",
+                    "delete 1",
+                ),
+                calls,
+            )
+            assertEquals(null, repo.list(server, 1).first())
+        }
+
+    @Test
+    fun onlyTheOwnerEdits() {
+        val me = server.copy(username = "Neo")
+        assertEquals(true, ReadingListEntity(1, 1, "a", owner = "neo").editableBy(me))
+        assertEquals(false, ReadingListEntity(1, 1, "a", owner = "admin").editableBy(me))
+        assertEquals(false, ReadingListEntity(1, 1, "a").editableBy(me))
+    }
 
     @Test
     fun itemsAreOrderedAndNextIsTheFirstUnfinished() =
