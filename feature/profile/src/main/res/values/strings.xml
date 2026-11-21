@@ -224,4 +224,22 @@
     <string name="admin_never">Never</string>
     <string name="admin_recent">Recently added</string>
     <string name="admin_web_note">Users, library folders and email or single sign-on settings are managed in Kavita on the web.</string>
+    <string name="scrobbling_kavita_plus">Kavita+</string>
+    <string name="trackers_title">From this phone</string>
+    <string name="trackers_kitsu">Kitsu</string>
+    <string name="trackers_hint">Finished chapters are sent on the next sync. Series link by the tracker links in their Kavita details, else only by an exact title match. Progress is never lowered.</string>
+    <string name="trackers_connect">Connect</string>
+    <string name="trackers_disconnect">Disconnect</string>
+    <string name="trackers_signed_in">Signed in as %1$s. Disconnecting removes the saved sign-in from this phone.</string>
+    <string name="trackers_connecting">Connecting…</string>
+    <string name="trackers_failed">Couldn\'t connect. Check what you pasted and try again.</string>
+    <string name="trackers_client_id">Client ID</string>
+    <string name="trackers_open">Open %1$s to approve</string>
+    <string name="trackers_token">Token</string>
+    <string name="trackers_code">Code or address</string>
+    <string name="trackers_email">Email</string>
+    <string name="trackers_password">Password</string>
+    <string name="trackers_anilist_help">Create an API client at anilist.co/settings/developer with the redirect URL https://anilist.co/api/v2/oauth/pin. Paste its client ID, approve, then paste the token AniList shows.</string>
+    <string name="trackers_mal_help">Create an app (type: other) at myanimelist.net/apiconfig with any redirect URL. Paste its client ID, approve, then paste the address the browser lands on.</string>
+    <string name="trackers_kitsu_help">Your password goes to Kitsu once to sign in and is not kept. Only the sign-in token is saved, encrypted on this phone.</string>
 </resources>

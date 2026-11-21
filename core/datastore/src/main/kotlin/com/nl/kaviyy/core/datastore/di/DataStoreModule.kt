@@ -14,6 +14,8 @@ import com.nl.kaviyy.core.datastore.AppSettings
 import com.nl.kaviyy.core.datastore.AppSettingsSerializer
 import com.nl.kaviyy.core.datastore.CredentialFile
 import com.nl.kaviyy.core.datastore.CredentialSerializer
+import com.nl.kaviyy.core.datastore.TrackerFile
+import com.nl.kaviyy.core.datastore.TrackerSerializer
 import com.nl.kaviyy.core.model.dispatch.Dispatcher
 import com.nl.kaviyy.core.model.dispatch.KaviyyDispatchers
 import dagger.Module
@@ -61,6 +63,21 @@ object DataStoreModule {
             corruptionHandler = ReplaceFileCorruptionHandler { CredentialFile() },
             scope = CoroutineScope(io + SupervisorJob()),
             produceFile = { context.dataStoreFile("credentials.pb") },
+        )
+
+    /** Tracker tokens: same Keystore-wrapped key, separate file and associated data. */
+    @Provides
+    @Singleton
+    fun trackerDataStore(
+        @ApplicationContext context: Context,
+        aead: Aead,
+        @Dispatcher(KaviyyDispatchers.IO) io: CoroutineDispatcher,
+    ): DataStore<TrackerFile> =
+        DataStoreFactory.create(
+            serializer = TrackerSerializer(aead),
+            corruptionHandler = ReplaceFileCorruptionHandler { TrackerFile() },
+            scope = CoroutineScope(io + SupervisorJob()),
+            produceFile = { context.dataStoreFile("trackers.pb") },
         )
 
     @Provides

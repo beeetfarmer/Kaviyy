@@ -8,6 +8,7 @@ import com.nl.kaviyy.core.database.toModel
 import com.nl.kaviyy.core.datastore.AppSettings
 import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.datastore.CredentialStore
+import com.nl.kaviyy.core.datastore.TrackerStore
 import com.nl.kaviyy.core.model.auth.Credentials
 import com.nl.kaviyy.core.model.dispatch.Dispatcher
 import com.nl.kaviyy.core.model.dispatch.KaviyyDispatchers
@@ -81,6 +82,7 @@ class SessionRepository
         private val settings: AppSettingsStore,
         @param:ApplicationContext private val context: Context,
         @param:Dispatcher(KaviyyDispatchers.IO) private val io: CoroutineDispatcher,
+        private val trackers: TrackerStore,
     ) : AuthSession {
         private val dao: ServerDao = db.serverDao()
         private val memoryOnly = MutableStateFlow<Map<ServerId, Credentials>>(emptyMap())
@@ -98,6 +100,7 @@ class SessionRepository
             val server = dao.byId(serverId.value)?.toModel()
             signOut(serverId)
             dao.delete(serverId.value)
+            trackers.forgetServer(serverId.value)
             // Per-server data isolation: everything cached for a server lives under its id (paths from ids only).
             withContext(io) {
                 server?.let { ServerImageLoaders.cacheDir(context, it).deleteRecursively() }
@@ -110,6 +113,7 @@ class SessionRepository
         override suspend fun deleteAllLocalData() {
             memoryOnly.value = emptyMap()
             store.clearAll()
+            trackers.clearAll()
             settings.update { AppSettings() }
             withContext(io) {
                 db.clearAllTables()

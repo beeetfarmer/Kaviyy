@@ -101,6 +101,7 @@ class OfflineFirstReadStateRepository
         private val apis: ServerApis,
         private val series: SeriesDao,
         private val outbox: OutboxDao,
+        private val scrobble: ScrobbleSignal = ScrobbleSignal.None,
     ) : ReadStateRepository {
         override suspend fun setRead(
             server: Server,
@@ -115,6 +116,7 @@ class OfflineFirstReadStateRepository
                     is ReadTarget.Chapter -> listOf(target.chapterId)
                 }
             series.applyRead(id, target.seriesId, chapters, read)
+            if (read) scrobble.finished(id, target.seriesId)
             val payload =
                 buildJsonObject {
                     put("target", target.key)

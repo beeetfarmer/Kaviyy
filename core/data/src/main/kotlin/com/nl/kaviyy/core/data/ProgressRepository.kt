@@ -56,6 +56,7 @@ class OfflineFirstProgressRepository
         private val progress: ProgressDao,
         private val outbox: OutboxDao,
         private val clock: ServerClock = ServerClock(),
+        private val scrobble: ScrobbleSignal = ScrobbleSignal.None,
     ) : ProgressRepository {
         override suspend fun resume(
             server: Server,
@@ -110,6 +111,7 @@ class OfflineFirstProgressRepository
                     clock.now(id),
                 )
             progress.save(row)
+            if (pagesRead >= chapter.pages && chapter.pages > 0) scrobble.finished(id, chapter.seriesId)
             val payload = Json.encodeToString(ProgressDto.serializer(), row.toDto())
             outbox.enqueue(
                 OutboxEntity(

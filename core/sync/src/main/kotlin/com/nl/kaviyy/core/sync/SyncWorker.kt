@@ -7,6 +7,7 @@ import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.OutboxReplayer
 import com.nl.kaviyy.core.data.ProgressPuller
 import com.nl.kaviyy.core.data.SmartCollections
+import com.nl.kaviyy.core.data.TrackerSync
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
 import dagger.hilt.EntryPoint
@@ -33,6 +34,8 @@ class SyncWorker(
         fun puller(): ProgressPuller
 
         fun smartCollections(): SmartCollections
+
+        fun trackers(): TrackerSync
     }
 
     override suspend fun doWork(): Result {
@@ -43,11 +46,10 @@ class SyncWorker(
                 deps.replayer().flush(server).let { if (it is AppResult.Success) deps.puller().pull(server) else it }
             }
         // Best effort: smart collections pick up newly tagged series; a failure waits for the next run.
-        deps
-            .session()
-            .servers
-            .first()
-            .forEach { deps.smartCollections().syncAll(it) }
+        val servers = deps.session().servers.first()
+        servers.forEach { deps.smartCollections().syncAll(it) }
+        // Direct scrobbling to AniList / MyAnimeList / Kitsu: after the push, so progress is final.
+        deps.trackers().syncAll(servers)
         return if (done) Result.success() else Result.retry()
     }
 }

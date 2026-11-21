@@ -63,6 +63,14 @@ class SessionRepositoryTest {
         )
     private val jwt = Credentials.Jwt("aarav", "t", "r", "k")
     private var login: AppResult<LoginResult> = AppResult.Success(LoginResult(jwt, setOf("Download")))
+    private val trackers =
+        com.nl.kaviyy.core.datastore.TrackerStore(
+            com.nl.kaviyy.core.testing
+                .InMemoryDataStore(
+                    com.nl.kaviyy.core.datastore
+                        .TrackerFile(),
+                ),
+        )
     private val session =
         SessionRepository(
             db,
@@ -71,6 +79,7 @@ class SessionRepositoryTest {
             settings,
             RuntimeEnvironment.getApplication(),
             Dispatchers.Unconfined,
+            trackers,
         )
     private val url = (ServerUrl.parse("https://kavita.home.lan:5000") as ServerUrlResult.Valid).url
 
