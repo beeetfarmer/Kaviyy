@@ -1,5 +1,8 @@
 package com.nl.kaviyy.core.data
 
+import com.nl.kaviyy.core.database.ReadingListEntity
+import com.nl.kaviyy.core.database.ReadingListRow
+import com.nl.kaviyy.core.datastore.AppSettings
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -62,7 +65,38 @@ class HomeLayoutTest {
     }
 
     @Test
-    fun readingListsSortByChoice() {
-        assertEquals(ListSort.NameAsc, ListSort.of("nonsense", ListSort.NameAsc))
+    fun ordersRoundTripFallBackToTheOldReadingListSettingAndOnlyApplyWhereOffered() {
+        val settings =
+            AppSettings(readingListSort = "Largest", homeOrder = "OnDeck=NameDesc,Collection:3=Random,OnDeck2=Bogus")
+        val orders = homeOrders(settings)
+        assertEquals(SectionOrder.Largest, orders.orderOf(HomeSectionPref(HomeSection.ReadingLists, true)))
+        assertEquals(SectionOrder.Random, orders.orderOf(HomeSectionPref(HomeSection.Collection, true, 3)))
+        assertEquals(SectionOrder.Default, orders.orderOf(HomeSectionPref(HomeSection.Collection, true, 4)))
+        // Random isn't offered for On Deck, so a stray value there is ignored.
+        assertEquals(
+            SectionOrder.Default,
+            mapOf("OnDeck" to SectionOrder.Random).orderOf(HomeSectionPref(HomeSection.OnDeck, true)),
+        )
+        assertEquals(orders, homeOrders(AppSettings(homeOrder = encodeHomeOrders(orders))))
+        assertEquals(emptyList(), HomeSection.ContinueReading.orders)
+        assertEquals(listOf("b", "a"), listOf("a", "b").ordered(SectionOrder.NameDesc) { it })
+    }
+
+    @Test
+    fun readingListsShuffleTheSameWayForOneSeed() {
+        val lists =
+            (1..8).map {
+                ReadingListRow(ReadingListEntity(1, it, "List $it", position = it, itemCount = it), 0)
+            }
+        val a = lists.sortedReadingLists(SectionOrder.Random, seed = 7).map { it.list.id }
+        assertEquals(a, lists.sortedReadingLists(SectionOrder.Random, seed = 7).map { it.list.id })
+        assertEquals((1..8).toSet(), a.toSet())
+        assertEquals(
+            8,
+            lists
+                .sortedReadingLists(SectionOrder.Largest)
+                .first()
+                .list.id,
+        )
     }
 }

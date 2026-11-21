@@ -25,6 +25,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.intOrNull
 import javax.inject.Inject
@@ -39,7 +40,13 @@ object StreamType {
     /** Local only: the series of one collection / library the user put on Home. */
     const val COLLECTION = 101
     const val LIBRARY = 102
+
+    /** Local only: Want to Read on Home, in the order chosen for it (the Want to Read page keeps its own). */
+    const val WANT_TO_READ = 103
 }
+
+/** Kavita `SeriesSortField.Random`. */
+private const val SORT_RANDOM = 9
 
 private const val COLLECTION_RAIL_BASE = 1_000_000
 private const val LIBRARY_RAIL_BASE = 2_000_000
@@ -158,13 +165,7 @@ class OfflineFirstHomeRepository
                 dashboard.observeDownloadedSeries(id),
                 ::assemble,
             ).let { streams ->
-                combine(
-                    streams,
-                    series.observeQuery(id, wantToReadQuery().key),
-                    readingLists.lists(server),
-                ) { home, wanted, lists ->
-                    home.copy(wantToRead = wanted.take(RAIL_SIZE).map { it.toHomeItem() }, readingLists = lists)
-                }
+                combine(streams, readingLists.lists(server)) { home, lists -> home.copy(readingLists = lists) }
             }
         }
 
@@ -193,7 +194,8 @@ class OfflineFirstHomeRepository
                 (builtInStreams(id) + smartFilters + itemStreams(server))
                     .mapIndexed { i, stream -> stream.copy(position = i) }
                     .also { dashboard.replaceStreams(id, it) }
-            val results = listOf(layout.map {}) + streams.map { refreshStream(id, api, it) } + shelves
+            val orders = homeOrders(settings.settings.first())
+            val results = listOf(layout.map {}) + streams.map { refreshStream(id, api, it, orders) } + shelves
             return results.firstOrNull { it is AppResult.Failure } ?: AppResult.Success(Unit)
         }
 
@@ -201,7 +203,10 @@ class OfflineFirstHomeRepository
             serverId: Long,
             api: KavitaApi,
             stream: DashboardStreamEntity,
+            orders: Map<String, SectionOrder>,
         ): AppResult<Unit> {
+            val order = stream.pref()?.let(orders::orderOf) ?: SectionOrder.Default
+
             fun item(
                 position: Int,
                 seriesId: Int,
@@ -245,15 +250,12 @@ class OfflineFirstHomeRepository
                     }
                 }
 
-                StreamType.COLLECTION, StreamType.LIBRARY -> {
-                    apiCall { api.series(itemFilter(stream), 1, RAIL_SIZE) }.map { list ->
-                        series.upsertSeries(list.map { it.toEntity(serverId) })
-                        dashboard.replaceItems(serverId, stream.id, list.mapIndexed { i, s -> item(i, s.id) })
-                    }
+                StreamType.COLLECTION, StreamType.LIBRARY, StreamType.WANT_TO_READ -> {
+                    refreshSeriesList(serverId, api, stream, order)
                 }
 
                 StreamType.SMART_FILTER -> {
-                    stream.smartFilterEncoded?.let { refreshSmartFilter(serverId, api, stream.id, it) }
+                    stream.smartFilterEncoded?.let { refreshSmartFilter(serverId, api, stream.id, it, order) }
                         ?: AppResult.Success(Unit)
                 }
 
@@ -263,15 +265,46 @@ class OfflineFirstHomeRepository
             }
         }
 
+        /** A collection, library or Want to Read rail, in [order]. */
+        private suspend fun refreshSeriesList(
+            serverId: Long,
+            api: KavitaApi,
+            stream: DashboardStreamEntity,
+            order: SectionOrder,
+        ): AppResult<Unit> {
+            val list =
+                if (stream.streamType == StreamType.WANT_TO_READ) {
+                    val filter = SeriesFilterV2Dto(sortOptions = order.sortOptions(null))
+                    apiCall { api.wantToRead(filter, 1, RAIL_SIZE) }
+                } else {
+                    apiCall { api.series(itemFilter(stream, order), 1, RAIL_SIZE) }
+                }
+            return list.map { found ->
+                series.upsertSeries(found.map { it.toEntity(serverId) })
+                dashboard.replaceItems(
+                    serverId,
+                    stream.id,
+                    found.mapIndexed { i, s -> DashboardItemEntity(serverId, stream.id, i, s.id) },
+                )
+            }
+        }
+
         /** Decode the stream's filter on the server, then list its series. Non-series filters are skipped. */
         private suspend fun refreshSmartFilter(
             serverId: Long,
             api: KavitaApi,
             streamId: Int,
             encoded: String,
+            order: SectionOrder,
         ): AppResult<Unit> {
             val decoded = apiCall { api.decodeFilter(DecodeFilterDto(encoded)) }
-            val filter = decoded.getOrNull() ?: return decoded.map {}
+            val saved = decoded.getOrNull() ?: return decoded.map {}
+            // A chosen order replaces the one saved with the filter.
+            val filter =
+                order.sortOptions(null)?.let { sort ->
+                    val json = sortJson.encodeToJsonElement(SeriesSortOptionDto.serializer(), sort)
+                    JsonObject(saved + ("sortOptions" to json))
+                } ?: saved
             val isSeries = ((filter["entityType"] as? JsonPrimitive)?.intOrNull ?: ENTITY_SERIES) == ENTITY_SERIES
             val list =
                 if (isSeries) {
@@ -319,31 +352,47 @@ class OfflineFirstHomeRepository
                 }
         }
 
-        /** On Deck, Recently Updated and Recently Added, with fixed local ids (server stream ids are positive). */
+        /** On Deck, Recently Updated / Added and Want to Read, with fixed local ids (server ids are positive). */
         private fun builtInStreams(serverId: Long) =
-            listOf(StreamType.ON_DECK, StreamType.RECENTLY_UPDATED, StreamType.NEWLY_ADDED).mapIndexed { i, type ->
-                DashboardStreamEntity(serverId, id = -type, name = "", position = i, streamType = type, visible = true)
-            }
+            listOf(StreamType.ON_DECK, StreamType.RECENTLY_UPDATED, StreamType.NEWLY_ADDED, StreamType.WANT_TO_READ)
+                .mapIndexed { i, type -> DashboardStreamEntity(serverId, -type, "", i, type, visible = true) }
     }
 
-/** A collection's series by title (as the collection opens); a library's newest first. */
-internal fun itemFilter(stream: DashboardStreamEntity): SeriesFilterV2Dto =
-    if (stream.streamType == StreamType.COLLECTION) {
-        val id = -stream.id - COLLECTION_RAIL_BASE
-        SeriesFilterV2Dto(
-            statements =
-                listOf(
-                    SeriesFilterStatementDto(Comparison.Contains.api, FilterField.CollectionTags.api, "$id"),
-                ),
-            sortOptions = SeriesSortOptionDto(SeriesSort.Title.field, SeriesSort.Title.ascending),
-        )
-    } else {
-        val id = -stream.id - LIBRARY_RAIL_BASE
-        SeriesFilterV2Dto(
-            statements = listOf(SeriesFilterStatementDto(Comparison.Contains.api, FilterField.LIBRARIES_API, "$id")),
-            sortOptions = SeriesSortOptionDto(SeriesSort.RecentlyAdded.field, SeriesSort.RecentlyAdded.ascending),
-        )
+/** A collection's or library's series in [order]; by default newest first. */
+internal fun itemFilter(
+    stream: DashboardStreamEntity,
+    order: SectionOrder = SectionOrder.Default,
+): SeriesFilterV2Dto {
+    val collection = stream.streamType == StreamType.COLLECTION
+    val id = -stream.id - if (collection) COLLECTION_RAIL_BASE else LIBRARY_RAIL_BASE
+    val field = if (collection) FilterField.CollectionTags.api else FilterField.LIBRARIES_API
+    val newest = SeriesSortOptionDto(SeriesSort.RecentlyAdded.field, SeriesSort.RecentlyAdded.ascending)
+    return SeriesFilterV2Dto(
+        statements = listOf(SeriesFilterStatementDto(Comparison.Contains.api, field, "$id")),
+        sortOptions = order.sortOptions(newest),
+    )
+}
+
+/** The server sort for [this] order, or [default] when it has none of its own. */
+internal fun SectionOrder.sortOptions(default: SeriesSortOptionDto?): SeriesSortOptionDto? =
+    when (this) {
+        SectionOrder.NameAsc -> SeriesSortOptionDto(SeriesSort.Title.field, isAscending = true)
+        SectionOrder.NameDesc -> SeriesSortOptionDto(SeriesSort.Title.field, isAscending = false)
+        SectionOrder.Random -> SeriesSortOptionDto(SORT_RANDOM)
+        else -> default
     }
+
+/** The Home layout row whose order applies to this stream. */
+private fun DashboardStreamEntity.pref(): HomeSectionPref? =
+    when (streamType) {
+        StreamType.WANT_TO_READ -> HomeSectionPref(HomeSection.WantToRead, true)
+        StreamType.SMART_FILTER -> HomeSectionPref(HomeSection.SmartFilters, true)
+        StreamType.COLLECTION -> HomeSectionPref(HomeSection.Collection, true, -id - COLLECTION_RAIL_BASE)
+        StreamType.LIBRARY -> HomeSectionPref(HomeSection.Library, true, -id - LIBRARY_RAIL_BASE)
+        else -> null
+    }
+
+private val sortJson = kotlinx.serialization.json.Json
 
 private fun assemble(
     streams: List<DashboardStreamEntity>,
@@ -364,7 +413,8 @@ private fun assemble(
             HomeRail(stream.id, stream.streamType, stream.name, rows)
         }
     val continueReading = rails.firstOrNull { it.type == StreamType.ON_DECK }?.items?.firstOrNull { it.chapter != null }
-    return Home(continueReading, rails, downloaded.map { it.toHomeItem() })
+    val wantToRead = rails.firstOrNull { it.type == StreamType.WANT_TO_READ }?.items.orEmpty()
+    return Home(continueReading, rails, downloaded.map { it.toHomeItem() }, wantToRead)
 }
 
 private fun SeriesEntity.toHomeItem(

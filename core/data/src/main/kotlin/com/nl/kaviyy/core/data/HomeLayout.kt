@@ -1,7 +1,5 @@
 package com.nl.kaviyy.core.data
 
-import com.nl.kaviyy.core.database.ReadingListRow
-
 /** Home sections the user can show, hide and reorder (You → Home Screen). Declaration order = default order. */
 enum class HomeSection(
     val defaultVisible: Boolean = true,
@@ -104,38 +102,3 @@ fun List<HomeSectionPref>.toggle(
     row: HomeSectionPref,
     visible: Boolean,
 ) = map { if (it.sameRow(row)) it.copy(visible = visible) else it }
-
-/** Order of the Reading Lists rail. */
-enum class ListSort {
-    /** Server order: most recently changed first. */
-    Recent,
-    NameAsc,
-    NameDesc,
-
-    /** Most items first. */
-    Largest,
-    ;
-
-    companion object {
-        fun of(
-            name: String,
-            default: ListSort = Recent,
-        ) = entries.firstOrNull { it.name == name } ?: default
-    }
-}
-
-private fun <T> List<T>.sorted(
-    sort: ListSort,
-    name: (T) -> String,
-    recent: Comparator<T>,
-    size: Comparator<T>,
-): List<T> =
-    when (sort) {
-        ListSort.Recent -> sortedWith(recent)
-        ListSort.NameAsc -> sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, name))
-        ListSort.NameDesc -> sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER, name))
-        ListSort.Largest -> sortedWith(size.then(compareBy(String.CASE_INSENSITIVE_ORDER, name)))
-    }
-
-fun List<ReadingListRow>.sortedReadingLists(sort: ListSort) =
-    sorted(sort, { it.list.title }, compareBy { it.list.position }, compareByDescending { it.list.itemCount })

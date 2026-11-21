@@ -31,10 +31,13 @@ import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.HomeSection
 import com.nl.kaviyy.core.data.HomeSectionPref
-import com.nl.kaviyy.core.data.ListSort
 import com.nl.kaviyy.core.data.ListsRepository
+import com.nl.kaviyy.core.data.SectionOrder
 import com.nl.kaviyy.core.data.encodeHomeLayout
+import com.nl.kaviyy.core.data.encodeHomeOrders
+import com.nl.kaviyy.core.data.homeOrders
 import com.nl.kaviyy.core.data.move
+import com.nl.kaviyy.core.data.orderKey
 import com.nl.kaviyy.core.data.parseHomeLayout
 import com.nl.kaviyy.core.data.toggle
 import com.nl.kaviyy.core.data.withItems
@@ -44,7 +47,6 @@ import com.nl.kaviyy.core.designsystem.component.GroupedList
 import com.nl.kaviyy.core.designsystem.component.KavitaSwitch
 import com.nl.kaviyy.core.designsystem.component.LargeTitleHeader
 import com.nl.kaviyy.core.designsystem.component.SectionHeader
-import com.nl.kaviyy.core.designsystem.component.SegmentedControl
 import com.nl.kaviyy.core.designsystem.component.rowDivider
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
@@ -64,7 +66,8 @@ import javax.inject.Inject
 data class HomeLayoutUiState(
     /** Every section, with a row for each collection and library (new ones hidden at the end). */
     val layout: List<HomeSectionPref> = parseHomeLayout(""),
-    val readingListSort: ListSort = ListSort.Recent,
+    /** Chosen order per section, by [com.nl.kaviyy.core.data.orderKey]. */
+    val orders: Map<String, SectionOrder> = emptyMap(),
     /** Names of the collection / library rows. */
     val collectionNames: Map<Int, String> = emptyMap(),
     val libraryNames: Map<Int, String> = emptyMap(),
@@ -74,7 +77,7 @@ data class HomeLayoutActions(
     val onBack: () -> Unit = {},
     val onToggle: (HomeSectionPref, Boolean) -> Unit = { _, _ -> },
     val onMove: (HomeSectionPref, Int) -> Unit = { _, _ -> },
-    val onReadingListSort: (ListSort) -> Unit = {},
+    val onOrder: (HomeSectionPref, SectionOrder) -> Unit = { _, _ -> },
 )
 
 private const val STOP_TIMEOUT_MS = 5_000L
@@ -104,7 +107,7 @@ class HomeLayoutViewModel
             combine(settings.settings, names) { a, (collections, libraries) ->
                 HomeLayoutUiState(
                     parseHomeLayout(a.homeLayout).withItems(collections.keys.toList(), libraries.keys.toList()),
-                    ListSort.of(a.readingListSort),
+                    homeOrders(a),
                     collections,
                     libraries,
                 )
@@ -120,8 +123,12 @@ class HomeLayoutViewModel
             by: Int,
         ) = edit { it.move(row, by) }
 
-        fun sortReadingLists(sort: ListSort) =
-            viewModelScope.launch { settings.update { it.copy(readingListSort = sort.name) } }
+        fun setOrder(
+            row: HomeSectionPref,
+            order: SectionOrder,
+        ) = viewModelScope.launch {
+            settings.update { a -> a.copy(homeOrder = encodeHomeOrders(homeOrders(a) + (row.orderKey to order))) }
+        }
 
         /** Edits what's on screen (rows for every collection / library included) and saves it. */
         private fun edit(change: (List<HomeSectionPref>) -> List<HomeSectionPref>) {
@@ -138,7 +145,7 @@ fun HomeLayoutRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     HomeLayoutScreen(
         state,
-        HomeLayoutActions(onBack, viewModel::toggle, viewModel::move, viewModel::sortReadingLists),
+        HomeLayoutActions(onBack, viewModel::toggle, viewModel::move, viewModel::setOrder),
     )
 }
 
@@ -172,17 +179,9 @@ fun HomeLayoutScreen(
                 SectionRow(pref, state, first = i == 0, last = i == state.layout.lastIndex, actions)
             }
         }
-        LayoutFootnote(stringResource(R.string.home_layout_footnote))
+        LayoutFootnoteText(stringResource(R.string.home_layout_footnote))
     }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionHeader(stringResource(R.string.home_layout_sort, stringResource(R.string.home_section_reading_lists)))
-        val options = ListSort.entries
-        SegmentedControl(
-            options.map { stringResource(sortName(it)) },
-            options.indexOf(state.readingListSort).coerceAtLeast(0),
-            { actions.onReadingListSort(options[it]) },
-        )
-    }
+    OrderGroup(state, actions)
 }
 
 @Composable
@@ -193,12 +192,7 @@ private fun SectionRow(
     last: Boolean,
     actions: HomeLayoutActions,
 ) {
-    val label =
-        when (pref.section) {
-            HomeSection.Collection -> state.collectionNames[pref.id].orEmpty()
-            HomeSection.Library -> state.libraryNames[pref.id].orEmpty()
-            else -> stringResource(homeSectionName(pref.section))
-        }
+    val label = rowLabel(pref, state)
     Row(
         Modifier
             .fillMaxWidth()
@@ -255,13 +249,24 @@ private fun MoveButton(
 }
 
 @Composable
-private fun LayoutFootnote(text: String) =
+internal fun LayoutFootnoteText(text: String) =
     Text(
         text,
         style = Kavita.type.footnote,
         color = Kavita.colors.labelSecondary,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
     )
+
+/** A collection / library row's name, else the section's. */
+@Composable
+internal fun rowLabel(
+    pref: HomeSectionPref,
+    state: HomeLayoutUiState,
+) = when (pref.section) {
+    HomeSection.Collection -> state.collectionNames[pref.id].orEmpty()
+    HomeSection.Library -> state.libraryNames[pref.id].orEmpty()
+    else -> stringResource(homeSectionName(pref.section))
+}
 
 @StringRes
 internal fun homeSectionName(section: HomeSection) =
@@ -276,13 +281,4 @@ internal fun homeSectionName(section: HomeSection) =
         HomeSection.Downloaded -> R.string.home_section_downloaded
         HomeSection.Collection -> R.string.home_row_collection
         HomeSection.Library -> R.string.home_row_library
-    }
-
-@StringRes
-private fun sortName(sort: ListSort) =
-    when (sort) {
-        ListSort.Recent -> R.string.home_sort_recent
-        ListSort.NameAsc -> R.string.home_sort_az
-        ListSort.NameDesc -> R.string.home_sort_za
-        ListSort.Largest -> R.string.home_sort_largest
     }

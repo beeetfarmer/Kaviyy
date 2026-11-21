@@ -53,10 +53,13 @@ data class AppSettings(
      * layout; sections missing from the string (added in later versions) are appended in their default place.
      */
     @ProtoNumber(14) val homeLayout: String = "",
-    /** `ListSort` names for the Collections, Reading Lists and Libraries rails; empty = default. */
+    /** Unused since collection / library rails replaced those shelves; kept so the numbers aren't reused. */
     @ProtoNumber(15) val collectionSort: String = "",
+    /** Reading Lists order before [homeOrder] existed (Recent, NameAsc, NameDesc, Largest); read as a fallback. */
     @ProtoNumber(16) val readingListSort: String = "",
     @ProtoNumber(17) val librarySort: String = "",
+    /** Per-section order, "OnDeck=NameAsc,Collection:3=Random"; sections not listed use their default order. */
+    @ProtoNumber(18) val homeOrder: String = "",
 ) {
     companion object {
         const val DEFAULT_ACCENT = "KavitaGreen"

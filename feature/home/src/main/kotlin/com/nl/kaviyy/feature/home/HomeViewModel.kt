@@ -8,9 +8,13 @@ import com.nl.kaviyy.core.data.HomeItem
 import com.nl.kaviyy.core.data.HomeRepository
 import com.nl.kaviyy.core.data.HomeSection
 import com.nl.kaviyy.core.data.HomeSectionPref
-import com.nl.kaviyy.core.data.ListSort
 import com.nl.kaviyy.core.data.NetworkMonitor
+import com.nl.kaviyy.core.data.SectionOrder
+import com.nl.kaviyy.core.data.homeOrders
+import com.nl.kaviyy.core.data.orderKey
+import com.nl.kaviyy.core.data.orderOf
 import com.nl.kaviyy.core.data.parseHomeLayout
+import com.nl.kaviyy.core.data.serverOrdered
 import com.nl.kaviyy.core.data.sortedReadingLists
 import com.nl.kaviyy.core.database.ReadingListRow
 import com.nl.kaviyy.core.datastore.AppSettingsStore
@@ -47,8 +51,13 @@ data class HomeUiState(
     val offline: Boolean = false,
     /** The user's sections, in order (hidden ones included, flagged). */
     val layout: List<HomeSectionPref> = parseHomeLayout(""),
-    val readingListSort: ListSort = ListSort.Recent,
+    /** Chosen order per section (You → Home Screen › Order), by [com.nl.kaviyy.core.data.orderKey]. */
+    val orders: Map<String, SectionOrder> = emptyMap(),
+    /** Random orders shuffled on the phone use this; it changes with each refresh. */
+    val shuffleSeed: Long = 0,
 ) {
+    fun order(pref: HomeSectionPref): SectionOrder = orders.orderOf(pref)
+
     /** Offline, downloads always come first, whatever the layout says. */
     val downloadedRail: List<HomeItem> get() = if (offline) home?.downloaded.orEmpty() else emptyList()
 
@@ -56,7 +65,12 @@ data class HomeUiState(
     val sections: List<HomeSectionPref>
         get() = layout.filter { it.visible && !(offline && it.section == HomeSection.Downloaded) }
 
-    val readingLists: List<ReadingListRow> get() = home?.readingLists.orEmpty().sortedReadingLists(readingListSort)
+    val readingLists: List<ReadingListRow>
+        get() =
+            home?.readingLists.orEmpty().sortedReadingLists(
+                order(HomeSectionPref(HomeSection.ReadingLists, true)),
+                shuffleSeed,
+            )
 
     /** Offline already explains itself via the pill. */
     val showStaleNotice: Boolean get() = error != null && !offline && home?.isEmpty == false
@@ -85,6 +99,7 @@ data class HomeActions(
 private data class RefreshStatus(
     val running: Boolean = false,
     val error: AppError? = null,
+    val seed: Long = 0,
 )
 
 private const val STOP_TIMEOUT_MS = 5_000L
@@ -107,10 +122,12 @@ class HomeViewModel
             server
                 .flatMapLatest { s ->
                     if (s == null) flowOf(HomeUiState()) else repository.home(s).map { home -> HomeUiState(s, home) }
-                }.combine(status) { ui, st -> ui.copy(refreshing = st.running, error = st.error) }
+                }.combine(
+                    status,
+                ) { ui, st -> ui.copy(refreshing = st.running, error = st.error, shuffleSeed = st.seed) }
                 .combine(online) { ui, on -> ui.copy(offline = !on) }
                 .combine(settings.settings) { ui, a ->
-                    ui.copy(layout = parseHomeLayout(a.homeLayout), readingListSort = ListSort.of(a.readingListSort))
+                    ui.copy(layout = parseHomeLayout(a.homeLayout), orders = homeOrders(a))
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeUiState())
 
         init {
@@ -118,11 +135,18 @@ class HomeViewModel
             viewModelScope.launch { server.filterNotNull().distinctUntilChangedBy { it.id }.collectLatest(::refresh) }
             // Back online: catch up.
             viewModelScope.launch { online.drop(1).filter { it }.collect { refresh() } }
-            // A collection or library rail switched on in You → Home Screen: fetch its series.
+            // A collection / library rail switched on, or a server-side order changed: fetch again.
             viewModelScope.launch {
                 settings.settings
-                    .map { a -> parseHomeLayout(a.homeLayout).filter { it.visible && it.section.perItem }.toSet() }
-                    .distinctUntilChanged()
+                    .map { a ->
+                        val layout = parseHomeLayout(a.homeLayout)
+                        val orders = homeOrders(a)
+                        layout.filter { it.visible && it.section.perItem }.toSet() to
+                            layout.filter { it.visible && it.section.serverOrdered }.associate {
+                                it.orderKey to
+                                    orders.orderOf(it)
+                            }
+                    }.distinctUntilChanged()
                     .drop(1)
                     .collect { refresh() }
             }
@@ -134,8 +158,9 @@ class HomeViewModel
         }
 
         private suspend fun refresh(s: Server) {
-            status.value = RefreshStatus(running = true)
+            val seed = status.value.seed + 1
+            status.value = RefreshStatus(running = true, seed = seed)
             val result = repository.refresh(s)
-            status.value = RefreshStatus(error = (result as? AppResult.Failure)?.error)
+            status.value = RefreshStatus(error = (result as? AppResult.Failure)?.error, seed = seed)
         }
     }

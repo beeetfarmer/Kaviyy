@@ -1,6 +1,7 @@
 package com.nl.kaviyy.feature.profile
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -11,8 +12,8 @@ import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.HomeSection
 import com.nl.kaviyy.core.data.HomeSectionPref
-import com.nl.kaviyy.core.data.ListSort
 import com.nl.kaviyy.core.data.ListsRepository
+import com.nl.kaviyy.core.data.SectionOrder
 import com.nl.kaviyy.core.data.parseHomeLayout
 import com.nl.kaviyy.core.data.withItems
 import com.nl.kaviyy.core.database.CollectionEntity
@@ -63,7 +64,7 @@ class HomeLayoutTest {
             HomeLayoutActions(
                 onToggle = { p, v -> calls += "toggle ${p.section}:${p.id} $v" },
                 onMove = { p, by -> calls += "move ${p.section}:${p.id} $by" },
-                onReadingListSort = { calls += "sort $it" },
+                onOrder = { p, o -> calls += "order ${p.section}:${p.id} $o" },
             )
         compose.setContent { KavitaTheme { HomeLayoutScreen(sample, actions) } }
         compose.onNodeWithContentDescription("Move On Deck up").performClick()
@@ -71,10 +72,21 @@ class HomeLayoutTest {
         compose.onNodeWithContentDescription("Award Winners").performScrollTo().performClick()
         compose.onNodeWithContentDescription("Move Manga down").performClick() // last: disabled
         compose.onNodeWithContentDescription("Move Manga up").performClick()
-        compose.onNodeWithText("READING LISTS ORDER").performScrollTo()
-        compose.onNodeWithText("A–Z").performClick()
+        // Order: only sections that are on and orderable (Continue Reading is a single card; Manga is off).
+        compose.onNodeWithText("ORDER").performScrollTo()
+        compose.onNodeWithText("Last read").performScrollTo().performClick() // On Deck's menu
+        compose.onNodeWithText("Z–A").performClick()
+        // Newest: Recently Updated, Recently Added, then Weekend Reads (the collection).
+        compose.onAllNodesWithText("Newest")[2].performScrollTo().performClick()
+        compose.onNodeWithText("Random").performClick()
         assertEquals(
-            listOf("move OnDeck:0 -1", "toggle Collection:2 true", "move Library:5 -1", "sort NameAsc"),
+            listOf(
+                "move OnDeck:0 -1",
+                "toggle Collection:2 true",
+                "move Library:5 -1",
+                "order OnDeck:0 NameDesc",
+                "order Collection:1 Random",
+            ),
             calls,
         )
     }
@@ -101,14 +113,15 @@ class HomeLayoutTest {
                     .first { it.section == HomeSection.Collection },
                 -1,
             )
-            vm.sortReadingLists(ListSort.NameDesc)
+            vm.setOrder(HomeSectionPref(HomeSection.ReadingLists, true), SectionOrder.NameDesc)
+            vm.setOrder(HomeSectionPref(HomeSection.Collection, true, 7), SectionOrder.Random)
             advanceUntilIdle()
             val saved = store.settings.first()
             val layout = parseHomeLayout(saved.homeLayout)
             val collection = layout.indexOfFirst { it.section == HomeSection.Collection }
             assertEquals(HomeSectionPref(HomeSection.Collection, true, 7), layout[collection])
             assertEquals(HomeSection.Downloaded, layout[collection + 1].section) // moved up past it
-            assertEquals("NameDesc", saved.readingListSort)
+            assertEquals("ReadingLists=NameDesc,Collection:7=Random", saved.homeOrder)
         }
 
     @Test

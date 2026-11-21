@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.nl.kaviyy.core.data.Home
+import com.nl.kaviyy.core.data.SectionOrder
 import com.nl.kaviyy.core.data.parseHomeLayout
 import com.nl.kaviyy.core.designsystem.theme.Appearance
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
@@ -96,6 +97,29 @@ class HomeScreenTest {
         assertEquals(9, opened)
         compose.onAllNodesWithText("See All")[0].performClick()
         assertEquals(1, collection)
+    }
+
+    @Test
+    fun phoneSortedSectionsFollowTheChosenOrder() {
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) {
+                HomeScreen(
+                    previewState().copy(orders = mapOf("RecentlyUpdated" to SectionOrder.NameDesc)),
+                    "Friday",
+                    HomeActions(),
+                    {},
+                )
+            }
+        }
+
+        fun left(text: String) =
+            compose
+                .onAllNodesWithText(text)[0]
+                .fetchSemanticsNode()
+                .boundsInRoot.left
+        // Z–A: Paper Lanterns, North Wind, Glass Harbor.
+        assertTrue(left("Paper Lanterns") < left("North Wind"))
+        assertTrue(left("North Wind") < left("Glass Harbor"))
     }
 
     @Test

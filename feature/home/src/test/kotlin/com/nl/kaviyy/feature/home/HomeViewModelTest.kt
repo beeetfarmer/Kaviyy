@@ -5,7 +5,8 @@ import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.Home
 import com.nl.kaviyy.core.data.HomeRepository
 import com.nl.kaviyy.core.data.HomeSection
-import com.nl.kaviyy.core.data.ListSort
+import com.nl.kaviyy.core.data.HomeSectionPref
+import com.nl.kaviyy.core.data.SectionOrder
 import com.nl.kaviyy.core.datastore.AppSettings
 import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.model.result.AppError
@@ -127,7 +128,12 @@ class HomeViewModelTest {
     @Test
     fun layoutComesFromSettingsAndDownloadedJumpsFirstOffline() =
         runTest {
-            settings.update { it.copy(homeLayout = "Downloaded,Collection:3,!OnDeck", readingListSort = "NameDesc") }
+            settings.update {
+                it.copy(
+                    homeLayout = "Downloaded,Collection:3,!OnDeck",
+                    homeOrder = "ReadingLists=NameDesc",
+                )
+            }
             val vm = HomeViewModel(session, repo, { online }, settings)
             vm.state.test {
                 runCurrent()
@@ -136,7 +142,7 @@ class HomeViewModelTest {
                 assertTrue(sections.indexOf(HomeSection.Downloaded) < sections.indexOf(HomeSection.Collection))
                 assertEquals(3, on.sections.single { it.section == HomeSection.Collection }.id)
                 assertTrue(HomeSection.OnDeck !in sections)
-                assertEquals(ListSort.NameDesc, on.readingListSort)
+                assertEquals(SectionOrder.NameDesc, on.order(HomeSectionPref(HomeSection.ReadingLists, true)))
                 online.value = false
                 runCurrent()
                 // Offline, downloads are shown first by the screen itself, so the section isn't repeated.
@@ -146,7 +152,7 @@ class HomeViewModelTest {
         }
 
     @Test
-    fun switchingOnACollectionRailFetchesIt() =
+    fun switchingOnACollectionRailOrAServerSideOrderFetchesAgain() =
         runTest {
             val vm = HomeViewModel(session, repo, { online }, settings)
             vm.state.test {
@@ -158,6 +164,12 @@ class HomeViewModelTest {
                 settings.update { it.copy(homeLayout = "Collection:3") }
                 runCurrent()
                 assertEquals(listOf(1L, 1L), refreshed)
+                settings.update { it.copy(homeLayout = "Collection:3", homeOrder = "OnDeck=NameAsc") } // sorted here
+                runCurrent()
+                assertEquals(listOf(1L, 1L), refreshed)
+                settings.update { it.copy(homeLayout = "Collection:3", homeOrder = "Collection:3=Random") }
+                runCurrent()
+                assertEquals(listOf(1L, 1L, 1L), refreshed)
                 cancelAndIgnoreRemainingEvents()
             }
         }

@@ -62,6 +62,7 @@ class HomeRepositoryTest {
     private var sentFilter: JsonObject? = null
     private var onDeckFilter: SeriesFilterV2Dto? = null
     private val itemFilters = mutableListOf<SeriesFilterV2Dto>()
+    private val wantedFilters = mutableListOf<SeriesFilterV2Dto>()
     private val settings = AppSettingsStore(InMemoryDataStore(AppSettings()))
 
     private val api =
@@ -111,7 +112,7 @@ class HomeRepositoryTest {
                 filter: SeriesFilterV2Dto,
                 pageNumber: Int,
                 pageSize: Int,
-            ) = online { listOf(SeriesDto(9, name = "Wanted")) }
+            ) = online { listOf(SeriesDto(9, name = "Wanted")).also { wantedFilters += filter } }
 
             override suspend fun collections(sortByLastModified: Boolean) =
                 online { listOf(CollectionDto(3, "Zeta", itemCount = 2), CollectionDto(4, "Alpha", itemCount = 9)) }
@@ -162,7 +163,8 @@ class HomeRepositoryTest {
             assertTrue(repo.home(server).first().isEmpty)
             assertEquals(AppResult.Success(Unit), repo.refresh(server))
             val home = repo.home(server).first()
-            val types = listOf(StreamType.ON_DECK, StreamType.RECENTLY_UPDATED, StreamType.NEWLY_ADDED)
+            val types =
+                listOf(StreamType.ON_DECK, StreamType.RECENTLY_UPDATED, StreamType.NEWLY_ADDED, StreamType.WANT_TO_READ)
             assertEquals(types, home.rails.map { it.type })
             val cont = checkNotNull(home.continueReading)
             assertEquals("Ember Road", cont.title)
@@ -192,6 +194,37 @@ class HomeRepositoryTest {
         }
 
     @Test
+    fun chosenOrdersAreSentToTheServer() =
+        runTest {
+            settings.update {
+                it.copy(homeLayout = "Collection:3,Library:2", homeOrder = "Collection:3=Random,WantToRead=NameDesc")
+            }
+            repo.refresh(server)
+            val (collection, library) = itemFilters
+            assertEquals(
+                SeriesSort.RecentlyAdded.field to false,
+                library.sortOptions?.let {
+                    it.sortField to
+                        it.isAscending
+                },
+            )
+            assertEquals(9, collection.sortOptions?.sortField) // Kavita SeriesSortField.Random
+            // Home's Want to Read rail (fetched after the page's own refresh): Z–A by title.
+            assertEquals(
+                SeriesSort.Title.field to false,
+                wantedFilters.last().sortOptions?.let { it.sortField to it.isAscending },
+            )
+            assertEquals(
+                listOf("Wanted"),
+                repo
+                    .home(server)
+                    .first()
+                    .wantToRead
+                    .map { it.title },
+            )
+        }
+
+    @Test
     fun switchedOnCollectionsAndLibrariesGetTheirOwnRailsThatStayOffline() =
         runTest {
             settings.update { it.copy(homeLayout = "Library:2,!Collection:4,Collection:3,Collection:99") }
@@ -200,7 +233,7 @@ class HomeRepositoryTest {
                 listOf(FilterField.LIBRARIES_API to "2", FilterField.CollectionTags.api to "3"),
                 itemFilters.map { f -> f.statements.single().let { it.field to it.value } },
             )
-            assertEquals(SeriesSort.Title.field, itemFilters[1].sortOptions?.sortField)
+            assertEquals(SeriesSort.RecentlyAdded.field, itemFilters[1].sortOptions?.sortField) // newest first
 
             fun rails(home: Home) =
                 listOf(HomeSectionPref(HomeSection.Library, true, 2), HomeSectionPref(HomeSection.Collection, true, 3))
@@ -229,10 +262,23 @@ class HomeRepositoryTest {
             val home = repo.home(server).first()
             // Built-ins are always kept (the app's Home layout decides);
             // only visible smart filters come from the server.
-            assertEquals(listOf(-1, -2, -3, 20, 21), home.rails.map { it.streamId })
-            assertEquals(listOf("Filtered"), home.rails[3].items.map { it.title })
+            assertEquals(listOf(-1, -2, -3, -StreamType.WANT_TO_READ, 20, 21), home.rails.map { it.streamId })
+            assertEquals(listOf("Filtered"), home.rails[4].items.map { it.title })
             assertEquals("fav", (sentFilter?.get("name") as JsonPrimitive).content) // decoded filter sent unchanged
-            assertTrue(home.rails[4].items.isEmpty()) // non-series smart filter skipped
+            assertEquals(null, sentFilter?.get("sortOptions")) // no order chosen: the filter's own
+            assertTrue(home.rails[5].items.isEmpty()) // non-series smart filter skipped
+        }
+
+    @Test
+    fun aChosenSmartFilterOrderReplacesTheSavedOne() =
+        runTest {
+            layout =
+                listOf(DashboardStreamDto(20, "Favourites", 0, StreamType.SMART_FILTER, smartFilterEncoded = "fav"))
+            settings.update { it.copy(homeOrder = "SmartFilters=Random") }
+            repo.refresh(server)
+            val sort = sentFilter?.get("sortOptions") as JsonObject
+            assertEquals("9", (sort["sortField"] as JsonPrimitive).content)
+            assertEquals("fav", (sentFilter?.get("name") as JsonPrimitive).content)
         }
 
     @Test
@@ -240,7 +286,8 @@ class HomeRepositoryTest {
         runTest {
             offline = true
             repo.refresh(server)
-            val types = listOf(StreamType.ON_DECK, StreamType.RECENTLY_UPDATED, StreamType.NEWLY_ADDED)
+            val types =
+                listOf(StreamType.ON_DECK, StreamType.RECENTLY_UPDATED, StreamType.NEWLY_ADDED, StreamType.WANT_TO_READ)
             assertEquals(
                 types,
                 repo
@@ -252,7 +299,7 @@ class HomeRepositoryTest {
             offline = false
             repo.refresh(server)
             val rails = repo.home(server).first().rails
-            assertEquals(listOf(-1, -2, -3), rails.map { it.streamId })
+            assertEquals(listOf(-1, -2, -3, -StreamType.WANT_TO_READ), rails.map { it.streamId })
             assertTrue(rails.all { it.items.isNotEmpty() })
         }
 

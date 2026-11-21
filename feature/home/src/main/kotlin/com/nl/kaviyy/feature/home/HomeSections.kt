@@ -19,6 +19,8 @@ import com.nl.kaviyy.core.data.HomeRail
 import com.nl.kaviyy.core.data.HomeSection
 import com.nl.kaviyy.core.data.HomeSectionPref
 import com.nl.kaviyy.core.data.StreamType
+import com.nl.kaviyy.core.data.ordered
+import com.nl.kaviyy.core.data.serverOrdered
 import com.nl.kaviyy.core.designsystem.component.CoverCard
 import com.nl.kaviyy.core.designsystem.component.RailHeader
 import com.nl.kaviyy.core.designsystem.component.coverColorFor
@@ -55,7 +57,17 @@ internal fun LazyListScope.homeSection(
         }
 
         else -> {
-            seriesRails(pref, home, actions).filter { it.first.items.isNotEmpty() }.forEach { (rail, a) ->
+            val order = state.order(pref)
+            seriesRails(pref, home, actions).filter { it.first.items.isNotEmpty() }.forEach { (found, a) ->
+                // Server-ordered sections arrive in order; the rest are sorted here (A–Z / Z–A).
+                val rail =
+                    if (pref.section.serverOrdered) {
+                        found
+                    } else {
+                        found.copy(
+                            items = found.items.ordered(order) { it.title },
+                        )
+                    }
                 item(key = "rail-${rail.streamId}") { Rail(rail, coverUrl, a, state::isDimmed, isDownloaded) }
             }
         }
