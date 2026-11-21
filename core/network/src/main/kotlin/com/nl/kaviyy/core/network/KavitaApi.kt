@@ -275,6 +275,8 @@ interface KavitaApi {
     suspend fun chapterInfo(
         @Query("chapterId") chapterId: Int,
         @Query("includeDimensions") includeDimensions: Boolean = true,
+        // PDFs: page count and dimensions of the server-rendered pages; ignored for other formats.
+        @Query("extractPdf") extractPdf: Boolean = true,
     ): ChapterInfoDto
 
     /** -1 when there is none. */

@@ -86,8 +86,8 @@ fun Server.volumeCoverUrl(volumeId: Int): String = url.resolve("api/Image/volume
 
 fun Server.chapterCoverUrl(chapterId: Int): String = url.resolve("api/Image/chapter-cover?chapterId=$chapterId")
 
-/** One page of an image chapter (0-based [page]). */
+/** One page of an image chapter (0-based [page]); for a PDF, Kavita renders the page to an image (`extractPdf`). */
 fun Server.pageUrl(
     chapterId: Int,
     page: Int,
-): String = url.resolve("api/Reader/image?chapterId=$chapterId&page=$page&extractPdf=false")
+): String = url.resolve("api/Reader/image?chapterId=$chapterId&page=$page&extractPdf=true")

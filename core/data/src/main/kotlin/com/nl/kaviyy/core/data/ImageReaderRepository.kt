@@ -19,13 +19,15 @@ data class ReaderChapter(
     val title: String?,
     val isSpecial: Boolean,
     val pages: Int,
-    /** Kavita `MangaFormat`: EPUB (3) and PDF (4) need their own readers. */
+    /** Kavita `MangaFormat`: EPUB (3) has its own reader; PDF (4) pages are rasterised by Kavita (`extractPdf`). */
     val format: Int,
     /** Per page (index = page); null when the server sent none for it. */
     val pageSizes: List<PageSize?> = emptyList(),
 ) {
-    val isImage: Boolean get() = format != FORMAT_EPUB && format != FORMAT_PDF
+    /** Shown in the image reader: archives, images, and PDFs (as server-rendered pages). */
+    val isImage: Boolean get() = format != FORMAT_EPUB
     val isEpub: Boolean get() = format == FORMAT_EPUB
+    val isPdf: Boolean get() = format == FORMAT_PDF
 }
 
 data class PageSize(

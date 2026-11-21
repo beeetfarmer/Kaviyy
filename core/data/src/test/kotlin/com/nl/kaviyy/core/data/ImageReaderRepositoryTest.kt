@@ -22,6 +22,7 @@ class ImageReaderRepositoryTest {
             override suspend fun chapterInfo(
                 chapterId: Int,
                 includeDimensions: Boolean,
+                extractPdf: Boolean,
             ) = ChapterInfoDto(
                 seriesId = 7,
                 volumeId = 5,
@@ -58,10 +59,12 @@ class ImageReaderRepositoryTest {
         }
 
     @Test
-    fun booksAreNotImageChaptersAndPageUrlsCarryNoCredentials() {
+    fun epubsHaveTheirOwnReaderPdfsAreServerRenderedPagesAndUrlsCarryNoCredentials() {
         val c = ChapterInfoDto(seriesFormat = 3).toReaderChapter(1)
         assertFalse(c.isImage)
         assertTrue(ChapterInfoDto(seriesFormat = 1).toReaderChapter(1).isImage)
-        assertEquals("https://s.lan/api/Reader/image?chapterId=49&page=0&extractPdf=false", server.pageUrl(49, 0))
+        val pdf = ChapterInfoDto(seriesFormat = 4).toReaderChapter(1)
+        assertTrue(pdf.isImage && pdf.isPdf)
+        assertEquals("https://s.lan/api/Reader/image?chapterId=49&page=0&extractPdf=true", server.pageUrl(49, 0))
     }
 }

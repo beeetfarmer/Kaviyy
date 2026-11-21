@@ -94,6 +94,7 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun chapterInfo(
         chapterId: Int,
         includeDimensions: Boolean,
+        extractPdf: Boolean,
     ): ChapterInfoDto = error("unused")
 
     override suspend fun nextChapter(
