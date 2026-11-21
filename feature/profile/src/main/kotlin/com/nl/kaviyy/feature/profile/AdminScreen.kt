@@ -136,7 +136,8 @@ fun AdminScreen(
         .background(Kavita.colors.background)
         .statusBarsPadding()
         .verticalScroll(rememberScrollState())
-        .padding(horizontal = KavitaSpacing.screenHorizontal),
+        .padding(horizontal = KavitaSpacing.screenHorizontal)
+        .padding(bottom = KavitaSpacing.contentBottomPadding),
     verticalArrangement = Arrangement.spacedBy(KavitaSpacing.sectionGapProfile),
 ) {
     CircleIconButton(

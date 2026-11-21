@@ -156,6 +156,7 @@ fun AllReadingListsScreen(
     item { RowsCard(state.readingLists, onOpen) }
 }
 
+@Composable
 internal fun screenPadding() =
     PaddingValues(
         start = KavitaSpacing.screenHorizontal,

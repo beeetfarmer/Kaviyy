@@ -1,6 +1,10 @@
 package com.nl.kaviyy.core.designsystem.theme
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -39,6 +43,12 @@ object KavitaSpacing {
     val tabBarSideInset: Dp = 16.dp
     val tabBarBottomInset: Dp = 28.dp
 
-    /** Bottom content padding so lists clear the floating tab bar. */
-    val contentBottomPadding: Dp = tabBarHeight + tabBarBottomInset + 16.dp
+    /**
+     * Bottom content padding so the last item clears the floating tab bar, which sits above the system navigation
+     * bar (gesture strip or buttons): its height is included.
+     */
+    val contentBottomPadding: Dp
+        @Composable get() =
+            tabBarHeight + tabBarBottomInset + 16.dp +
+                WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 }
