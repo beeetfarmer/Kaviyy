@@ -25,12 +25,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nl.kaviyy.core.data.number
+import com.nl.kaviyy.core.designsystem.component.ButtonSize
 import com.nl.kaviyy.core.designsystem.component.CoverImage
 import com.nl.kaviyy.core.designsystem.component.GroupedList
 import com.nl.kaviyy.core.designsystem.component.GroupedThumbRow
@@ -74,6 +79,11 @@ fun DownloadsRoute(
             onSettings,
             viewModel::removeRead,
             viewModel::syncNow,
+            viewModel::toggleSelecting,
+            viewModel::toggleSeries,
+            viewModel::selectAll,
+            viewModel::markSelectedRead,
+            viewModel::deleteSelected,
         )
     DownloadsScreen(state, actions, freeBytes = free)
 }
@@ -96,7 +106,18 @@ fun DownloadsScreen(
         ),
     verticalArrangement = Arrangement.spacedBy(16.dp),
 ) {
-    item { LargeTitleHeader(stringResource(R.string.downloads_title)) { MoreMenu(state, actions) } }
+    item {
+        LargeTitleHeader(stringResource(R.string.downloads_title)) {
+            if (state.segment == 0 && state.downloaded.isNotEmpty()) {
+                SecondaryButton(
+                    stringResource(if (state.selecting) R.string.downloads_done else R.string.downloads_select),
+                    actions.onToggleSelecting,
+                    size = ButtonSize.Small,
+                )
+            }
+            MoreMenu(state, actions)
+        }
+    }
     if (state.usedBytes > 0) item { StorageCard(state.usedBytes, freeBytes, state.storage) }
     if (state.pendingChanges > 0 || state.usedBytes > 0) item { SyncLine(state.pendingChanges, actions.onSyncNow) }
     item {
@@ -110,13 +131,45 @@ fun DownloadsScreen(
         )
     }
     when {
-        state.loading -> Unit
-        state.segment == 0 && state.downloaded.isEmpty() -> item { EmptyDownloads(actions.onBrowse) }
-        state.segment == 0 -> item { DownloadedList(state, actions) }
-        state.queue.isEmpty() -> item { Hint(stringResource(R.string.downloads_queue_empty)) }
-        else -> item { QueueList(state, actions) }
+        state.loading -> {
+            Unit
+        }
+
+        state.segment == 0 && state.downloaded.isEmpty() -> {
+            item { EmptyDownloads(actions.onBrowse) }
+        }
+
+        state.segment == 0 -> {
+            if (state.selecting) item { SeriesSelectionBar(state, actions) }
+            item { DownloadedList(state, actions) }
+        }
+
+        state.queue.isEmpty() -> {
+            item { Hint(stringResource(R.string.downloads_queue_empty)) }
+        }
+
+        else -> {
+            item { QueueList(state, actions) }
+        }
     }
 }
+
+@Composable
+private fun SeriesSelectionBar(
+    state: DownloadsUiState,
+    actions: DownloadsActions,
+) = SelectionBar(
+    state.selected.size,
+    state.allSelected,
+    if (state.confirmDelete) {
+        stringResource(R.string.downloads_delete_series_confirm)
+    } else {
+        pluralStringResource(R.plurals.downloads_delete_series, state.selected.size, state.selected.size)
+    },
+    actions.onSelectAll,
+    actions.onMarkSelectedRead,
+    actions.onDeleteSelected,
+)
 
 @Composable
 private fun DownloadedList(
@@ -127,12 +180,38 @@ private fun DownloadedList(
     GroupedList {
         state.downloaded.forEachIndexed { i, g ->
             val chapters = pluralStringResource(R.plurals.downloads_chapters, g.chapters, g.chapters)
+            val chosen = g.seriesId in state.selected
             GroupedThumbRow(
                 title = g.name ?: stringResource(R.string.downloads_unknown_series),
                 subtitle = "$chapters · ${Formatter.formatShortFileSize(context, g.bytes)}",
-                onClick = { actions.onOpenSeries(g.seriesId) },
+                modifier =
+                    if (state.selecting) {
+                        Modifier.semantics {
+                            role = Role.Checkbox
+                            selected = chosen
+                        }
+                    } else {
+                        Modifier
+                    },
+                onClick = {
+                    if (state.selecting) {
+                        actions.onToggleSeries(
+                            g.seriesId,
+                        )
+                    } else {
+                        actions.onOpenSeries(g.seriesId)
+                    }
+                },
                 divider = i < state.downloaded.lastIndex,
-            ) { Thumb(g.seriesId, state.server?.seriesCoverUrl(g.seriesId)) }
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (state.selecting) CheckCircle(chosen)
+                    Thumb(g.seriesId, state.server?.seriesCoverUrl(g.seriesId))
+                }
+            }
         }
     }
 }

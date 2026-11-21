@@ -86,4 +86,12 @@
     </plurals>
     <string name="downloads_synced">All progress synced</string>
     <string name="downloads_sync_now">Sync now</string>
+    <string name="downloads_selected_count">%1$d selected</string>
+    <string name="downloads_select_all">Select All</string>
+    <string name="downloads_deselect_all">Deselect All</string>
+    <plurals name="downloads_delete_series">
+        <item quantity="one">Delete %1$d series</item>
+        <item quantity="other">Delete %1$d series</item>
+    </plurals>
+    <string name="downloads_delete_series_confirm">Tap again to delete</string>
 </resources>

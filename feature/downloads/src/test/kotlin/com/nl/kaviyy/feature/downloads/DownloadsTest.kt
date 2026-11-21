@@ -14,11 +14,14 @@ import androidx.compose.ui.test.performClick
 import app.cash.turbine.test
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.nl.kaviyy.core.data.AuthSession
+import com.nl.kaviyy.core.data.ReadStateRepository
+import com.nl.kaviyy.core.data.ReadTarget
 import com.nl.kaviyy.core.designsystem.theme.Appearance
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
 import com.nl.kaviyy.core.download.DownloadControls
 import com.nl.kaviyy.core.download.DownloadItem
 import com.nl.kaviyy.core.download.DownloadState
+import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.sync.SyncStatus
 import com.nl.kaviyy.core.testing.MainDispatcherRule
@@ -97,7 +100,7 @@ class DownloadsTest {
     fun viewModelFollowsTheActiveServerAndSegment() =
         runTest {
             val downloads = MutableStateFlow(previewItems)
-            val vm = DownloadsViewModel(session(previewServer), controls(downloads), FakeSync())
+            val vm = DownloadsViewModel(session(previewServer), controls(downloads), FakeSync(), FakeReadState())
             vm.state.test {
                 runCurrent()
                 assertEquals(4 to 3, expectMostRecentItem().let { it.queue.size to it.pendingChanges })
@@ -108,6 +111,64 @@ class DownloadsTest {
                 assertEquals(1 to 0, st.segment to st.queue.size)
             }
         }
+
+    @Test
+    fun selectedSeriesAreMarkedReadOrDeletedTogether() =
+        runTest {
+            val calls = mutableListOf<String>()
+            val read = FakeReadState()
+            val vm =
+                DownloadsViewModel(
+                    session(previewServer),
+                    controls(MutableStateFlow(previewItems), calls),
+                    FakeSync(),
+                    read,
+                )
+            vm.state.test {
+                runCurrent()
+                vm.toggleSelecting()
+                vm.toggleSeries(12)
+                vm.toggleSeries(11)
+                runCurrent()
+                assertEquals(setOf(11, 12), expectMostRecentItem().selected)
+                vm.markSelectedRead()
+                runCurrent()
+                // Only finished downloads of the chosen series; the queued Ember Road chapters aren't touched.
+                assertEquals(setOf(1, 9, 2, 3), read.marked.map { it.chapterId }.toSet())
+                assertEquals(false, expectMostRecentItem().selecting)
+                vm.toggleSelecting()
+                vm.selectAll()
+                runCurrent()
+                assertEquals(true, expectMostRecentItem().allSelected)
+                vm.selectAll() // all → none
+                vm.toggleSeries(14)
+                vm.deleteSelected() // asks
+                runCurrent()
+                assertEquals(true to emptyList<String>(), expectMostRecentItem().confirmDelete to calls)
+                vm.deleteSelected()
+                runCurrent()
+                assertEquals(listOf("cancel 8"), calls)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun selectModeTogglesRowsInsteadOfOpeningThem() {
+        var opened = 0
+        var toggled = -1
+        compose.setContent {
+            KavitaTheme {
+                DownloadsScreen(
+                    previewItems.toUiState(previewServer, 0).copy(selecting = true, selected = setOf(11)),
+                    DownloadsActions(onOpenSeries = { opened++ }, onToggleSeries = { toggled = it }),
+                )
+            }
+        }
+        compose.onNodeWithText("1 selected").assertExists()
+        compose.onNodeWithText("Delete 1 series").assertExists()
+        compose.onNodeWithText("Salt & Signal").performClick()
+        assertEquals(0 to 12, opened to toggled)
+    }
 
     @Test
     fun emptyStateOffersTheLibrary() {
@@ -130,7 +191,12 @@ class DownloadsTest {
         runTest {
             val calls = mutableListOf<String>()
             val vm =
-                DownloadsViewModel(session(previewServer), controls(MutableStateFlow(previewItems), calls), FakeSync())
+                DownloadsViewModel(
+                    session(previewServer),
+                    controls(MutableStateFlow(previewItems), calls),
+                    FakeSync(),
+                    FakeReadState(),
+                )
             vm.state.test {
                 runCurrent()
                 vm.pause(4)
@@ -211,6 +277,21 @@ class DownloadsTest {
     @Test
     fun screenshotEmptyDark() = shot("downloads_empty_dark") { DownloadsPreview(Appearance.Dark, items = emptyList()) }
 
+    @Test
+    fun screenshotSelectingLight() = shot("downloads_selecting_light") { SelectingShot(Appearance.Light) }
+
+    @Test
+    fun screenshotSelectingDark() = shot("downloads_selecting_dark") { SelectingShot(Appearance.Dark) }
+
+    @androidx.compose.runtime.Composable
+    private fun SelectingShot(appearance: Appearance) =
+        KavitaTheme(appearance = appearance) {
+            DownloadsScreen(
+                previewItems.toUiState(previewServer, 0).copy(selecting = true, selected = setOf(11, 14)),
+                DownloadsActions(),
+            )
+        }
+
     private fun shot(
         name: String,
         content: @androidx.compose.runtime.Composable () -> Unit,
@@ -266,6 +347,31 @@ private fun controls(
     override suspend fun removeRead(serverId: Long) {
         calls += "removeRead $serverId"
     }
+}
+
+private class FakeReadState : ReadStateRepository {
+    val marked = mutableListOf<ReadTarget.Chapter>()
+
+    override suspend fun setRead(
+        server: Server,
+        target: ReadTarget,
+        read: Boolean,
+    ): AppResult<Unit> {
+        if (target is ReadTarget.Chapter) marked += target
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun setWantToRead(
+        server: Server,
+        seriesId: Int,
+        on: Boolean,
+    ) = AppResult.Success(Unit)
+
+    override suspend fun setRating(
+        server: Server,
+        seriesId: Int,
+        rating: Float,
+    ) = AppResult.Success(Unit)
 }
 
 private class FakeSync : SyncStatus {

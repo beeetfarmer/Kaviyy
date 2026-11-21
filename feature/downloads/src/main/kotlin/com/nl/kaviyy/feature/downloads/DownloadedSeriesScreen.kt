@@ -64,6 +64,7 @@ fun DownloadedSeriesRoute(
             onBack,
             viewModel::toggleSelecting,
             viewModel::toggle,
+            viewModel::selectAll,
             viewModel::delete,
             viewModel::markRead,
             viewModel::deleteAll,
@@ -112,7 +113,16 @@ fun DownloadedSeriesScreen(
 
         else -> {
             if (state.selecting) {
-                item { SelectionBar(state.selected, actions) }
+                item {
+                    SelectionBar(
+                        state.selected.size,
+                        state.allSelected,
+                        stringResource(R.string.downloads_delete_count, state.selected.size),
+                        actions.onSelectAll,
+                        { actions.onMarkRead(state.selected) },
+                        { actions.onDelete(state.selected) },
+                    )
+                }
             } else {
                 state.continueChapterId?.let { id ->
                     item {
@@ -140,28 +150,6 @@ fun DownloadedSeriesScreen(
             }
         }
     }
-}
-
-@Composable
-private fun SelectionBar(
-    selected: Set<Int>,
-    actions: DownloadedSeriesActions,
-) = Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-    SecondaryButton(
-        stringResource(R.string.downloads_mark_read),
-        { actions.onMarkRead(selected) },
-        Modifier.weight(1f),
-        size = ButtonSize.Medium,
-        enabled = selected.isNotEmpty(),
-    )
-    SecondaryButton(
-        stringResource(R.string.downloads_delete_count, selected.size),
-        { actions.onDelete(selected) },
-        Modifier.weight(1f),
-        size = ButtonSize.Medium,
-        enabled = selected.isNotEmpty(),
-        destructive = true,
-    )
 }
 
 @Composable
@@ -281,21 +269,6 @@ private fun ReadState(item: DownloadItem) {
         }
     Text(text, style = Kavita.type.subhead, color = if (accent) Kavita.colors.accent else Kavita.colors.labelSecondary)
 }
-
-@Composable
-private fun CheckCircle(on: Boolean) =
-    Box(
-        Modifier
-            .size(24.dp)
-            .then(
-                if (on) {
-                    Modifier.background(Kavita.colors.accent, CircleShape)
-                } else {
-                    Modifier.border(1.5.dp, Kavita.colors.labelTertiary, CircleShape)
-                },
-            ),
-        contentAlignment = Alignment.Center,
-    ) { if (on) Icon(KavitaIcons.Check, null, Modifier.size(16.dp), tint = Kavita.colors.onAccent) }
 
 @Composable
 private fun Hint(text: String) =

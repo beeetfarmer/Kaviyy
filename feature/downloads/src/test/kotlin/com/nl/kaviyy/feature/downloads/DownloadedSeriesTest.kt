@@ -138,6 +138,22 @@ class DownloadedSeriesTest {
         }
 
     @Test
+    fun selectAllTogglesEveryChapter() =
+        runTest {
+            val vm = vm()
+            vm.state.test {
+                runCurrent()
+                vm.toggleSelecting()
+                vm.selectAll()
+                runCurrent()
+                assertEquals(setOf(1, 2, 9), expectMostRecentItem().selected)
+                vm.selectAll()
+                runCurrent()
+                assertEquals(emptySet(), expectMostRecentItem().selected)
+            }
+        }
+
+    @Test
     fun deleteAllAsksFirst() =
         runTest {
             val vm = vm()

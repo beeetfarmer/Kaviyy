@@ -38,6 +38,8 @@ data class DownloadedSeriesUiState(
     val confirmDeleteAll: Boolean = false,
     val loading: Boolean = true,
 ) {
+    val allSelected: Boolean get() = chapters.isNotEmpty() && chapters.all { it.row.chapterId in selected }
+
     /** Where "Continue" resumes: the first downloaded chapter not finished yet, else the first one. */
     val continueChapterId: Int?
         get() =
@@ -51,6 +53,7 @@ data class DownloadedSeriesActions(
     val onBack: () -> Unit = {},
     val onToggleSelecting: () -> Unit = {},
     val onToggle: (chapterId: Int) -> Unit = {},
+    val onSelectAll: () -> Unit = {},
     val onDelete: (chapterIds: Set<Int>) -> Unit = {},
     val onMarkRead: (chapterIds: Set<Int>) -> Unit = {},
     val onDeleteAll: () -> Unit = {},
@@ -108,6 +111,13 @@ class DownloadedSeriesViewModel
         fun toggle(chapterId: Int) =
             selection.update {
                 it.copy(selected = if (chapterId in it.selected) it.selected - chapterId else it.selected + chapterId)
+            }
+
+        /** Selects every downloaded chapter, or clears the selection when all already are. */
+        fun selectAll() =
+            selection.update {
+                val all = state.value.chapters.mapTo(HashSet()) { c -> c.row.chapterId }
+                it.copy(selected = if (state.value.allSelected) emptySet() else all)
             }
 
         fun delete(chapterIds: Set<Int>) {
