@@ -1,13 +1,18 @@
 package com.nl.kaviyy
 
 import android.app.Application
+import com.nl.kaviyy.core.download.AutoDownloader
 import com.nl.kaviyy.core.model.log.Log
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 
 @HiltAndroidApp
 class KaviyyApplication : Application() {
+    @Inject lateinit var autoDownloader: AutoDownloader
+
     override fun onCreate() {
         super.onCreate()
+        autoDownloader.start()
         // Release builds never set a sink, so logging is a no-op there (and R8 strips the calls).
         if (BuildConfig.DEBUG) {
             Log.sink = { level, tag, message, _ ->
