@@ -632,6 +632,40 @@ data class ReadingPaceDto(
 data class DateStatCountDto(
     val value: String? = null,
     val count: Int = 0,
+    /** Kavita `MangaFormat` (0 Image, 1 Archive, 2 Unknown, 3 Epub, 4 Pdf); `DateTimeStatCountWithFormat`. */
+    val format: Int = 0,
+)
+
+/** Kavita `ProfileStatBarDto` (api/Stats/user-stats). */
+@Serializable
+data class ProfileStatBarDto(
+    val booksRead: Int = 0,
+    val comicsRead: Int = 0,
+    val pagesRead: Long = 0,
+    val wordsRead: Long = 0,
+    val authorsRead: Int = 0,
+    val reviews: Int = 0,
+    val ratings: Int = 0,
+)
+
+/** Kavita `ReadTimeByHourDto`: one entry per hour of day (0–23). */
+@Serializable
+data class ReadTimeByHourDto(
+    val stats: List<IntStatCountDto> = emptyList(),
+)
+
+/** Kavita `YearMonthGroupingDto`. */
+@Serializable
+data class YearMonthDto(
+    val year: Int = 0,
+    val month: Int = 0,
+)
+
+/** Kavita `YearMonthGroupingDtoStatCount`. */
+@Serializable
+data class YearMonthStatCountDto(
+    val value: YearMonthDto? = null,
+    val count: Long = 0,
 )
 
 /** Kavita `UserReadStatistics`; [timeSpentReading] is in hours. */

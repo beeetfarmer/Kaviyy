@@ -219,6 +219,32 @@ interface KavitaApi {
         @Query("userId") userId: Int,
     ): StringBreakdownDto
 
+    @GET("api/Stats/tag-breakdown")
+    suspend fun tagBreakdown(
+        @Query("userId") userId: Int,
+    ): StringBreakdownDto
+
+    /** Books/comics read, authors, ratings and reviews. */
+    @GET("api/Stats/user-stats")
+    suspend fun userStats(
+        @Query("userId") userId: Int,
+    ): ProfileStatBarDto
+
+    /** Reading per hour of day, in [timeZoneId]. */
+    @GET("api/Stats/avg-time-by-hour")
+    suspend fun avgTimeByHour(
+        @Query("userId") userId: Int,
+        @Query("TimeZoneId") timeZoneId: String,
+    ): ReadTimeByHourDto
+
+    @GET("api/Stats/reads-by-month")
+    suspend fun readsByMonth(
+        @Query("userId") userId: Int,
+        @Query("StartDate") startDate: String,
+        @Query("EndDate") endDate: String,
+        @Query("TimeZoneId") timeZoneId: String,
+    ): List<YearMonthStatCountDto>
+
     /** Reading lists the user can see (own + promoted), most recently changed first. */
     @POST("api/ReadingList/lists")
     suspend fun readingLists(

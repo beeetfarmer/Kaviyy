@@ -95,52 +95,21 @@ fun AllStatsScreen(
 
 @Composable
 private fun Stats(s: AllStats) {
-    val number = NumberFormat.getIntegerInstance(LocalConfiguration.current.locales[0])
-    Card {
-        Row {
-            Stat(stringResource(R.string.you_hours, s.hours.toInt()), stringResource(R.string.you_time_reading))
-            Stat(number.format(s.pages), stringResource(R.string.you_pages_read))
-            Stat(number.format(s.words), stringResource(R.string.you_words_read))
-        }
-        Text(
-            stringResource(R.string.you_hours_per_week, s.hoursPerWeek),
-            style = Kavita.type.footnote,
-            color = Kavita.colors.labelSecondary,
-        )
-    }
+    TotalsCard(s)
+    HighlightsCard(s)
+    s.activityEnd?.let { if (s.activity.isNotEmpty()) ActivityCard(s, it) }
+    if (s.readsByMonth.any { it.second > 0 }) MonthsCard(s.readsByMonth)
+    if (s.byHour.isNotEmpty()) HoursCard(s.byHour)
+    WeekdayCard(s.byWeekday)
     val years = s.pagesPerYear.takeLast(YEARS_SHOWN)
-    if (years.isNotEmpty()) {
-        Card {
-            Text(stringResource(R.string.you_pages_per_year), style = Kavita.type.headline, color = Kavita.colors.label)
-            StatBars(
-                years.map { it.second.toFloat() },
-                years.map { "'" + (it.first % 100).toString().padStart(2, '0') },
-                stringResource(R.string.you_pages_per_year),
-            )
-        }
-    }
-    Card {
-        Text(stringResource(R.string.you_by_weekday), style = Kavita.type.headline, color = Kavita.colors.label)
-        StatBars(
-            s.byWeekday.map { it.toFloat() },
-            DayOfWeek.entries.map { it.getDisplayName(TextStyle.NARROW, LocalConfiguration.current.locales[0]) },
-            stringResource(R.string.you_by_weekday),
-        )
-    }
-    if (s.genres.isNotEmpty()) {
-        Column {
-            SectionHeader(stringResource(R.string.you_top_genres))
-            GroupedList {
-                s.genres.forEachIndexed { i, (genre, count) ->
-                    GroupedRow(genre, value = number.format(count), divider = i < s.genres.lastIndex)
-                }
-            }
-        }
-    }
+    if (years.isNotEmpty()) YearsCard(years)
+    if (s.formats.size > 1) FormatsCard(s.formats)
+    if (s.genres.isNotEmpty()) RankedCard(stringResource(R.string.you_top_genres), s.genres)
+    if (s.tags.isNotEmpty()) RankedCard(stringResource(R.string.you_top_tags), s.tags)
 }
 
 @Composable
-private fun Card(content: @Composable () -> Unit) =
+internal fun StatCard(content: @Composable () -> Unit) =
     Column(
         Modifier
             .fillMaxWidth()
@@ -151,7 +120,7 @@ private fun Card(content: @Composable () -> Unit) =
     ) { content() }
 
 @Composable
-private fun androidx.compose.foundation.layout.RowScope.Stat(
+internal fun androidx.compose.foundation.layout.RowScope.Stat(
     value: String,
     caption: String,
 ) = Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {

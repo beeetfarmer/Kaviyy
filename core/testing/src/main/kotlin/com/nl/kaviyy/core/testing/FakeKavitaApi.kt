@@ -37,7 +37,9 @@ import com.nl.kaviyy.core.network.MarkVolumeReadDto
 import com.nl.kaviyy.core.network.MarkVolumesReadDto
 import com.nl.kaviyy.core.network.MetadataValueDto
 import com.nl.kaviyy.core.network.PersonDto
+import com.nl.kaviyy.core.network.ProfileStatBarDto
 import com.nl.kaviyy.core.network.ProgressDto
+import com.nl.kaviyy.core.network.ReadTimeByHourDto
 import com.nl.kaviyy.core.network.ReadingListDto
 import com.nl.kaviyy.core.network.ReadingListItemDto
 import com.nl.kaviyy.core.network.ReadingListPositionDto
@@ -66,6 +68,7 @@ import com.nl.kaviyy.core.network.UpdateUserReviewDto
 import com.nl.kaviyy.core.network.UpdateWantToReadDto
 import com.nl.kaviyy.core.network.UserReadStatsDto
 import com.nl.kaviyy.core.network.UserReviewDto
+import com.nl.kaviyy.core.network.YearMonthStatCountDto
 import kotlinx.serialization.json.JsonObject
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -299,6 +302,22 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun dayBreakdown(userId: Int): List<IntStatCountDto> = error("unused")
 
     override suspend fun genreBreakdown(userId: Int): StringBreakdownDto = error("unused")
+
+    override suspend fun tagBreakdown(userId: Int): StringBreakdownDto = error("unused")
+
+    override suspend fun userStats(userId: Int): ProfileStatBarDto = error("unused")
+
+    override suspend fun avgTimeByHour(
+        userId: Int,
+        timeZoneId: String,
+    ): ReadTimeByHourDto = error("unused")
+
+    override suspend fun readsByMonth(
+        userId: Int,
+        startDate: String,
+        endDate: String,
+        timeZoneId: String,
+    ): List<YearMonthStatCountDto> = error("unused")
 
     override suspend fun saveCblFile(cblFile: MultipartBody.Part): CblSavedFileDto = error("unused")
 

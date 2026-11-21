@@ -18,6 +18,42 @@
     <string name="you_pages_per_year">Pages per year</string>
     <string name="you_by_weekday">Reading by weekday</string>
     <string name="you_top_genres">Top genres</string>
+    <string name="you_top_tags">Top tags</string>
+    <string name="you_streak_current">Current streak</string>
+    <string name="you_streak_longest">Longest streak</string>
+    <string name="you_active_days">Reading days</string>
+    <string name="you_books_read">Books read</string>
+    <string name="you_comics_read">Comics read</string>
+    <string name="you_authors">Authors</string>
+    <string name="you_activity">Activity</string>
+    <!-- TalkBack summary of the heatmap: %1$d reading days in the last 6 months, %2$d-day current streak. -->
+    <string name="you_activity_a11y">Reading activity, last 6 months: %1$d reading days, current streak %2$d days</string>
+    <string name="you_less">Less</string>
+    <string name="you_more">More</string>
+    <string name="you_reads_by_month">Chapters per month</string>
+    <string name="you_by_hour">Time of day</string>
+    <!-- %s: an hour like "10 PM" or "22". -->
+    <string name="you_peak_hour">You read most around %s</string>
+    <string name="you_formats">What you read</string>
+    <string name="you_format_images">Manga &amp; comics</string>
+    <string name="you_format_epub">EPUB books</string>
+    <string name="you_format_pdf">PDFs</string>
+    <plurals name="you_days_short">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="you_active_days_window">
+        <item quantity="one">%d reading day</item>
+        <item quantity="other">%d reading days</item>
+    </plurals>
+    <plurals name="you_ratings">
+        <item quantity="one">%d rating</item>
+        <item quantity="other">%d ratings</item>
+    </plurals>
+    <plurals name="you_reviews">
+        <item quantity="one">%d review</item>
+        <item quantity="other">%d reviews</item>
+    </plurals>
     <string name="you_sign_out">Sign Out</string>
     <string name="you_delete_local_data">Delete Local Data</string>
     <string name="you_delete_local_data_confirm">Tap again to delete all local data</string>

@@ -109,6 +109,8 @@ class AccountTest {
             override suspend fun allStats(
                 server: Server,
                 userId: Int,
+                today: java.time.LocalDate,
+                zone: java.time.ZoneId,
             ): AppResult<AllStats> = error("unused")
         }
 

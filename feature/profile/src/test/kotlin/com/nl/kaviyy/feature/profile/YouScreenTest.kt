@@ -96,9 +96,11 @@ class YouScreenTest {
     fun screenshotYouDark() = shot("you_dark") { YouPreview(Appearance.Dark) }
 
     @Test
+    @Config(qualifiers = "w412dp-h2900dp-xhdpi") // the whole page, every chart
     fun screenshotAllStatsLight() = shot("all_stats_light") { AllStatsPreview() }
 
     @Test
+    @Config(qualifiers = "w412dp-h2900dp-xhdpi") // the whole page, every chart
     fun screenshotAllStatsDark() = shot("all_stats_dark") { AllStatsPreview(Appearance.Dark) }
 
     private fun shot(
