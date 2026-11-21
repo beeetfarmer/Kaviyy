@@ -165,6 +165,8 @@ open class FakeKavitaApi : KavitaApi {
         range: String?,
     ): Response<okhttp3.ResponseBody> = error("unused")
 
+    override suspend fun seriesCover(seriesId: Int): okhttp3.ResponseBody = error("unused")
+
     override suspend fun pageImage(
         chapterId: Int,
         page: Int,

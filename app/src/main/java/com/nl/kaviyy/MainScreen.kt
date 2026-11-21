@@ -238,7 +238,8 @@ internal fun MainScreen(
                         onPrivacy = { nav.navigate(PrivacyDestination) },
                         onAbout = { nav.navigate(AboutDestination) },
                         onAdmin = { nav.navigate(AdminDestination) },
-                        onOpenDownloadedSeries = { nav.navigate(DownloadedSeriesDestination(it)) },
+                        // The full series page (works offline from cache); "Manage downloads" there opens the list.
+                        onOpenDownloadedSeries = openSeries,
                         onDownloadSettings = { nav.navigate(DownloadSettingsDestination) },
                         openLibrary = openLibrary,
                         onOpenLibrary = {
@@ -260,6 +261,7 @@ internal fun MainScreen(
                     },
                     onOpenSeries = openSeries,
                     onBrowse = browse,
+                    onManageDownloads = { nav.navigate(DownloadedSeriesDestination(it)) },
                 )
             }
             composable<SearchRouteDestination> {

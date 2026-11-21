@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
@@ -52,6 +53,8 @@ import com.nl.kaviyy.core.data.canDownload
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.designsystem.component.CircleIconButton
 import com.nl.kaviyy.core.designsystem.component.CoverImage
+import com.nl.kaviyy.core.designsystem.component.GroupedList
+import com.nl.kaviyy.core.designsystem.component.GroupedRow
 import com.nl.kaviyy.core.designsystem.component.PrimaryButton
 import com.nl.kaviyy.core.designsystem.component.StatusChip
 import com.nl.kaviyy.core.designsystem.component.StatusChipStyle
@@ -82,6 +85,8 @@ data class SeriesActions(
     val onSendToDevice: (SendTarget) -> Unit = {},
     val onDownload: (chapterIds: List<Int>) -> Unit = {},
     val onUpdateDownloads: () -> Unit = {},
+    /** Opens this series' downloads (select all, mark read, delete). */
+    val onManageDownloads: () -> Unit = {},
     val onMark: (ReadTarget, read: Boolean) -> Unit = { _, _ -> },
     val onRate: (Float) -> Unit = {},
     val onSaveReview: () -> Unit = {},
@@ -102,6 +107,7 @@ fun SeriesRoute(
     onRead: (seriesId: Int, chapterId: Int?) -> Unit,
     onOpenSeries: (seriesId: Int) -> Unit,
     onBrowse: (BrowseTarget) -> Unit,
+    onManageDownloads: (seriesId: Int) -> Unit = {},
     viewModel: SeriesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -133,6 +139,7 @@ fun SeriesRoute(
                 viewModel.download(ids)
             },
             onUpdateDownloads = viewModel::updateDownloads,
+            onManageDownloads = { onManageDownloads(viewModel.seriesId) },
             onMark = viewModel::setRead,
             onRate = viewModel::setRating,
             onSaveReview = viewModel::saveReview,
@@ -300,6 +307,16 @@ private fun Body(
         }
         Chips(series, state) { actions.onSheet(SeriesSheet.Reviews) }
         ActionRow(series, state, actions)
+        val downloaded = state.downloaded.size
+        if (downloaded > 0) {
+            GroupedList {
+                GroupedRow(
+                    stringResource(R.string.series_manage_downloads),
+                    value = pluralStringResource(R.plurals.series_downloaded_chapters, downloaded, downloaded),
+                    onClick = actions.onManageDownloads,
+                )
+            }
+        }
         if (state.notice != null) {
             Text(
                 stringResource(noticeText(state.notice)),

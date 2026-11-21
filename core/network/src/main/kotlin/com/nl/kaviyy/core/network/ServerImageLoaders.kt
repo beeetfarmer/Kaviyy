@@ -6,6 +6,7 @@ import coil3.disk.DiskCache
 import coil3.intercept.Interceptor
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import coil3.request.ErrorResult
 import coil3.request.ImageResult
 import com.nl.kaviyy.core.model.server.Server
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -51,6 +52,39 @@ internal object CredentialFreeCacheKeys : Interceptor {
 }
 
 /**
+ * A series cover that fails to load (server unreachable, not cached) falls back to the copy saved with its downloads:
+ * `filesDir/downloads/{serverId}/{seriesId}/cover` (written by core:download's ChapterDownloader).
+ */
+internal class DownloadedCovers(
+    private val downloads: File,
+) : Interceptor {
+    override suspend fun intercept(chain: Interceptor.Chain): ImageResult {
+        val result = chain.proceed()
+        val file = (result as? ErrorResult)?.let { localCover(chain.request.data) }
+        return if (file == null) {
+            result
+        } else {
+            chain
+                .withRequest(
+                    chain.request
+                        .newBuilder()
+                        .data(file)
+                        .build(),
+                ).proceed()
+        }
+    }
+
+    private fun localCover(data: Any): File? =
+        (data as? String)
+            ?.toHttpUrlOrNull()
+            ?.takeIf { it.encodedPath.endsWith("/api/Image/series-cover") }
+            ?.queryParameter("seriesId")
+            ?.toIntOrNull()
+            ?.let { File(downloads, "$it/cover") }
+            ?.takeIf { it.isFile }
+}
+
+/**
  * One Coil [ImageLoader] per server (N6): images go through that server's authenticated [OkHttpClient], so they get
  * the same TLS/pin/cleartext policy and host-scoped auth. Disk cache per server, deleted with the server.
  * The `apiKey` image parameter is added on the wire by AuthInterceptor, so request data and cache keys stay clean.
@@ -88,6 +122,7 @@ object ServerImageLoaders {
             .Builder(context)
             .components {
                 add(CredentialFreeCacheKeys)
+                add(DownloadedCovers(File(context.filesDir, "downloads/${server.id.value}")))
                 add(OkHttpNetworkFetcherFactory(callFactory = { client }))
             }.memoryCache { sharedMemoryCache(context) }
             .diskCache {

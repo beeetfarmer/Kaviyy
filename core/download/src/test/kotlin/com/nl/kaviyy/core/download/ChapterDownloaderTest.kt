@@ -75,6 +75,8 @@ class ChapterDownloaderTest {
                 return JPEG.toResponseBody()
             }
 
+            override suspend fun seriesCover(seriesId: Int): ResponseBody = JPEG.toResponseBody()
+
             override suspend fun downloadChapterFrom(
                 chapterId: Int,
                 range: String?,
@@ -114,6 +116,21 @@ class ChapterDownloaderTest {
             assertEquals(listOf("0", "1", "2"), manifest?.pages?.map { it.file })
             assertEquals("image/jpeg" to 800, manifest?.pages?.get(1)?.let { it.mime to it.width })
             assertFalse(File(app.filesDir, "downloads/$serverId/2/7.part").exists())
+        }
+
+    @Test
+    fun theSeriesCoverIsKeptWithItsDownloadsAndGoesWithTheLast() =
+        runTest {
+            store.enqueue(row(7))
+            store.enqueue(row(8))
+            runDownload(store, downloader, server, 7)
+            runDownload(store, downloader, server, 8)
+            val cover = File(app.filesDir, "downloads/$serverId/2/cover")
+            assertEquals(JPEG.size.toLong(), cover.length())
+            downloader.delete(row(7))
+            assertTrue(cover.exists()) // chapter 8 is still there
+            downloader.delete(row(8))
+            assertFalse(cover.parentFile?.exists() == true)
         }
 
     @Test

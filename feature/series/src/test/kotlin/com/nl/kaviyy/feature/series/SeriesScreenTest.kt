@@ -91,7 +91,7 @@ class SeriesScreenTest {
         compose.onNodeWithText("Volume 5").assertExists()
         compose.onNodeWithText("Ch. 48–50 · 212 pages").assertExists()
         compose.onNodeWithText("61%").assertExists()
-        compose.onNodeWithText("Volume 5").performClick()
+        compose.onNodeWithText("Volume 5").performScrollTo().performClick()
         assertEquals(SeriesSheet.Volume(5), sheet)
         compose.onNodeWithText("Chapters").performClick()
         assertEquals(SeriesTab.Chapters, tab)
@@ -113,6 +113,19 @@ class SeriesScreenTest {
         // The sheet's Read button (row states also say "Read").
         compose.onNode(hasText("Read") and hasClickAction() and !hasText("Crossing", substring = true)).performClick()
         assertEquals(49, read)
+    }
+
+    @Test
+    fun downloadedChaptersLinkToManagingThem() {
+        var managed = 0
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) {
+                SeriesScreen(previewSeries, SeriesActions(onManageDownloads = { managed++ }))
+            }
+        }
+        compose.onNodeWithText("1 chapter").assertExists() // the running one doesn't count yet
+        compose.onNodeWithText("Manage downloads").performScrollTo().performClick()
+        assertEquals(1, managed)
     }
 
     @Test

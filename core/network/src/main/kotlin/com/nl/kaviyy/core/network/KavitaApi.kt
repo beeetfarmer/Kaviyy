@@ -602,6 +602,13 @@ interface KavitaApi {
         @Header("Range") range: String?,
     ): Response<ResponseBody>
 
+    /** A series' cover (kept with its downloads for offline). `apiKey` is added on the wire by AuthInterceptor. */
+    @Streaming
+    @GET("api/Image/series-cover")
+    suspend fun seriesCover(
+        @Query("seriesId") seriesId: Int,
+    ): ResponseBody
+
     /** One page image (0-based); PDFs are rendered server-side. `apiKey` is added on the wire by AuthInterceptor. */
     @Streaming
     @GET("api/Reader/image")

@@ -75,12 +75,31 @@ class ChapterDownloader
                 runCatching { json.decodeFromString<DownloadManifest>(file.readText()) }.getOrNull()
             }
 
-        /** Deletes the finished and partial folders of a chapter. */
+        /** Deletes the finished and partial folders of a chapter, and the series folder once nothing else is in it. */
         suspend fun delete(row: DownloadEntity) =
             withContext(io) {
                 dir(row.serverId, row.seriesId, row.chapterId).deleteRecursively()
                 partDir(row).deleteRecursively()
+                val series = coverFile(row).parentFile
+                if (series?.listFiles().orEmpty().all { it.name == COVER }) series?.deleteRecursively()
             }
+
+        private fun coverFile(row: DownloadEntity) =
+            guardedUnder(root, File(root, "${row.serverId}/${row.seriesId}/$COVER"))
+
+        /** Best effort: the series cover next to its chapters, refreshed with each finished download. */
+        private suspend fun saveCover(
+            api: KavitaApi,
+            row: DownloadEntity,
+        ) {
+            val cover = coverFile(row)
+            val temp = File(cover.path + ".tmp")
+            val saved = apiCall { api.seriesCover(row.seriesId).use { stream(it.byteStream(), temp.outputStream()) } }
+            if (saved is AppResult.Success && temp.length() > 0 && sniffMime(temp) != null) {
+                temp.renameTo(cover)
+            }
+            temp.delete()
+        }
 
         /** Everything under the downloads root (all servers). */
         suspend fun deleteAll() = withContext(io) { root.deleteRecursively() }
@@ -97,7 +116,9 @@ class ChapterDownloader
                     if (row.pageImages) pages(api, row, part, progress) else book(api, row, part, progress)
                     val target = dir(row.serverId, row.seriesId, row.chapterId)
                     target.deleteRecursively() // an update replaces the old copy
-                    if (part.renameTo(target)) DownloadOutcome.Done else DownloadOutcome.Failed(AppError.Unknown)
+                    if (!part.renameTo(target)) return@withContext DownloadOutcome.Failed(AppError.Unknown)
+                    saveCover(api, row)
+                    DownloadOutcome.Done
                 } catch (abort: Abort) {
                     abort.outcome
                 }
@@ -172,6 +193,9 @@ class ChapterDownloader
 
         internal companion object {
             const val BOOK = "book.epub"
+
+            /** `downloads/{serverId}/{seriesId}/cover`, read by the image loader when the server can't be reached. */
+            const val COVER = "cover"
             private const val REPORT_BYTES = 512L * 1024
         }
     }

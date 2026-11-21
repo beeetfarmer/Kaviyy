@@ -170,4 +170,9 @@
     <string name="series_downloaded">Downloaded</string>
     <string name="series_download_retry">Download failed, tap to retry</string>
     <string name="series_offline_not_downloaded">You’re offline. Download this chapter to read it without a connection.</string>
+    <string name="series_manage_downloads">Manage downloads</string>
+    <plurals name="series_downloaded_chapters">
+        <item quantity="one">%1$d chapter</item>
+        <item quantity="other">%1$d chapters</item>
+    </plurals>
 </resources>

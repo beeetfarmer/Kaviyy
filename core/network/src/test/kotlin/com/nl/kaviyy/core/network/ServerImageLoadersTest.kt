@@ -96,6 +96,38 @@ class ServerImageLoadersTest {
             assertTrue(ServerImageLoaders.cacheDir(context, server).path.endsWith("images/9"))
         }
 
+    @Test
+    fun anUnreachableSeriesCoverFallsBackToTheDownloadedCopy() =
+        runTest {
+            val context = RuntimeEnvironment.getApplication()
+            val server = Server(ServerId(11), "S", (ServerUrl.parse("https://s.invalid") as ServerUrlResult.Valid).url)
+            val dir = java.io.File(context.filesDir, "downloads/11/4").apply { mkdirs() }
+            java.io.File(dir, "cover").writeBytes(Base64.getDecoder().decode(PNG_1X1))
+            val offline =
+                okhttp3.OkHttpClient
+                    .Builder()
+                    .addInterceptor { throw java.io.IOException("offline") }
+                    .build()
+            val loader = ServerImageLoaders.create(context, server, offline)
+
+            suspend fun load(id: Int) =
+                loader.execute(
+                    ImageRequest
+                        .Builder(context)
+                        .data("https://s.invalid/api/Image/series-cover?seriesId=$id")
+                        .diskCachePolicy(coil3.request.CachePolicy.DISABLED)
+                        .memoryCachePolicy(coil3.request.CachePolicy.DISABLED)
+                        .build(),
+                )
+            try {
+                // Robolectric can't decode the bitmap; what matters is the load went to the local file.
+                assertEquals(java.io.File(dir, "cover"), load(4).request.data)
+                assertTrue(load(5).request.data is String) // nothing downloaded for it: stays the URL
+            } finally {
+                java.io.File(context.filesDir, "downloads").deleteRecursively()
+            }
+        }
+
     private companion object {
         const val PNG_1X1 =
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="

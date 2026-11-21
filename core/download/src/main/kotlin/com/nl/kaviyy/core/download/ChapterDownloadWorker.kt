@@ -7,8 +7,11 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.nl.kaviyy.core.data.AuthSession
+import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.database.DownloadDao
+import com.nl.kaviyy.core.database.SeriesDao
 import com.nl.kaviyy.core.datastore.AppSettingsStore
+import com.nl.kaviyy.core.model.server.Server
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -37,6 +40,10 @@ class ChapterDownloadWorker(
         fun settings(): AppSettingsStore
 
         fun dao(): DownloadDao
+
+        fun catalog(): CatalogRepository
+
+        fun series(): SeriesDao
     }
 
     override suspend fun doWork(): Result {
@@ -67,6 +74,7 @@ class ChapterDownloadWorker(
                         runCatching { setForeground(foregroundInfo(notifications, row)) }
                     }
                 }
+            if (result == RunResult.Success) keepSeriesDetails(deps, server, chapterId)
             if (result != RunResult.Retry) {
                 deps.dao().get(serverId, chapterId)?.let { row ->
                     notifications.finished(
@@ -86,6 +94,18 @@ class ChapterDownloadWorker(
             // Stopped by the system (constraints lost) or by pause/cancel: back to the queue unless the user acted.
             withContext(NonCancellable) { deps.store().apply(serverId, chapterId, DownloadEvent.Interrupted) }
             throw e
+        }
+    }
+
+    /** Summary, genres, tags etc. cached once, so the series page has them offline (whatever queued the download). */
+    private suspend fun keepSeriesDetails(
+        deps: Deps,
+        server: Server,
+        chapterId: Int,
+    ) {
+        val seriesId = deps.dao().get(server.id.value, chapterId)?.seriesId ?: return
+        if (deps.series().observeMetadata(server.id.value, seriesId).first() == null) {
+            deps.catalog().refreshSeries(server, seriesId) // best effort: a failure leaves what's cached
         }
     }
 
