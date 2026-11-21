@@ -61,6 +61,8 @@ data class DownloadItem(
     val seriesName: String?,
     /** The cached chapter, for its title and read state; null if not cached. */
     val chapter: ChapterEntity?,
+    /** Kavita `LibraryType` of the series' library, when cached. */
+    val libraryType: Int? = null,
 ) {
     val state: DownloadState get() = row.downloadState
 }

@@ -38,12 +38,27 @@ class DownloadsTest {
     @Test
     fun finishedDownloadsAreGroupedBySeriesAndTheQueueIsOrdered() {
         val state = previewItems.toUiState(previewServer, 0)
-        assertEquals(listOf("Ember Road" to 2, "Salt & Signal" to 1), state.downloaded.map { it.name to it.chapters })
-        assertEquals(272L * 1024 * 1024, state.downloaded.first().bytes)
+        assertEquals(
+            listOf("Ember Road" to 3, "Salt & Signal" to 1, "The Quiet Archive" to 1),
+            state.downloaded.map { it.name to it.chapters },
+        )
+        assertEquals(317L * 1024 * 1024, state.downloaded.first().bytes)
         assertEquals(
             listOf(DownloadState.RUNNING, DownloadState.QUEUED, DownloadState.PAUSED, DownloadState.FAILED),
             state.queue.map { it.state },
         )
+    }
+
+    @Test
+    fun storageIsBrokenDownByLibraryKind() {
+        val mb = 1024L * 1024
+        val state = previewItems.toUiState(previewServer, 0)
+        assertEquals((140 + 45 + 132 + 30 + 61 + 9) * mb, state.usedBytes)
+        assertEquals(
+            listOf(StorageKind.Manga to 347 * mb, StorageKind.Comics to 61 * mb, StorageKind.Books to 9 * mb),
+            state.storage,
+        )
+        assertEquals(StorageKind.Other, storageKind(null))
     }
 
     @Test
@@ -55,7 +70,7 @@ class DownloadsTest {
                 runCurrent()
                 assertEquals(4, expectMostRecentItem().queue.size)
                 vm.select(1)
-                downloads.value = previewItems.take(3)
+                downloads.value = previewItems.filter { it.state == DownloadState.COMPLETED }
                 runCurrent()
                 val st = expectMostRecentItem()
                 assertEquals(1 to 0, st.segment to st.queue.size)

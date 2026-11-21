@@ -36,6 +36,9 @@ data class DownloadsUiState(
     /** Not finished yet: running first, then waiting, paused, failed. */
     val queue: List<DownloadItem> = emptyList(),
     val loading: Boolean = true,
+    /** Bytes on disk across all downloads. */
+    val usedBytes: Long = 0,
+    val storage: List<Pair<StorageKind, Long>> = emptyList(),
 )
 
 data class DownloadsActions(
@@ -64,6 +67,8 @@ internal fun List<DownloadItem>.toUiState(
         groups,
         pending.sortedWith(compareBy({ QUEUE_ORDER.indexOf(it.state) }, { it.row.updatedAt })),
         loading = false,
+        usedBytes = sumOf { it.row.bytesDone },
+        storage = storageBreakdown(),
     )
 }
 

@@ -62,7 +62,7 @@ class Downloads
         override fun downloads(server: Server): Flow<List<DownloadItem>> =
             combine(dao.observeWithSeries(server.id.value), dao.observeChapters(server.id.value)) { rows, chapters ->
                 val byId = chapters.associateBy { it.id }
-                rows.map { DownloadItem(it.download, it.seriesName, byId[it.download.chapterId]) }
+                rows.map { DownloadItem(it.download, it.seriesName, byId[it.download.chapterId], it.libraryType) }
             }
 
         override fun outdated(

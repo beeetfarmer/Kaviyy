@@ -12,17 +12,21 @@ data class OutdatedDownload(
     val lastModified: Long,
 )
 
-/** A download with its series' name (null until the series is cached). */
+/** A download with its series' name and library type (null until they are cached). */
 data class DownloadWithSeries(
     @Embedded val download: DownloadEntity,
     val seriesName: String?,
+    /** Kavita `LibraryType`. */
+    val libraryType: Int?,
 )
 
 @Dao
 interface DownloadDao {
     @Query(
-        "SELECT d.*, s.name AS seriesName FROM downloads d LEFT JOIN series s ON s.serverId = d.serverId AND " +
-            "s.id = d.seriesId WHERE d.serverId = :serverId ORDER BY d.updatedAt",
+        "SELECT d.*, s.name AS seriesName, l.type AS libraryType FROM downloads d " +
+            "LEFT JOIN series s ON s.serverId = d.serverId AND s.id = d.seriesId " +
+            "LEFT JOIN libraries l ON l.serverId = s.serverId AND l.id = s.libraryId " +
+            "WHERE d.serverId = :serverId ORDER BY d.updatedAt",
     )
     fun observeWithSeries(serverId: Long): Flow<List<DownloadWithSeries>>
 

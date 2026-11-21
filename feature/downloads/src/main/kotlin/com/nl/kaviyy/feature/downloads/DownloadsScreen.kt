@@ -1,5 +1,6 @@
 package com.nl.kaviyy.feature.downloads
 
+import android.os.StatFs
 import android.text.format.Formatter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -53,7 +55,10 @@ fun DownloadsRoute(
     viewModel: DownloadsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    DownloadsScreen(state, DownloadsActions(viewModel::select, onOpenSeries, onBrowse))
+    val context = LocalContext.current
+    // Free space where downloads live; re-read whenever the used total changes.
+    val free = remember(state.usedBytes) { runCatching { StatFs(context.filesDir.path).availableBytes }.getOrNull() }
+    DownloadsScreen(state, DownloadsActions(viewModel::select, onOpenSeries, onBrowse), freeBytes = free)
 }
 
 /** [derived] Screen 11: Downloaded (grouped by series) / Queue. */
@@ -62,6 +67,7 @@ fun DownloadsScreen(
     state: DownloadsUiState,
     actions: DownloadsActions,
     modifier: Modifier = Modifier,
+    freeBytes: Long? = null,
 ) = LazyColumn(
     modifier.fillMaxSize().background(Kavita.colors.background).statusBarsPadding(),
     contentPadding =
@@ -74,6 +80,7 @@ fun DownloadsScreen(
     verticalArrangement = Arrangement.spacedBy(16.dp),
 ) {
     item { LargeTitleHeader(stringResource(R.string.downloads_title)) }
+    if (state.usedBytes > 0) item { StorageCard(state.usedBytes, freeBytes, state.storage) }
     item {
         SegmentedControl(
             listOf(

@@ -32,6 +32,7 @@ import com.nl.kaviyy.core.designsystem.component.TabItem
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaSpacing
+import com.nl.kaviyy.feature.downloads.DownloadedSeriesRoute
 import com.nl.kaviyy.feature.downloads.DownloadsRoute
 import com.nl.kaviyy.feature.filter.FilterSheet
 import com.nl.kaviyy.feature.home.HomeActions
@@ -148,6 +149,12 @@ private data class CollectionDestination(
     val collectionId: Int,
 )
 
+/** Field name = `DOWNLOADED_SERIES_ARG`. */
+@Serializable
+private data class DownloadedSeriesDestination(
+    val seriesId: Int,
+)
+
 private const val NO_LIBRARY = -1
 
 /** [filterFor] value: the filter sheet is open for the Want to Read list. */
@@ -199,6 +206,7 @@ internal fun MainScreen(
                         onAccount = { nav.navigate(AccountDestination) },
                         onPrivacy = { nav.navigate(PrivacyDestination) },
                         onAbout = { nav.navigate(AboutDestination) },
+                        onOpenDownloadedSeries = { nav.navigate(DownloadedSeriesDestination(it)) },
                     ),
                 ) { filterFor = it }
             }
@@ -246,6 +254,7 @@ internal fun MainScreen(
                     onSignOut = onSignOut,
                 )
             }
+            composable<DownloadedSeriesDestination> { DownloadedSeriesRoute(onBack = { nav.popBackStack() }) }
             composable<AboutDestination> { AboutRoute(onBack = { nav.popBackStack() }) }
             composable<PrivacyDestination> {
                 PrivacyRoute(onBack = { nav.popBackStack() }, onDeleteLocalData = onDeleteLocalData)
@@ -338,6 +347,7 @@ private data class TabNav(
     val onAccount: () -> Unit,
     val onPrivacy: () -> Unit,
     val onAbout: () -> Unit,
+    val onOpenDownloadedSeries: (Int) -> Unit,
 )
 
 @Suppress("LongParameterList")
@@ -394,7 +404,7 @@ private fun TabContent(
         }
 
         Tab.Downloads -> {
-            DownloadsRoute(onOpenSeries = onOpenSeries, onBrowse = { onSelect(Tab.Library) })
+            DownloadsRoute(onOpenSeries = lists.onOpenDownloadedSeries, onBrowse = { onSelect(Tab.Library) })
         }
     }
 }

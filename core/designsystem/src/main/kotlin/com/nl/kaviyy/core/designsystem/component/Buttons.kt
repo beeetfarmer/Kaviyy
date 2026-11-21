@@ -160,7 +160,7 @@ fun PrimaryButton(
     ring = false,
 )
 
-/** Pill, `surface` fill, accent text, hairline ring. */
+/** Pill, `surface` fill, accent text (destructive red when [destructive]), hairline ring. */
 @Composable
 fun SecondaryButton(
     text: String,
@@ -169,6 +169,7 @@ fun SecondaryButton(
     size: ButtonSize = ButtonSize.Large,
     leadingIcon: ImageVector? = null,
     enabled: Boolean = true,
+    destructive: Boolean = false,
 ) = PillButton(
     text,
     onClick,
@@ -177,6 +178,6 @@ fun SecondaryButton(
     leadingIcon,
     enabled,
     Kavita.colors.surface,
-    Kavita.colors.accent,
+    if (destructive) Kavita.colors.destructive else Kavita.colors.accent,
     ring = true,
 )
