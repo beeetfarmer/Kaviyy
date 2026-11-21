@@ -42,6 +42,7 @@ data class YouActions(
     val onPrivacy: () -> Unit = {},
     val onAbout: () -> Unit = {},
     val onDownloads: () -> Unit = {},
+    val onAdmin: () -> Unit = {},
 )
 
 data class YouUiState(

@@ -27,6 +27,7 @@ import com.nl.kaviyy.core.network.GenreTagDto
 import com.nl.kaviyy.core.network.GroupedSeriesDto
 import com.nl.kaviyy.core.network.HourEstimateRangeDto
 import com.nl.kaviyy.core.network.IntStatCountDto
+import com.nl.kaviyy.core.network.JobDto
 import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.LanguageDto
 import com.nl.kaviyy.core.network.LibraryDto
@@ -54,6 +55,7 @@ import com.nl.kaviyy.core.network.SeriesDetailPlusDto
 import com.nl.kaviyy.core.network.SeriesDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
 import com.nl.kaviyy.core.network.SeriesMetadataDto
+import com.nl.kaviyy.core.network.ServerInfoSlimDto
 import com.nl.kaviyy.core.network.SideNavStreamDto
 import com.nl.kaviyy.core.network.SmartFilterDto
 import com.nl.kaviyy.core.network.StringBreakdownDto
@@ -97,6 +99,17 @@ open class FakeKavitaApi : KavitaApi {
         pageNumber: Int,
         pageSize: Int,
     ): List<SeriesDto> = error("unused")
+
+    override suspend fun serverInfo(): ServerInfoSlimDto = error("unused")
+
+    override suspend fun jobs(): List<JobDto> = error("unused")
+
+    override suspend fun scanLibrary(
+        libraryId: Int,
+        force: Boolean,
+    ): Unit = error("unused")
+
+    override suspend fun scanAll(force: Boolean): Unit = error("unused")
 
     override suspend fun continuePoint(seriesId: Int): ChapterDto = ChapterDto(0, volumeId = 0)
 

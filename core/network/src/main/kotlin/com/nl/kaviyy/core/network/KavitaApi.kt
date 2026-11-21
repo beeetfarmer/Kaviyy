@@ -401,6 +401,24 @@ interface KavitaApi {
         @Query("PageSize") pageSize: Int,
     ): List<GroupedSeriesDto>
 
+    @GET("api/Server/server-info-slim")
+    suspend fun serverInfo(): ServerInfoSlimDto
+
+    /** Recurring jobs only; ad-hoc running tasks are pushed over SignalR (not used). */
+    @GET("api/Server/jobs")
+    suspend fun jobs(): List<JobDto>
+
+    @POST("api/Library/scan")
+    suspend fun scanLibrary(
+        @Query("libraryId") libraryId: Int,
+        @Query("force") force: Boolean = false,
+    )
+
+    @POST("api/Library/scan-all")
+    suspend fun scanAll(
+        @Query("force") force: Boolean = false,
+    )
+
     @POST("api/Series/recently-added-v2")
     suspend fun recentlyAdded(
         @Body filter: SeriesFilterV2Dto,

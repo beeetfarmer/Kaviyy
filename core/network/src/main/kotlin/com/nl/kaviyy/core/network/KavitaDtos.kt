@@ -748,3 +748,10 @@ data class AuthKeyRequestDto(
     val name: String,
     val expiresUtc: String? = null,
 )
+
+@Serializable
+data class JobDto(
+    val id: String = "",
+    val title: String? = null,
+    val lastExecutionUtc: String? = null,
+)

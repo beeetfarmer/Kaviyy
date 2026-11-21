@@ -19,9 +19,11 @@ import javax.inject.Inject
 
 /** `GET api/Server/server-info-slim` (ServerInfoSlimDto, required: installId, kavitaVersion). */
 @Serializable
-internal data class ServerInfoSlimDto(
+data class ServerInfoSlimDto(
     val installId: String? = null,
     val kavitaVersion: String? = null,
+    val isDocker: Boolean = false,
+    val firstInstallDate: String? = null,
 )
 
 /**

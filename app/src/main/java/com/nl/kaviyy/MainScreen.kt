@@ -48,6 +48,7 @@ import com.nl.kaviyy.feature.lists.WantToReadActions
 import com.nl.kaviyy.feature.lists.WantToReadRoute
 import com.nl.kaviyy.feature.profile.AboutRoute
 import com.nl.kaviyy.feature.profile.AccountRoute
+import com.nl.kaviyy.feature.profile.AdminRoute
 import com.nl.kaviyy.feature.profile.AllStatsRoute
 import com.nl.kaviyy.feature.profile.AuthKeysRoute
 import com.nl.kaviyy.feature.profile.DevicesRoute
@@ -141,6 +142,9 @@ private data object PrivacyDestination
 private data object AboutDestination
 
 @Serializable
+private data object AdminDestination
+
+@Serializable
 private data class ReadingListDestination(
     val readingListId: Int,
 )
@@ -210,6 +214,7 @@ internal fun MainScreen(
                         onAccount = { nav.navigate(AccountDestination) },
                         onPrivacy = { nav.navigate(PrivacyDestination) },
                         onAbout = { nav.navigate(AboutDestination) },
+                        onAdmin = { nav.navigate(AdminDestination) },
                         onOpenDownloadedSeries = { nav.navigate(DownloadedSeriesDestination(it)) },
                         onDownloadSettings = { nav.navigate(DownloadSettingsDestination) },
                     ),
@@ -262,6 +267,7 @@ internal fun MainScreen(
             composable<DownloadSettingsDestination> { DownloadSettingsRoute(onBack = { nav.popBackStack() }) }
             composable<DownloadedSeriesDestination> { DownloadedSeriesRoute(onBack = { nav.popBackStack() }) }
             composable<AboutDestination> { AboutRoute(onBack = { nav.popBackStack() }) }
+            composable<AdminDestination> { AdminRoute(onBack = { nav.popBackStack() }) }
             composable<PrivacyDestination> {
                 PrivacyRoute(onBack = { nav.popBackStack() }, onDeleteLocalData = onDeleteLocalData)
             }
@@ -353,6 +359,7 @@ private data class TabNav(
     val onAccount: () -> Unit,
     val onPrivacy: () -> Unit,
     val onAbout: () -> Unit,
+    val onAdmin: () -> Unit,
     val onOpenDownloadedSeries: (Int) -> Unit,
     val onDownloadSettings: () -> Unit,
 )
@@ -406,6 +413,7 @@ private fun TabContent(
                     onAccount = lists.onAccount,
                     onPrivacy = lists.onPrivacy,
                     onAbout = lists.onAbout,
+                    onAdmin = lists.onAdmin,
                     onDownloads = lists.onDownloadSettings,
                 ),
             )

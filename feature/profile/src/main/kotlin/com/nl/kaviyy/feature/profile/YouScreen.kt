@@ -123,12 +123,23 @@ fun YouScreen(
             actions.onDevices,
             divider = true,
         )
+        val admin = state.account?.admin == true
         SettingsRow(
             KavitaIcons.Activity,
             SettingsTileColors.scrobbling,
             stringResource(R.string.you_settings_scrobbling),
             actions.onScrobbling,
+            divider = admin,
         )
+        // [derived] admins only; the server checks the role on every admin call anyway.
+        if (admin) {
+            SettingsRow(
+                KavitaIcons.Sliders,
+                SettingsTileColors.sendToDevice,
+                stringResource(R.string.you_settings_admin),
+                actions.onAdmin,
+            )
+        }
     }
     AccountGroup(actions)
     Spacer(Modifier.height(KavitaSpacing.contentBottomPadding))

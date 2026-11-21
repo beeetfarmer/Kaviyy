@@ -3,8 +3,11 @@ package com.nl.kaviyy.feature.profile
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.nl.kaviyy.core.data.Account
+import com.nl.kaviyy.core.data.AdminServerInfo
 import com.nl.kaviyy.core.data.AllStats
+import com.nl.kaviyy.core.data.ServerJob
 import com.nl.kaviyy.core.data.WeekStats
+import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.designsystem.theme.Appearance
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
 import com.nl.kaviyy.core.model.server.Server
@@ -68,3 +71,23 @@ private fun AllStatsLightPreview() = AllStatsPreview()
 @Preview(widthDp = 412, heightDp = 915)
 @Composable
 private fun AllStatsDarkPreview() = AllStatsPreview(Appearance.Dark)
+
+internal val previewAdmin =
+    AdminUiState(
+        info = AdminServerInfo("0.9.1", docker = true, installedAt = 1_700_000_000_000),
+        libraries = listOf(LibraryEntity(1, 1, "Manga", 0), LibraryEntity(1, 2, "Comics", 1)),
+        jobs = listOf(ServerJob("Scan Libraries", 1_763_600_000_000), ServerJob("Backup", 0)),
+        recent = listOf("Ember Road" to 1_763_500_000_000, "Salt & Signal" to 1_763_400_000_000),
+    )
+
+@Composable
+internal fun AdminPreview(appearance: Appearance = Appearance.Light) =
+    KavitaTheme(appearance = appearance) { AdminScreen(previewAdmin, AdminActions()) }
+
+@Preview(widthDp = 412, heightDp = 1200)
+@Composable
+private fun AdminLightPreview() = AdminPreview()
+
+@Preview(widthDp = 412, heightDp = 1200)
+@Composable
+private fun AdminDarkPreview() = AdminPreview(Appearance.Dark)

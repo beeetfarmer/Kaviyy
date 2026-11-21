@@ -32,6 +32,7 @@ class YouScreenTest {
                         onServers = { calls += "servers" },
                         onAccount = { calls += "account" },
                         onPrivacy = { calls += "privacy" },
+                        onAdmin = { calls += "admin" },
                     ),
                 )
             }
@@ -44,7 +45,15 @@ class YouScreenTest {
         compose.onNodeWithText("Servers").performClick()
         compose.onNodeWithText("Account").performClick()
         compose.onNodeWithText("Privacy & Security").performClick()
-        assertEquals(listOf("stats", "servers", "account", "privacy"), calls)
+        compose.onNodeWithText("Server Admin").performClick()
+        assertEquals(listOf("stats", "servers", "account", "privacy", "admin"), calls)
+    }
+
+    @Test
+    fun serverAdminIsOnlyOfferedToAdmins() {
+        val user = previewYou.copy(account = previewYou.account?.copy(admin = false))
+        compose.setContent { KavitaTheme { YouScreen(user, YouActions()) } }
+        compose.onNodeWithText("Server Admin").assertDoesNotExist()
     }
 
     @Test

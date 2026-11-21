@@ -170,4 +170,22 @@
         <item quantity="one">%d to sync</item>
         <item quantity="other">%d to sync</item>
     </plurals>
+    <string name="you_settings_admin">Server Admin</string>
+    <string name="admin_title">Server Admin</string>
+    <string name="admin_load_failed">Some details couldn’t be loaded. Check the connection and that you’re still an admin.</string>
+    <string name="admin_server">Server</string>
+    <string name="admin_version">Kavita version</string>
+    <string name="admin_docker">Docker</string>
+    <string name="admin_yes">Yes</string>
+    <string name="admin_no">No</string>
+    <string name="admin_installed">Installed</string>
+    <string name="admin_libraries">Libraries</string>
+    <string name="admin_scan">Scan</string>
+    <string name="admin_scan_all">Scan All Libraries</string>
+    <string name="admin_scan_started">Scan started on the server.</string>
+    <string name="admin_scan_failed">Couldn’t start the scan.</string>
+    <string name="admin_tasks">Scheduled tasks</string>
+    <string name="admin_never">Never</string>
+    <string name="admin_recent">Recently added</string>
+    <string name="admin_web_note">Users, library folders and email or single sign-on settings are managed in Kavita on the web.</string>
 </resources>
