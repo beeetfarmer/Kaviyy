@@ -12,6 +12,11 @@ data class OutdatedDownload(
     val lastModified: Long,
 )
 
+data class ReadDownload(
+    @Embedded val download: DownloadEntity,
+    val readAt: Long?,
+)
+
 /** A download with its series' name and library type (null until they are cached). */
 data class DownloadWithSeries(
     @Embedded val download: DownloadEntity,
@@ -64,6 +69,15 @@ interface DownloadDao {
 
     @Query("DELETE FROM downloads")
     suspend fun deleteAll()
+
+    /** Finished downloads whose chapter is fully read, with the local read time when there is one. */
+    @Query(
+        "SELECT d.*, p.lastModifiedUtc AS readAt FROM downloads d " +
+            "JOIN chapters c ON c.serverId = d.serverId AND c.id = d.chapterId " +
+            "LEFT JOIN progress p ON p.serverId = d.serverId AND p.chapterId = d.chapterId " +
+            "WHERE d.state = 'COMPLETED' AND c.pages > 0 AND c.pagesRead >= c.pages",
+    )
+    fun observeRead(): Flow<List<ReadDownload>>
 
     /**
      * Finished downloads whose cached chapter changed on the server since (newer `lastModified`). Rows with no recorded

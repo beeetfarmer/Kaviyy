@@ -2,6 +2,7 @@ package com.nl.kaviyy
 
 import android.app.Application
 import com.nl.kaviyy.core.download.AutoDownloader
+import com.nl.kaviyy.core.download.ReadCleanup
 import com.nl.kaviyy.core.model.log.Log
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -10,9 +11,12 @@ import javax.inject.Inject
 class KaviyyApplication : Application() {
     @Inject lateinit var autoDownloader: AutoDownloader
 
+    @Inject lateinit var readCleanup: ReadCleanup
+
     override fun onCreate() {
         super.onCreate()
         autoDownloader.start()
+        readCleanup.start()
         // Release builds never set a sink, so logging is a no-op there (and R8 strips the calls).
         if (BuildConfig.DEBUG) {
             Log.sink = { level, tag, message, _ ->

@@ -201,4 +201,25 @@ class DownloadsTest {
             assertNull(store.get(serverId, 2))
             assertFalse(dir.exists())
         }
+
+    @Test
+    fun removeReadDeletesOnlyFinishedChaptersThatAreFullyRead() =
+        runTest {
+            downloads.enqueue(downloader, listOf(chapter(21), chapter(22), chapter(23)))
+            listOf(21, 22).forEach {
+                store.apply(serverId, it, DownloadEvent.Start)
+                store.apply(serverId, it, DownloadEvent.Complete(0))
+            }
+            db.seriesDao().upsertChapters(
+                listOf(
+                    ChapterEntity(serverId, 21, 3, 2, pages = 10, pagesRead = 10, format = 1), // read
+                    ChapterEntity(serverId, 22, 3, 2, pages = 10, pagesRead = 4, format = 1), // half read
+                    ChapterEntity(serverId, 23, 3, 2, pages = 10, pagesRead = 10, format = 1), // read, still queued
+                ),
+            )
+            downloads.removeRead(serverId)
+            assertNull(store.get(serverId, 21))
+            assertEquals(DownloadState.COMPLETED, store.get(serverId, 22)?.downloadState)
+            assertEquals(DownloadState.QUEUED, store.get(serverId, 23)?.downloadState)
+        }
 }

@@ -75,6 +75,9 @@ interface DownloadControls {
     /** Every download on every server: rows, work and files. */
     suspend fun clearAll() = Unit
 
+    /** Deletes this server's downloaded chapters that are fully read. */
+    suspend fun removeRead(serverId: Long) = Unit
+
     fun downloads(server: Server): Flow<List<DownloadItem>>
 
     suspend fun pause(

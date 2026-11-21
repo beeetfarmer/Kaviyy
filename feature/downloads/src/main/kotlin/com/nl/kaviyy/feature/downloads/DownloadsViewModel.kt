@@ -54,6 +54,7 @@ data class DownloadsActions(
     val onPauseAll: () -> Unit = {},
     val onResumeAll: () -> Unit = {},
     val onSettings: () -> Unit = {},
+    val onRemoveRead: () -> Unit = {},
 )
 
 /** Running or waiting: can be paused. */
@@ -122,6 +123,8 @@ class DownloadsViewModel
             act { id ->
                 queued().filter { it.state == DownloadState.PAUSED }.forEach { controls.resume(id, it.row.chapterId) }
             }
+
+        fun removeRead() = act { controls.removeRead(it) }
 
         private fun queued() = state.value.queue
 

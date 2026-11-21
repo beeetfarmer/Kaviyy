@@ -110,8 +110,9 @@ class DownloadsTest {
                 calls.clear()
                 vm.pauseAll() // running 4 + waiting 5
                 vm.resumeAll() // paused 6 only, not failed 7
+                vm.removeRead()
                 runCurrent()
-                assertEquals(listOf("pause 4", "pause 5", "resume 6"), calls)
+                assertEquals(listOf("pause 4", "pause 5", "resume 6", "removeRead 1"), calls)
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -211,5 +212,9 @@ private fun controls(
         chapterId: Int,
     ) {
         calls += "cancel $chapterId"
+    }
+
+    override suspend fun removeRead(serverId: Long) {
+        calls += "removeRead $serverId"
     }
 }

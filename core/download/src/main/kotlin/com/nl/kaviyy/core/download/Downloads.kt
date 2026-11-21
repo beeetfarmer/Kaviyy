@@ -124,6 +124,12 @@ class Downloads
             }
         }
 
+        override suspend fun removeRead(serverId: Long) {
+            dao.observeRead().first().filter { it.download.serverId == serverId }.forEach {
+                cancel(serverId, it.download.chapterId)
+            }
+        }
+
         override suspend fun clearAll() {
             work.cancelAllWorkByTag(TAG)
             dao.deleteAll()

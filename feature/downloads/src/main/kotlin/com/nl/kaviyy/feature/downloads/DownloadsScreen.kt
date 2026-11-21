@@ -71,6 +71,7 @@ fun DownloadsRoute(
             viewModel::pauseAll,
             viewModel::resumeAll,
             onSettings,
+            viewModel::removeRead,
         )
     DownloadsScreen(state, actions, freeBytes = free)
 }
