@@ -50,6 +50,16 @@ interface ProgressDao {
         seriesId: Int,
     )
 
+    /** Chapters worth refreshing from the server: started but unfinished, then downloaded ones. */
+    @Query(
+        "SELECT id FROM chapters WHERE serverId = :serverId AND pagesRead > 0 AND pagesRead < pages " +
+            "UNION SELECT chapterId FROM downloads WHERE serverId = :serverId LIMIT :limit",
+    )
+    suspend fun syncCandidates(
+        serverId: Long,
+        limit: Int,
+    ): List<Int>
+
     /** Saves a position and updates the chapter, volume and series pagesRead it implies. */
     @Transaction
     suspend fun save(row: ProgressEntity) {
