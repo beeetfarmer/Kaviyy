@@ -26,11 +26,13 @@ import com.nl.kaviyy.core.data.OfflineFirstListsRepository
 import com.nl.kaviyy.core.data.OfflineFirstProgressRepository
 import com.nl.kaviyy.core.data.OfflineFirstReadStateRepository
 import com.nl.kaviyy.core.data.OfflineFirstReaderSettingsRepository
+import com.nl.kaviyy.core.data.OfflineFirstReadingListRepository
 import com.nl.kaviyy.core.data.PersonRepository
 import com.nl.kaviyy.core.data.ProgressRepository
 import com.nl.kaviyy.core.data.ReadStateRepository
 import com.nl.kaviyy.core.data.ReaderDisplayRepository
 import com.nl.kaviyy.core.data.ReaderSettingsRepository
+import com.nl.kaviyy.core.data.ReadingListRepository
 import com.nl.kaviyy.core.data.ReviewRepository
 import com.nl.kaviyy.core.data.SearchRepository
 import com.nl.kaviyy.core.data.ServerApis
@@ -70,6 +72,9 @@ internal interface DataModule {
 
     @Binds
     fun lists(repository: OfflineFirstListsRepository): ListsRepository
+
+    @Binds
+    fun readingLists(repository: OfflineFirstReadingListRepository): ReadingListRepository
 
     @Binds
     fun annotations(repository: OfflineFirstAnnotationRepository): AnnotationRepository

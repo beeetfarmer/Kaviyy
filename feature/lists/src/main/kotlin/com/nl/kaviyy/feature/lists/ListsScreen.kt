@@ -53,10 +53,35 @@ fun ListsRoute(
     onOpenWantToRead: () -> Unit,
     onOpenCollection: (Int) -> Unit,
     onSeeAllCollections: () -> Unit,
+    onOpenReadingList: (Int) -> Unit,
+    onSeeAllReadingLists: () -> Unit,
     viewModel: ListsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    ListsScreen(state, ListsActions(onOpenWantToRead, onOpenCollection, onSeeAllCollections))
+    ListsScreen(
+        state,
+        ListsActions(onOpenWantToRead, onOpenCollection, onSeeAllCollections, onOpenReadingList, onSeeAllReadingLists),
+    )
+}
+
+@Composable
+fun AllReadingListsRoute(
+    onBack: () -> Unit,
+    onOpen: (Int) -> Unit,
+    viewModel: ListsViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    AllReadingListsScreen(state, onBack, onOpen)
+}
+
+@Composable
+fun ReadingListRoute(
+    onBack: () -> Unit,
+    onRead: (seriesId: Int, chapterId: Int) -> Unit,
+    viewModel: ReadingListViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    ReadingListScreen(state, onBack, onRead)
 }
 
 @Composable
@@ -94,7 +119,7 @@ fun CollectionRoute(
     }
 }
 
-/** Screen 08 (DESIGN.md §7). Reading Lists join with M13.3. */
+/** Screen 08 (DESIGN.md §7). */
 @Composable
 fun ListsScreen(
     state: ListsUiState,
@@ -112,6 +137,7 @@ fun ListsScreen(
     LargeTitleHeader(stringResource(R.string.lists_title), Modifier.padding(top = KavitaSpacing.topBelowStatusBar))
     WantToReadCard(state.wantToRead, state.server, actions.onOpenWantToRead)
     CollectionsSection(state, actions)
+    ReadingListsSection(state, actions)
     Spacer(Modifier.height(KavitaSpacing.contentBottomPadding))
 }
 

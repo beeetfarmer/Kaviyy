@@ -21,6 +21,8 @@ import com.nl.kaviyy.core.network.MarkVolumesReadDto
 import com.nl.kaviyy.core.network.MetadataValueDto
 import com.nl.kaviyy.core.network.PersonDto
 import com.nl.kaviyy.core.network.ProgressDto
+import com.nl.kaviyy.core.network.ReadingListDto
+import com.nl.kaviyy.core.network.ReadingListItemDto
 import com.nl.kaviyy.core.network.RefreshSeriesDto
 import com.nl.kaviyy.core.network.RelatedSeriesDto
 import com.nl.kaviyy.core.network.SearchResultGroupDto
@@ -139,6 +141,15 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun updateCollection(body: CollectionDto): CollectionDto = error("unused")
 
     override suspend fun deleteCollection(tagId: Int): Unit = error("unused")
+
+    override suspend fun readingLists(
+        pageNumber: Int,
+        pageSize: Int,
+        includePromoted: Boolean,
+        sortByLastModified: Boolean,
+    ): List<ReadingListDto> = error("unused")
+
+    override suspend fun readingListItems(readingListId: Int): List<ReadingListItemDto> = error("unused")
 
     override suspend fun progress(chapterId: Int): ProgressDto = error("unused")
 

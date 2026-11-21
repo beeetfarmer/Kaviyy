@@ -8,6 +8,9 @@ import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.nl.kaviyy.core.data.ListSummary
 import com.nl.kaviyy.core.database.CollectionEntity
+import com.nl.kaviyy.core.database.ReadingListEntity
+import com.nl.kaviyy.core.database.ReadingListItemEntity
+import com.nl.kaviyy.core.database.ReadingListRow
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.designsystem.theme.Appearance
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
@@ -23,7 +26,11 @@ internal val previewCollections =
     )
 
 internal val previewLists =
-    ListsUiState(wantToRead = ListSummary(18, false, listOf(1, 2, 3), 3), collections = previewCollections)
+    ListsUiState(
+        wantToRead = ListSummary(18, false, listOf(1, 2, 3), 3),
+        collections = previewCollections,
+        readingLists = previewReadingLists,
+    )
 
 @Composable
 internal fun ListsPreview(

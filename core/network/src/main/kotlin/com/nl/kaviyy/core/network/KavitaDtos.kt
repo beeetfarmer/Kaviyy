@@ -479,3 +479,33 @@ data class CollectionRemoveDto(
     val tag: CollectionDto,
     val seriesIdsToRemove: List<Int>,
 )
+
+/** Kavita `ReadingListDto` (the fields we show). */
+@Serializable
+data class ReadingListDto(
+    val id: Int,
+    val title: String? = null,
+    val summary: String? = null,
+    val promoted: Boolean = false,
+    val itemCount: Int = 0,
+    val startingYear: Int = 0,
+    val startingMonth: Int = 0,
+    val endingYear: Int = 0,
+    val endingMonth: Int = 0,
+    val ownerUserName: String? = null,
+)
+
+/** Kavita `ReadingListItemDto` (the fields we show). */
+@Serializable
+data class ReadingListItemDto(
+    val id: Int,
+    val order: Int = 0,
+    val chapterId: Int,
+    val seriesId: Int,
+    val volumeId: Int = 0,
+    val seriesName: String? = null,
+    val seriesFormat: Int = 0,
+    val pagesRead: Int = 0,
+    val pagesTotal: Int = 0,
+    val title: String? = null,
+)

@@ -1,6 +1,7 @@
 package com.nl.kaviyy.core.database
 
 import androidx.room.ColumnInfo
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -56,6 +57,15 @@ data class ReadingListEntity(
     val startingMonth: Int = 0,
     val endingYear: Int = 0,
     val endingMonth: Int = 0,
+    val owner: String? = null,
+    /** Server-side position (most recently changed first). */
+    @ColumnInfo(defaultValue = "0") val position: Int = 0,
+)
+
+/** A reading list with how many of its items are fully read (from the cached items). */
+data class ReadingListRow(
+    @Embedded val list: ReadingListEntity,
+    val readCount: Int,
 )
 
 @Entity(
@@ -77,6 +87,9 @@ data class ReadingListItemEntity(
     val title: String? = null,
     val pagesRead: Int = 0,
     val pagesTotal: Int = 0,
+    val seriesName: String? = null,
+    /** Kavita `MangaFormat`. */
+    @ColumnInfo(defaultValue = "0") val format: Int = 0,
 )
 
 @Entity(

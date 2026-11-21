@@ -140,6 +140,35 @@ class ListsScreenTest {
         }
 
     @Test
+    fun readingListRowsOpenAndTheListContinuesAtTheFirstUnfinishedItem() {
+        val calls = mutableListOf<String>()
+        compose.setContent {
+            com.nl.kaviyy.core.designsystem.theme.KavitaTheme {
+                ReadingListScreen(previewReadingList, {}, { s, c -> calls += "read $s $c" })
+            }
+        }
+        compose.onNodeWithText("2 of 4 read").assertExists()
+        compose.onNodeWithText("Continue").performClick()
+        compose.onNodeWithText("Iron Man").performClick()
+        assertEquals(listOf("read 1 102", "read 3 103"), calls)
+    }
+
+    @Test
+    fun listsShowReadingListProgress() {
+        var opened = 0
+        compose.setContent { ListsScreen(previewLists, ListsActions(onOpenReadingList = { opened = it })) }
+        compose.onNodeWithText("14 / 24").assertExists()
+        compose.onNodeWithText("Cosmic arcs").performClick()
+        assertEquals(3, opened)
+    }
+
+    @Test
+    fun screenshotReadingListLight() = shot("reading_list_light") { ReadingListPreview() }
+
+    @Test
+    fun screenshotReadingListDark() = shot("reading_list_dark") { ReadingListPreview(Appearance.Dark) }
+
+    @Test
     fun screenshotCollection() = shot("collection_light") { CollectionPreview() }
 
     @Test

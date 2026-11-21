@@ -24,6 +24,9 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** ponytail: one page of reading lists; page further if someone has more. */
+const val READING_LISTS_PAGE = 200
+
 /** Kavita endpoints we use, verified against api/openapi.json. Add methods only when a feature needs them. */
 @Suppress("TooManyFunctions") // one function per endpoint, like a DAO
 interface KavitaApi {
@@ -82,6 +85,20 @@ interface KavitaApi {
     suspend fun peopleByRole(
         @Query("role") role: Int,
     ): List<PersonDto>
+
+    /** Reading lists the user can see (own + promoted), most recently changed first. */
+    @POST("api/ReadingList/lists")
+    suspend fun readingLists(
+        @Query("PageNumber") pageNumber: Int = 1,
+        @Query("PageSize") pageSize: Int = READING_LISTS_PAGE,
+        @Query("includePromoted") includePromoted: Boolean = true,
+        @Query("sortByLastModified") sortByLastModified: Boolean = true,
+    ): List<ReadingListDto>
+
+    @GET("api/ReadingList/items")
+    suspend fun readingListItems(
+        @Query("readingListId") readingListId: Int,
+    ): List<ReadingListItemDto>
 
     /** The user's own collections that contain [seriesId]. */
     @GET("api/Collection/all-series")

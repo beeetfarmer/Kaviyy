@@ -10,6 +10,7 @@ import com.nl.kaviyy.core.database.KaviyyDatabase
 import com.nl.kaviyy.core.database.LibraryDao
 import com.nl.kaviyy.core.database.OutboxDao
 import com.nl.kaviyy.core.database.ProgressDao
+import com.nl.kaviyy.core.database.ReadingListDao
 import com.nl.kaviyy.core.database.ReadingProfileDao
 import com.nl.kaviyy.core.database.RecentSearchDao
 import com.nl.kaviyy.core.database.SeriesDao
@@ -59,6 +60,9 @@ object DatabaseModule {
 
     @Provides
     fun collectionDao(db: KaviyyDatabase): CollectionDao = db.collectionDao()
+
+    @Provides
+    fun readingListDao(db: KaviyyDatabase): ReadingListDao = db.readingListDao()
 
     @Provides
     fun dashboardDao(db: KaviyyDatabase): DashboardDao = db.dashboardDao()

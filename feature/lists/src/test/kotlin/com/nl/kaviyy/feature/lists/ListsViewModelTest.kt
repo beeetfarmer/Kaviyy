@@ -12,6 +12,7 @@ import com.nl.kaviyy.core.data.LibraryQuery
 import com.nl.kaviyy.core.data.ListSummary
 import com.nl.kaviyy.core.data.ListsRepository
 import com.nl.kaviyy.core.data.OptionSource
+import com.nl.kaviyy.core.data.ReadingListRepository
 import com.nl.kaviyy.core.data.RelatedSeries
 import com.nl.kaviyy.core.data.RuleValue
 import com.nl.kaviyy.core.data.SeriesDetail
@@ -19,6 +20,9 @@ import com.nl.kaviyy.core.data.SeriesSort
 import com.nl.kaviyy.core.data.collectionQuery
 import com.nl.kaviyy.core.database.CollectionEntity
 import com.nl.kaviyy.core.database.LibraryEntity
+import com.nl.kaviyy.core.database.ReadingListEntity
+import com.nl.kaviyy.core.database.ReadingListItemEntity
+import com.nl.kaviyy.core.database.ReadingListRow
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
@@ -76,6 +80,41 @@ class ListsViewModelTest {
     private val changes = mutableListOf<String>()
     private var changeResult: AppResult<Unit> = AppResult.Success(Unit)
     private val refreshed = mutableListOf<ServerId>()
+    private val readingRows =
+        MutableStateFlow(listOf(ReadingListRow(ReadingListEntity(1, 3, "Crisis order", itemCount = 4), readCount = 1)))
+    private val readingItems =
+        MutableStateFlow(
+            listOf(
+                ReadingListItemEntity(1, 1, 3, 0, 100, 0, 5, "Ch. 1", pagesRead = 20, pagesTotal = 20),
+                ReadingListItemEntity(1, 2, 3, 1, 101, 0, 6, "Ch. 2", pagesTotal = 20),
+            ),
+        )
+    private var itemsResult: AppResult<Unit> = AppResult.Success(Unit)
+    private val readingLists =
+        object : ReadingListRepository {
+            override fun lists(server: Server) = readingRows
+
+            override fun list(
+                server: Server,
+                id: Int,
+            ) = readingRows.map { r -> r.firstOrNull { it.list.id == id } }
+
+            override fun items(
+                server: Server,
+                id: Int,
+            ) = readingItems
+
+            override suspend fun refreshLists(server: Server): AppResult<Unit> {
+                refreshed += server.id
+                return AppResult.Success(Unit)
+            }
+
+            override suspend fun refreshItems(
+                server: Server,
+                id: Int,
+            ) = itemsResult
+        }
+
     private val lists =
         object : ListsRepository {
             override fun wantToRead(server: Server) = summary
@@ -174,17 +213,33 @@ class ListsViewModelTest {
     @Test
     fun listsShowTheWantToReadSummaryAndRefreshPerServer() =
         runTest {
-            val vm = ListsViewModel(session, lists)
+            val vm = ListsViewModel(session, lists, readingLists)
             vm.state.test {
                 runCurrent()
                 val first = expectMostRecentItem()
                 assertEquals(ListSummary(2, false, listOf(4, 5), 1), first.wantToRead)
                 assertEquals(listOf("Comfort reads"), first.collections.map { it.title })
+                assertEquals(listOf("Crisis order"), first.readingLists.map { it.list.title })
                 summary.value = ListSummary(3, false, listOf(4, 5, 6), 1)
                 assertEquals(3, expectMostRecentItem().wantToRead.count)
-                assertEquals(listOf(server.id, server.id), refreshed) // want to read + collections
+                assertEquals(List(3) { server.id }, refreshed) // want to read + collections + reading lists
                 active.value = null
                 assertEquals(ListsUiState(), expectMostRecentItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun aReadingListShowsItsItemsAndKeepsThemWhenRefreshFails() =
+        runTest {
+            itemsResult = AppResult.Failure(AppError.Network)
+            val vm = ReadingListViewModel(session, readingLists, SavedStateHandle(mapOf(READING_LIST_ID_ARG to 3)))
+            vm.state.test {
+                runCurrent()
+                val st = expectMostRecentItem()
+                assertEquals("Crisis order", st.list?.list?.title)
+                assertEquals(listOf(100, 101), st.items.map { it.chapterId })
+                assertEquals(AppError.Network, st.error)
                 cancelAndIgnoreRemainingEvents()
             }
         }

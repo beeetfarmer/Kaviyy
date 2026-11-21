@@ -34,4 +34,13 @@
     <string name="lists_delete">Delete collection</string>
     <string name="lists_delete_confirm">Tap again to delete for good</string>
     <string name="lists_change_failed">Couldn\'t save. Check your connection and try again.</string>
+    <string name="lists_reading_lists">Reading Lists</string>
+    <string name="lists_reading_list">Reading list</string>
+    <string name="lists_no_reading_lists">No reading lists yet.</string>
+    <string name="lists_reading_progress">%1$d / %2$d</string>
+    <string name="lists_reading_read_of">%1$d of %2$d read</string>
+    <string name="lists_reading_start">Start reading</string>
+    <string name="lists_reading_continue">Continue</string>
+    <string name="lists_reading_again">Read again</string>
+    <string name="lists_reading_empty">This reading list has nothing you can see yet.</string>
 </resources>

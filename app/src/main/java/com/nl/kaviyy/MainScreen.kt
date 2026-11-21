@@ -38,8 +38,10 @@ import com.nl.kaviyy.feature.home.HomeActions
 import com.nl.kaviyy.feature.home.HomeRoute
 import com.nl.kaviyy.feature.library.LibraryRoute
 import com.nl.kaviyy.feature.lists.AllCollectionsRoute
+import com.nl.kaviyy.feature.lists.AllReadingListsRoute
 import com.nl.kaviyy.feature.lists.CollectionRoute
 import com.nl.kaviyy.feature.lists.ListsRoute
+import com.nl.kaviyy.feature.lists.ReadingListRoute
 import com.nl.kaviyy.feature.lists.WantToReadActions
 import com.nl.kaviyy.feature.lists.WantToReadRoute
 import com.nl.kaviyy.feature.readerepub.EpubReaderRoute
@@ -96,6 +98,14 @@ private data object WantToReadDestination
 private data object CollectionsDestination
 
 @Serializable
+private data object ReadingListsDestination
+
+@Serializable
+private data class ReadingListDestination(
+    val readingListId: Int,
+)
+
+@Serializable
 private data class CollectionDestination(
     val collectionId: Int,
 )
@@ -146,6 +156,8 @@ internal fun MainScreen(
                         onOpenWantToRead = { nav.navigate(WantToReadDestination) },
                         onOpenCollection = { nav.navigate(CollectionDestination(it)) },
                         onSeeAllCollections = { nav.navigate(CollectionsDestination) },
+                        onOpenReadingList = { nav.navigate(ReadingListDestination(it)) },
+                        onSeeAllReadingLists = { nav.navigate(ReadingListsDestination) },
                     ),
                 ) { filterFor = it }
             }
@@ -182,6 +194,20 @@ internal fun MainScreen(
             }
             composable<EpubDestination> { EpubReaderRoute(onClose = { nav.popBackStack() }) }
             composable<BrowseDestination> { BrowseRoute(onBack = { nav.popBackStack() }, onOpenSeries = openSeries) }
+            composable<ReadingListsDestination> {
+                AllReadingListsRoute(
+                    onBack = { nav.popBackStack() },
+                    onOpen = { nav.navigate(ReadingListDestination(it)) },
+                )
+            }
+            composable<ReadingListDestination> {
+                ReadingListRoute(onBack = { nav.popBackStack() }, onRead = {
+                    s,
+                    c,
+                    ->
+                    nav.navigate(ReaderDestination(s, c))
+                })
+            }
             composable<CollectionsDestination> {
                 AllCollectionsRoute(onBack = { nav.popBackStack() }, onOpenCollection = {
                     nav.navigate(CollectionDestination(it))
@@ -237,6 +263,8 @@ private data class ListsNav(
     val onOpenWantToRead: () -> Unit,
     val onOpenCollection: (Int) -> Unit,
     val onSeeAllCollections: () -> Unit,
+    val onOpenReadingList: (Int) -> Unit,
+    val onSeeAllReadingLists: () -> Unit,
 )
 
 @Suppress("LongParameterList")
@@ -271,7 +299,13 @@ private fun TabContent(
         }
 
         Tab.Lists -> {
-            ListsRoute(lists.onOpenWantToRead, lists.onOpenCollection, lists.onSeeAllCollections)
+            ListsRoute(
+                lists.onOpenWantToRead,
+                lists.onOpenCollection,
+                lists.onSeeAllCollections,
+                lists.onOpenReadingList,
+                lists.onSeeAllReadingLists,
+            )
         }
 
         Tab.You -> {

@@ -13,11 +13,13 @@ import com.nl.kaviyy.core.data.FilterScope
 import com.nl.kaviyy.core.data.LibraryFilterStore
 import com.nl.kaviyy.core.data.ListSummary
 import com.nl.kaviyy.core.data.ListsRepository
+import com.nl.kaviyy.core.data.ReadingListRepository
 import com.nl.kaviyy.core.data.SeriesFilter
 import com.nl.kaviyy.core.data.collectionQuery
 import com.nl.kaviyy.core.data.editableBy
 import com.nl.kaviyy.core.data.wantToReadQuery
 import com.nl.kaviyy.core.database.CollectionEntity
+import com.nl.kaviyy.core.database.ReadingListRow
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
@@ -48,6 +50,7 @@ data class ListsUiState(
     val server: Server? = null,
     val wantToRead: ListSummary = ListSummary(0, false, emptyList(), 0),
     val collections: List<CollectionEntity> = emptyList(),
+    val readingLists: List<ReadingListRow> = emptyList(),
 )
 
 data class EditCollectionActions(
@@ -60,6 +63,8 @@ data class ListsActions(
     val onOpenWantToRead: () -> Unit = {},
     val onOpenCollection: (Int) -> Unit = {},
     val onSeeAllCollections: () -> Unit = {},
+    val onOpenReadingList: (Int) -> Unit = {},
+    val onSeeAllReadingLists: () -> Unit = {},
 )
 
 /** Screen 08. */
@@ -70,6 +75,7 @@ class ListsViewModel
     constructor(
         session: AuthSession,
         private val lists: ListsRepository,
+        private val readingLists: ReadingListRepository,
     ) : ViewModel() {
         private val server = session.activeServer.distinctUntilChangedBy { it?.id }
 
@@ -79,7 +85,9 @@ class ListsViewModel
                     if (s == null) {
                         flowOf(ListsUiState())
                     } else {
-                        combine(lists.wantToRead(s), lists.collections(s)) { w, c -> ListsUiState(s, w, c) }
+                        combine(lists.wantToRead(s), lists.collections(s), readingLists.lists(s)) { w, c, r ->
+                            ListsUiState(s, w, c, r)
+                        }
                     }
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ListsUiState())
 
@@ -88,6 +96,7 @@ class ListsViewModel
                 server.filterNotNull().collect {
                     lists.refreshWantToRead(it)
                     lists.refreshCollections(it)
+                    readingLists.refreshLists(it)
                 }
             }
         }
