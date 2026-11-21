@@ -88,6 +88,7 @@ fun GroupedRow(
     onClick: (() -> Unit)? = null,
     showChevron: Boolean = onClick != null,
     divider: Boolean = false,
+    labelColor: Color = Kavita.colors.label,
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
     val colors = Kavita.colors
@@ -102,7 +103,7 @@ fun GroupedRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = Kavita.type.body, color = colors.label, modifier = Modifier.weight(1f))
+        Text(label, style = Kavita.type.body, color = labelColor, modifier = Modifier.weight(1f))
         if (value != null) Text(value, style = Kavita.type.callout, color = colors.labelSecondary, maxLines = 1)
         trailing()
         if (showChevron) Chevron()

@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,7 +76,22 @@ fun CollectionRoute(
     viewModel: CollectionViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    CollectionScreen(state, viewModel.series.collectAsLazyPagingItems(), onBack, onOpenSeries)
+    LaunchedEffect(state.deleted) { if (state.deleted) onBack() }
+    CollectionScreen(
+        state,
+        viewModel.series.collectAsLazyPagingItems(),
+        onBack,
+        onOpenSeries,
+        onEdit = viewModel::startEdit,
+    )
+    if (state.editing) {
+        EditCollectionSheet(
+            state,
+            viewModel.title,
+            viewModel.summary,
+            EditCollectionActions(viewModel::closeEdit, viewModel::save, viewModel::delete),
+        )
+    }
 }
 
 /** Screen 08 (DESIGN.md §7). Reading Lists join with M13.3. */

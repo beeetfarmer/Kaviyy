@@ -1,5 +1,6 @@
 package com.nl.kaviyy.feature.lists
 
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.SavedStateHandle
 import androidx.paging.PagingData
 import app.cash.turbine.test
@@ -19,6 +20,7 @@ import com.nl.kaviyy.core.data.collectionQuery
 import com.nl.kaviyy.core.database.CollectionEntity
 import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.database.SeriesEntity
+import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.model.server.ServerId
@@ -41,7 +43,8 @@ class ListsViewModelTest {
     @get:Rule
     val main = MainDispatcherRule()
 
-    private val server = Server(ServerId(1), "s", (ServerUrl.parse("https://s.lan") as ServerUrlResult.Valid).url)
+    private val server =
+        Server(ServerId(1), "s", (ServerUrl.parse("https://s.lan") as ServerUrlResult.Valid).url, username = "Neo")
     private val active = MutableStateFlow<Server?>(server)
     private val session =
         object : AuthSession {
@@ -68,7 +71,10 @@ class ListsViewModelTest {
         }
 
     private val summary = MutableStateFlow(ListSummary(2, false, listOf(4, 5), 1))
-    private val collections = MutableStateFlow(listOf(CollectionEntity(1, 7, "Comfort reads", itemCount = 3)))
+    private val collections =
+        MutableStateFlow(listOf(CollectionEntity(1, 7, "Comfort reads", itemCount = 3, owner = "neo")))
+    private val changes = mutableListOf<String>()
+    private var changeResult: AppResult<Unit> = AppResult.Success(Unit)
     private val refreshed = mutableListOf<ServerId>()
     private val lists =
         object : ListsRepository {
@@ -89,6 +95,42 @@ class ListsViewModelTest {
             override suspend fun refreshCollections(server: Server): AppResult<Unit> {
                 refreshed += server.id
                 return AppResult.Success(Unit)
+            }
+
+            override suspend fun collectionsWith(
+                server: Server,
+                seriesId: Int,
+            ): AppResult<Set<Int>> = error("unused")
+
+            override suspend fun setInCollection(
+                server: Server,
+                collection: CollectionEntity,
+                seriesId: Int,
+                inIt: Boolean,
+            ): AppResult<Unit> = error("unused")
+
+            override suspend fun createCollection(
+                server: Server,
+                title: String,
+                seriesId: Int,
+            ): AppResult<Unit> = error("unused")
+
+            override suspend fun updateCollection(
+                server: Server,
+                collection: CollectionEntity,
+                title: String,
+                summary: String?,
+            ): AppResult<Unit> {
+                changes += "update ${collection.id} $title $summary"
+                return changeResult
+            }
+
+            override suspend fun deleteCollection(
+                server: Server,
+                id: Int,
+            ): AppResult<Unit> {
+                changes += "delete $id"
+                return changeResult
             }
         }
 
@@ -158,6 +200,50 @@ class ListsViewModelTest {
                 cancelAndIgnoreRemainingEvents()
             }
             assertEquals(collectionQuery(7), queries.last())
+        }
+
+    @Test
+    fun theOwnerEditsAndDeletesAfterConfirming() =
+        runTest {
+            val vm = CollectionViewModel(session, catalog, lists, SavedStateHandle(mapOf(COLLECTION_ID_ARG to 7)))
+            vm.state.test {
+                runCurrent()
+                assertEquals(true, expectMostRecentItem().editable)
+                vm.startEdit()
+                assertEquals("Comfort reads", vm.title.text.toString())
+                vm.title.setTextAndPlaceCursorAtEnd("Comfort")
+                changeResult = AppResult.Failure(AppError.Network)
+                vm.save()
+                runCurrent()
+                var st = expectMostRecentItem()
+                assertEquals(true to AppError.Network, st.editing to st.error) // stays open on failure
+                changeResult = AppResult.Success(Unit)
+                vm.save()
+                runCurrent()
+                assertEquals(false, expectMostRecentItem().editing)
+                vm.startEdit()
+                vm.delete() // asks first
+                runCurrent()
+                st = expectMostRecentItem()
+                assertEquals(true to false, st.confirmDelete to st.deleted)
+                vm.delete()
+                runCurrent()
+                assertEquals(true, expectMostRecentItem().deleted)
+                assertEquals(listOf("update 7 Comfort ", "update 7 Comfort ", "delete 7"), changes)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun othersCannotEdit() =
+        runTest {
+            collections.value = listOf(CollectionEntity(1, 7, "Theirs", owner = "trinity"))
+            val vm = CollectionViewModel(session, catalog, lists, SavedStateHandle(mapOf(COLLECTION_ID_ARG to 7)))
+            vm.state.test {
+                runCurrent()
+                assertEquals(false, expectMostRecentItem().editable)
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test

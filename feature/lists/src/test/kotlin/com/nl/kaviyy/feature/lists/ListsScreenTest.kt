@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.nl.kaviyy.core.data.Comparison
 import com.nl.kaviyy.core.data.FilterField
@@ -99,6 +100,44 @@ class ListsScreenTest {
         compose.onNodeWithText("Synced from a MyAnimeList interest stack.").assertExists()
         compose.onNodeWithText("North of Quiet").assertExists()
     }
+
+    @Test
+    fun ownersSeeEditAndTheSheetSavesAndAsksBeforeDeleting() {
+        val calls = mutableListOf<String>()
+        compose.setContent {
+            CollectionScreen(
+                CollectionUiState(collection = previewCollections[0], editable = true),
+                kotlinx.coroutines.flow
+                    .flowOf(
+                        androidx.paging.PagingData.empty<com.nl.kaviyy.core.database.SeriesEntity>(),
+                    ).collectAsLazyPagingItems(),
+                {},
+                {},
+                onEdit = { calls += "edit" },
+            )
+        }
+        compose.onNodeWithText("Edit").performClick()
+        assertEquals(listOf("edit"), calls)
+    }
+
+    @Test
+    fun screenshotEditCollection() =
+        shot("collection_edit") {
+            CollectionPreview()
+            EditCollectionSheet(
+                CollectionUiState(
+                    collection = previewCollections[0],
+                    editable = true,
+                    editing = true,
+                    confirmDelete = true,
+                ),
+                androidx.compose.foundation.text.input
+                    .TextFieldState("Comfort reads"),
+                androidx.compose.foundation.text.input
+                    .TextFieldState(),
+                EditCollectionActions(),
+            )
+        }
 
     @Test
     fun screenshotCollection() = shot("collection_light") { CollectionPreview() }

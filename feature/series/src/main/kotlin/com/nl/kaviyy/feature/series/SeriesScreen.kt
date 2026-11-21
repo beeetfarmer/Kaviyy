@@ -73,6 +73,7 @@ data class SeriesActions(
     val onSheet: (SeriesSheet?) -> Unit = {},
     val onOpenSeries: (seriesId: Int) -> Unit = {},
     val onWantToRead: () -> Unit = {},
+    val onCollections: () -> Unit = {},
     val onMark: (ReadTarget, read: Boolean) -> Unit = { _, _ -> },
     val onRate: (Float) -> Unit = {},
     val onSaveReview: () -> Unit = {},
@@ -96,6 +97,8 @@ fun SeriesRoute(
     viewModel: SeriesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var collections by rememberSaveable { mutableStateOf(false) }
+    if (collections) CollectionsSheet(viewModel.seriesId, onDismiss = { collections = false })
     SeriesScreen(
         state,
         SeriesActions(
@@ -106,6 +109,7 @@ fun SeriesRoute(
             onSheet = viewModel::showSheet,
             onOpenSeries = onOpenSeries,
             onWantToRead = viewModel::toggleWantToRead,
+            onCollections = { collections = true },
             onMark = viewModel::setRead,
             onRate = viewModel::setRating,
             onSaveReview = viewModel::saveReview,
@@ -370,6 +374,7 @@ private fun ActionRow(
         PrimaryButton(label, { onRead(next?.id) }, Modifier.weight(1f), leadingIcon = KavitaIcons.Play)
         // Toggle: M8.3. Download: M15 (behind the Download role).
         WantToRead(state.detail?.metadata?.wantToRead == true, actions.onWantToRead)
+        RoundAction(KavitaIcons.ListIcon, stringResource(R.string.series_collections_add), actions.onCollections)
     }
 }
 

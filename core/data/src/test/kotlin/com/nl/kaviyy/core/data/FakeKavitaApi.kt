@@ -4,7 +4,9 @@ import com.nl.kaviyy.core.network.AnnotationDto
 import com.nl.kaviyy.core.network.BookmarkDto
 import com.nl.kaviyy.core.network.ChapterDto
 import com.nl.kaviyy.core.network.ChapterInfoDto
+import com.nl.kaviyy.core.network.CollectionAddDto
 import com.nl.kaviyy.core.network.CollectionDto
+import com.nl.kaviyy.core.network.CollectionRemoveDto
 import com.nl.kaviyy.core.network.DashboardStreamDto
 import com.nl.kaviyy.core.network.DecodeFilterDto
 import com.nl.kaviyy.core.network.GenreTagDto
@@ -124,6 +126,19 @@ open class FakeKavitaApi : KavitaApi {
         pageNumber: Int,
         pageSize: Int,
     ): List<SeriesDto> = error("unused")
+
+    override suspend fun collectionsWithSeries(
+        seriesId: Int,
+        ownedOnly: Boolean,
+    ): List<CollectionDto> = error("unused")
+
+    override suspend fun addToCollection(body: CollectionAddDto): Unit = error("unused")
+
+    override suspend fun removeFromCollection(body: CollectionRemoveDto): Unit = error("unused")
+
+    override suspend fun updateCollection(body: CollectionDto): CollectionDto = error("unused")
+
+    override suspend fun deleteCollection(tagId: Int): Unit = error("unused")
 
     override suspend fun progress(chapterId: Int): ProgressDto = error("unused")
 

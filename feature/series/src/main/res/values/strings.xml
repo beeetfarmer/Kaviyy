@@ -131,4 +131,13 @@
     <string name="series_admin_started">Started on the server. Changes appear when it finishes.</string>
     <string name="series_admin_saved">Summary saved.</string>
     <string name="series_admin_failed">That didn\'t work. Check your connection and permissions.</string>
+    <string name="series_collections_add">Add to collection</string>
+    <string name="series_collections_title">Collections</string>
+    <string name="series_collections_yours">Your collections</string>
+    <string name="series_collections_in">In this collection</string>
+    <string name="series_collections_new">New collection</string>
+    <string name="series_collections_name">Name</string>
+    <string name="series_collections_name_hint">e.g. Comfort reads</string>
+    <string name="series_collections_create">Create with this series</string>
+    <string name="series_collections_failed">Couldn\'t update collections. Check your connection and try again.</string>
 </resources>

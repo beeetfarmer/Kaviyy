@@ -5,7 +5,12 @@ import com.nl.kaviyy.core.database.CollectionEntity
 import com.nl.kaviyy.core.database.SeriesDao
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.result.map
+import com.nl.kaviyy.core.model.result.onSuccess
 import com.nl.kaviyy.core.model.server.Server
+import com.nl.kaviyy.core.network.CollectionAddDto
+import com.nl.kaviyy.core.network.CollectionDto
+import com.nl.kaviyy.core.network.CollectionRemoveDto
+import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.apiCall
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -53,11 +58,48 @@ interface ListsRepository {
     ): Flow<CollectionEntity?>
 
     suspend fun refreshCollections(server: Server): AppResult<Unit>
+
+    /** Ids of the user's collections that contain [seriesId] (network). */
+    suspend fun collectionsWith(
+        server: Server,
+        seriesId: Int,
+    ): AppResult<Set<Int>>
+
+    suspend fun setInCollection(
+        server: Server,
+        collection: CollectionEntity,
+        seriesId: Int,
+        inIt: Boolean,
+    ): AppResult<Unit>
+
+    /** A new collection holding [seriesId] (Kavita creates collections by adding series to them). */
+    suspend fun createCollection(
+        server: Server,
+        title: String,
+        seriesId: Int,
+    ): AppResult<Unit>
+
+    suspend fun updateCollection(
+        server: Server,
+        collection: CollectionEntity,
+        title: String,
+        summary: String?,
+    ): AppResult<Unit>
+
+    suspend fun deleteCollection(
+        server: Server,
+        id: Int,
+    ): AppResult<Unit>
 }
+
+/** Only the owner edits a collection, and synced ("Smart") ones are managed by their source. */
+fun CollectionEntity.editableBy(server: Server): Boolean =
+    source == 0 && owner != null && owner.equals(server.username, ignoreCase = true)
 
 private const val CARD_COVERS = 3
 private val WEEK_MS = TimeUnit.DAYS.toMillis(7)
 
+@Suppress("TooManyFunctions") // one function per list operation
 class OfflineFirstListsRepository
     @Inject
     constructor(
@@ -107,6 +149,54 @@ class OfflineFirstListsRepository
             }
         }
 
+        override suspend fun collectionsWith(
+            server: Server,
+            seriesId: Int,
+        ) = apiCall { apis.api(server).collectionsWithSeries(seriesId) }.map { list -> list.map { it.id }.toSet() }
+
+        override suspend fun setInCollection(
+            server: Server,
+            collection: CollectionEntity,
+            seriesId: Int,
+            inIt: Boolean,
+        ) = changed(server) {
+            if (inIt) {
+                addToCollection(CollectionAddDto(collection.id, collection.title, listOf(seriesId)))
+            } else {
+                removeFromCollection(CollectionRemoveDto(collection.toDto(), listOf(seriesId)))
+            }
+        }
+
+        override suspend fun createCollection(
+            server: Server,
+            title: String,
+            seriesId: Int,
+        ) = changed(server) { addToCollection(CollectionAddDto(0, title.trim(), listOf(seriesId))) }
+
+        override suspend fun updateCollection(
+            server: Server,
+            collection: CollectionEntity,
+            title: String,
+            summary: String?,
+        ) = changed(server) {
+            updateCollection(collection.toDto().copy(title = title.trim(), summary = summary?.trim()?.ifEmpty { null }))
+        }
+
+        override suspend fun deleteCollection(
+            server: Server,
+            id: Int,
+        ) = changed(server) { deleteCollection(id) }.onSuccess { collectionDao.delete(server.id.value, id) }
+
+        /**
+         * Collection edits are online-only (ponytail: no outbox; Kavita validates names and ownership). The cached
+         * list is refreshed after a change.
+         */
+        private suspend fun changed(
+            server: Server,
+            call: suspend KavitaApi.() -> Unit,
+        ): AppResult<Unit> =
+            apiCall { apis.api(server).call() }.also { if (it is AppResult.Success) refreshCollections(server) }
+
         override suspend fun refreshWantToRead(server: Server): AppResult<Unit> {
             val id = server.id.value
             return apiCall { apis.api(server).wantToRead(query.toFilter(), 1, SERIES_PAGE_SIZE) }.map { page ->
@@ -114,3 +204,5 @@ class OfflineFirstListsRepository
             }
         }
     }
+
+private fun CollectionEntity.toDto() = CollectionDto(id, title, summary, promoted, itemCount, owner, source)

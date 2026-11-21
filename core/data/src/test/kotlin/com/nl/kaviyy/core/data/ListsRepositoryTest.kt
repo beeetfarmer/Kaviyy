@@ -1,6 +1,7 @@
 package com.nl.kaviyy.core.data
 
 import androidx.room.Room
+import com.nl.kaviyy.core.database.CollectionEntity
 import com.nl.kaviyy.core.database.KaviyyDatabase
 import com.nl.kaviyy.core.database.ServerEntity
 import com.nl.kaviyy.core.model.result.AppResult
@@ -8,7 +9,9 @@ import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
+import com.nl.kaviyy.core.network.CollectionAddDto
 import com.nl.kaviyy.core.network.CollectionDto
+import com.nl.kaviyy.core.network.CollectionRemoveDto
 import com.nl.kaviyy.core.network.SeriesDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
 import kotlinx.coroutines.flow.first
@@ -54,6 +57,28 @@ class ListsRepositoryTest {
             }
 
             override suspend fun collections(sortByLastModified: Boolean) = collectionsRemote
+
+            override suspend fun collectionsWithSeries(
+                seriesId: Int,
+                ownedOnly: Boolean,
+            ) = collectionsRemote.take(1)
+
+            override suspend fun addToCollection(body: CollectionAddDto) {
+                calls += "add ${body.collectionTagId} '${body.collectionTagTitle}' ${body.seriesIds}"
+            }
+
+            override suspend fun removeFromCollection(body: CollectionRemoveDto) {
+                calls += "remove ${body.tag.id} ${body.seriesIdsToRemove}"
+            }
+
+            override suspend fun updateCollection(body: CollectionDto): CollectionDto {
+                calls += "update ${body.id} '${body.title}' ${body.summary}"
+                return body
+            }
+
+            override suspend fun deleteCollection(tagId: Int) {
+                calls += "delete $tagId"
+            }
         }
     private var collectionsRemote =
         listOf(
@@ -85,6 +110,38 @@ class ListsRepositoryTest {
             repo.refreshCollections(server)
             assertEquals(listOf(3), repo.collections(server).first().map { it.id }) // deleted on the server
         }
+
+    @Test
+    fun collectionChangesGoToKavitaThenRefreshTheCache() =
+        runTest {
+            repo.refreshCollections(server)
+            val mine = checkNotNull(repo.collection(server, 7).first())
+            assertEquals(AppResult.Success(setOf(7)), repo.collectionsWith(server, 42))
+            repo.setInCollection(server, mine, 42, inIt = true)
+            repo.setInCollection(server, mine, 42, inIt = false)
+            repo.createCollection(server, "  New one ", 42)
+            repo.updateCollection(server, mine, "Comfort", "  ")
+            repo.deleteCollection(server, 7)
+            assertEquals(
+                listOf(
+                    "add 7 'Comfort reads' [42]",
+                    "remove 7 [42]",
+                    "add 0 'New one' [42]",
+                    "update 7 'Comfort' null",
+                    "delete 7",
+                ),
+                calls,
+            )
+            assertEquals(null, repo.collection(server, 7).first())
+        }
+
+    @Test
+    fun onlyTheOwnerEditsAndNeverSyncedOnes() {
+        val me = server.copy(username = "Neo")
+        assertEquals(true, CollectionEntity(1, 1, "a", owner = "neo").editableBy(me))
+        assertEquals(false, CollectionEntity(1, 1, "a", owner = "trinity").editableBy(me))
+        assertEquals(false, CollectionEntity(1, 1, "a", owner = "neo", source = 2).editableBy(me))
+    }
 
     @Test
     fun collectionQueryAddsTheCollectionRule() {

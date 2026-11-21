@@ -464,3 +464,18 @@ data class AnnotationDto(
     val createdUtc: String? = null,
     val lastModifiedUtc: String? = null,
 )
+
+/** Kavita `CollectionTagBulkAddDto`. */
+@Serializable
+data class CollectionAddDto(
+    val collectionTagId: Int,
+    val collectionTagTitle: String,
+    val seriesIds: List<Int>,
+)
+
+/** Kavita `UpdateSeriesForTagDto`. */
+@Serializable
+data class CollectionRemoveDto(
+    val tag: CollectionDto,
+    val seriesIdsToRemove: List<Int>,
+)

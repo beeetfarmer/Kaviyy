@@ -27,6 +27,7 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.nl.kaviyy.core.database.SeriesEntity
+import com.nl.kaviyy.core.designsystem.component.ButtonSize
 import com.nl.kaviyy.core.designsystem.component.CircleIconButton
 import com.nl.kaviyy.core.designsystem.component.CoverCard
 import com.nl.kaviyy.core.designsystem.component.CoverCardSize
@@ -205,6 +206,7 @@ fun CollectionScreen(
     onBack: () -> Unit,
     onOpenSeries: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    onEdit: () -> Unit = {},
 ) = SeriesGridScreen(
     state.server,
     series,
@@ -215,7 +217,9 @@ fun CollectionScreen(
 ) {
     val c = state.collection
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        LargeTitleHeader(c?.title.orEmpty(), overline = stringResource(R.string.lists_collection))
+        LargeTitleHeader(c?.title.orEmpty(), overline = stringResource(R.string.lists_collection)) {
+            if (state.editable) SecondaryButton(stringResource(R.string.lists_edit), onEdit, size = ButtonSize.Small)
+        }
         if (c?.smart == true) SmartBadge()
         c?.summary?.takeIf { it.isNotBlank() }?.let {
             Text(it, style = Kavita.type.callout, color = Kavita.colors.labelBody, maxLines = SUMMARY_LINES)

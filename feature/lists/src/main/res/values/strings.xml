@@ -24,4 +24,14 @@
     <string name="lists_smart">Smart</string>
     <string name="lists_no_collections">No collections yet.</string>
     <string name="lists_collection_empty">This collection has no series you can see.</string>
+    <string name="lists_edit">Edit</string>
+    <string name="lists_edit_collection">Edit collection</string>
+    <string name="lists_cancel">Cancel</string>
+    <string name="lists_save">Save</string>
+    <string name="lists_name">Name</string>
+    <string name="lists_summary">Summary</string>
+    <string name="lists_summary_hint">Optional</string>
+    <string name="lists_delete">Delete collection</string>
+    <string name="lists_delete_confirm">Tap again to delete for good</string>
+    <string name="lists_change_failed">Couldn\'t save. Check your connection and try again.</string>
 </resources>

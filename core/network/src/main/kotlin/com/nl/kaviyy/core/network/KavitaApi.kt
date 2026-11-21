@@ -83,6 +83,34 @@ interface KavitaApi {
         @Query("role") role: Int,
     ): List<PersonDto>
 
+    /** The user's own collections that contain [seriesId]. */
+    @GET("api/Collection/all-series")
+    suspend fun collectionsWithSeries(
+        @Query("seriesId") seriesId: Int,
+        @Query("ownedOnly") ownedOnly: Boolean = true,
+    ): List<CollectionDto>
+
+    /** Adds series to a collection; collectionTagId 0 creates one named collectionTagTitle. */
+    @POST("api/Collection/update-for-series")
+    suspend fun addToCollection(
+        @Body body: CollectionAddDto,
+    )
+
+    @POST("api/Collection/update-series")
+    suspend fun removeFromCollection(
+        @Body body: CollectionRemoveDto,
+    )
+
+    @POST("api/Collection/update")
+    suspend fun updateCollection(
+        @Body body: CollectionDto,
+    ): CollectionDto
+
+    @DELETE("api/Collection")
+    suspend fun deleteCollection(
+        @Query("tagId") tagId: Int,
+    )
+
     /** Collections the user can see (own + promoted). */
     @GET("api/Collection")
     suspend fun collections(
