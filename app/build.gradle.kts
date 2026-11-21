@@ -23,8 +23,25 @@ android {
         versionName = "0.1.0"
     }
 
+    // Release signing only from the environment (CI secrets or a local shell), never from files in the repo.
+    // Without KAVIYY_KEYSTORE the release build is unsigned (still useful for R8 and lint checks).
+    val keystore = providers.environmentVariable("KAVIYY_KEYSTORE").orNull
+    signingConfigs {
+        if (keystore != null) {
+            create("release") {
+                storeFile = file(keystore)
+                storePassword = providers.environmentVariable("KAVIYY_KEYSTORE_PASSWORD").get()
+                keyAlias = providers.environmentVariable("KAVIYY_KEY_ALIAS").get()
+                keyPassword = providers.environmentVariable("KAVIYY_KEY_PASSWORD").get()
+                enableV1Signing = false // minSdk 26: v2+ only
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
+            isDebuggable = false
             optimization {
                 enable = true
             }
