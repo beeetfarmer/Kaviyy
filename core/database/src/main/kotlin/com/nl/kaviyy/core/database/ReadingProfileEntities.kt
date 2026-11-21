@@ -94,4 +94,15 @@ interface OutboxDao {
 
     @Query("SELECT * FROM outbox WHERE serverId = :serverId ORDER BY id")
     suspend fun pending(serverId: Long): List<OutboxEntity>
+
+    /** By row id, so a newer coalesced change for the same key survives. */
+    @Query("DELETE FROM outbox WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("UPDATE outbox SET attempts = attempts + 1 WHERE id = :id")
+    suspend fun bumpAttempts(id: Long)
+
+    /** Changes waiting on every server. */
+    @Query("SELECT COUNT(*) FROM outbox")
+    fun observeCount(): kotlinx.coroutines.flow.Flow<Int>
 }

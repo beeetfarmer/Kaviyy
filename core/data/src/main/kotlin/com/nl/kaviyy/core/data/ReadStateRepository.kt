@@ -43,6 +43,22 @@ sealed interface ReadTarget {
     ) : ReadTarget {
         override val key get() = "chapter:$chapterId"
     }
+
+    companion object {
+        /** Back from an outbox [key]; null for anything unrecognised. */
+        fun parse(
+            key: String,
+            seriesId: Int,
+        ): ReadTarget? {
+            val id = key.substringAfter(':').toIntOrNull() ?: return null
+            return when (key.substringBefore(':')) {
+                "series" -> Series(seriesId)
+                "volume" -> Volume(seriesId, id)
+                "chapter" -> Chapter(seriesId, id)
+                else -> null
+            }
+        }
+    }
 }
 
 /**
@@ -172,7 +188,7 @@ internal suspend fun OutboxDao.pushOrQueue(
     return result
 }
 
-private suspend fun KavitaApi.markRead(
+internal suspend fun KavitaApi.markRead(
     target: ReadTarget,
     read: Boolean,
 ) {

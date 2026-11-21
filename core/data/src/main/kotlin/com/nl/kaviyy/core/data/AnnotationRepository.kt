@@ -73,9 +73,9 @@ interface AnnotationRepository {
     ): AppResult<Unit>
 }
 
-private const val OP = "op"
-private const val OP_UPSERT = "upsert"
-private const val OP_DELETE = "delete"
+internal const val OP = "op"
+internal const val OP_UPSERT = "upsert"
+internal const val OP_DELETE = "delete"
 private const val REMOTE_UUID = "remote-"
 
 class OfflineFirstAnnotationRepository
