@@ -3,6 +3,8 @@ package com.nl.kaviyy.core.data
 import com.nl.kaviyy.core.database.AnnotationDao
 import com.nl.kaviyy.core.database.OutboxDao
 import com.nl.kaviyy.core.database.OutboxEntity
+import com.nl.kaviyy.core.database.ProgressDao
+import com.nl.kaviyy.core.database.ProgressEntity
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
@@ -10,9 +12,11 @@ import com.nl.kaviyy.core.network.AnnotationDto
 import com.nl.kaviyy.core.network.BookmarkDto
 import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.ProgressDto
+import com.nl.kaviyy.core.network.ServerClock
 import com.nl.kaviyy.core.network.UpdateRatingDto
 import com.nl.kaviyy.core.network.UpdateWantToReadDto
 import com.nl.kaviyy.core.network.apiCall
+import com.nl.kaviyy.core.network.parseUtc
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
@@ -34,6 +38,8 @@ class OutboxReplayer
         private val apis: ServerApis,
         private val outbox: OutboxDao,
         private val annotations: AnnotationDao,
+        private val progress: ProgressDao,
+        private val clock: ServerClock,
     ) {
         /** Success when the queue for [server] is empty; otherwise the error that stopped it. */
         suspend fun flush(server: Server): AppResult<Unit> {
@@ -65,12 +71,11 @@ class OutboxReplayer
             fun bool(name: String) = json.field(name).jsonPrimitive.boolean
             when (entry.type) {
                 OUTBOX_PROGRESS -> {
-                    api.saveProgress(Json.decodeFromJsonElement(ProgressDto.serializer(), json))
+                    progress(api, entry, Json.decodeFromJsonElement(ProgressDto.serializer(), json))
                 }
 
                 OUTBOX_MARK_READ -> {
-                    val target = ReadTarget.parse(json.field("target").jsonPrimitive.content, int("seriesId"))
-                    api.markRead(target ?: throw IllegalArgumentException(entry.entityKey), bool("read"))
+                    markRead(api, entry, json)
                 }
 
                 OUTBOX_WANT_TO_READ -> {
@@ -100,6 +105,54 @@ class OutboxReplayer
                 }
             }
         }
+
+        /** Newest wins: a position the server already has a newer one for is replaced locally instead of pushed. */
+        private suspend fun progress(
+            api: KavitaApi,
+            entry: OutboxEntity,
+            local: ProgressDto,
+        ) {
+            val remote = api.progress(local.chapterId)
+            if (parseUtc(remote.lastModifiedUtc) <= parseUtc(local.lastModifiedUtc)) {
+                api.saveProgress(local)
+                return
+            }
+            progress.save(
+                ProgressEntity(
+                    entry.serverId,
+                    local.chapterId,
+                    local.volumeId,
+                    local.seriesId,
+                    local.libraryId,
+                    remote.pageNum,
+                    remote.bookScrollId,
+                    parseUtc(remote.lastModifiedUtc),
+                ),
+            )
+        }
+
+        /** Unread moves progress back: only if it's newer than what the server last saw for that chapter. */
+        private suspend fun markRead(
+            api: KavitaApi,
+            entry: OutboxEntity,
+            json: JsonObject,
+        ) {
+            val target =
+                ReadTarget.parse(
+                    json.field("target").jsonPrimitive.content,
+                    json.field("seriesId").jsonPrimitive.int,
+                )
+            requireNotNull(target) { entry.entityKey }
+            val read = json.field("read").jsonPrimitive.boolean
+            val queuedAt = entry.createdAt + clock.offset(entry.serverId)
+            val stale = !read && target is ReadTarget.Chapter && remoteTime(api, target.chapterId) > queuedAt
+            if (!stale) api.markRead(target, read)
+        }
+
+        private suspend fun remoteTime(
+            api: KavitaApi,
+            chapterId: Int,
+        ) = parseUtc(api.progress(chapterId).lastModifiedUtc)
 
         /** Creates (writing the new id back to the row) or updates; deletes by remote id. */
         private suspend fun annotation(

@@ -8,7 +8,9 @@ import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.result.getOrNull
 import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.network.ProgressDto
+import com.nl.kaviyy.core.network.ServerClock
 import com.nl.kaviyy.core.network.apiCall
+import com.nl.kaviyy.core.network.parseUtc
 import kotlinx.serialization.json.Json
 import java.time.Instant
 import java.util.UUID
@@ -53,6 +55,7 @@ class OfflineFirstProgressRepository
         private val apis: ServerApis,
         private val progress: ProgressDao,
         private val outbox: OutboxDao,
+        private val clock: ServerClock = ServerClock(),
     ) : ProgressRepository {
         override suspend fun resume(
             server: Server,
@@ -62,13 +65,17 @@ class OfflineFirstProgressRepository
             val queued = outbox.pending(id).any { it.type == OUTBOX_PROGRESS && it.entityKey == "${chapter.id}" }
             val local = progress.get(id, chapter.id)
             // A position not pushed yet is the newest one; otherwise the server knows best (other devices).
+            // Newest wins: local times are on the server's clock (ServerClock), so they compare with the server's.
             val remote =
-                if (queued &&
-                    local != null
-                ) {
+                if (queued && local != null) {
                     null
                 } else {
-                    apiCall { apis.api(server).progress(chapter.id) }.getOrNull()
+                    apiCall { apis.api(server).progress(chapter.id) }
+                        .getOrNull()
+                        ?.takeIf {
+                            local == null ||
+                                parseUtc(it.lastModifiedUtc).let { t -> t == 0L || t >= local.lastModifiedUtc }
+                        }
                 }
             val pagesRead = remote?.pageNum ?: local?.pageNum ?: progress.chapterPagesRead(id, chapter.id) ?: 0
             // Our finer position still applies if the server agrees on the page.
@@ -100,7 +107,7 @@ class OfflineFirstProgressRepository
                     chapter.libraryId,
                     pagesRead,
                     position,
-                    System.currentTimeMillis(),
+                    clock.now(id),
                 )
             progress.save(row)
             val payload = Json.encodeToString(ProgressDto.serializer(), row.toDto())

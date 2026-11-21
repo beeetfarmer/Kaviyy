@@ -39,12 +39,13 @@ class ProgressRepositoryTest {
     private val sent = mutableListOf<ProgressDto>()
     private var offline = false
     private var remotePage = 0
+    private var remoteTime: String? = null
 
     private val api =
         object : FakeKavitaApi() {
             override suspend fun progress(chapterId: Int): ProgressDto {
                 if (offline) throw IOException("offline")
-                return ProgressDto(5, chapterId, remotePage, 7, 1)
+                return ProgressDto(5, chapterId, remotePage, 7, 1, lastModifiedUtc = remoteTime)
             }
 
             override suspend fun saveProgress(body: ProgressDto) {
@@ -121,6 +122,23 @@ class ProgressRepositoryTest {
             offline = true
             val read = chapter.copy(id = 11)
             assertEquals(0, repo.resume(server, read).page) // offline, cached pagesRead = finished: start over
+        }
+
+    @Test
+    fun onOpenTheNewerOfLocalAndServerWins() =
+        runTest {
+            seed()
+            repo.record(server, chapter, 8) // pushed below, so not queued
+            repo.push(server, 10)
+            remotePage = 2
+            remoteTime = "1970-01-01T00:00:01Z" // older than ours
+            assertEquals(8, repo.resume(server, chapter).page)
+            remoteTime =
+                java.time.Instant
+                    .now()
+                    .plusSeconds(60)
+                    .toString() // moved on elsewhere since
+            assertEquals(2, repo.resume(server, chapter).page)
         }
 
     @Test

@@ -17,8 +17,10 @@ import com.nl.kaviyy.core.network.AnnotationDto
 import com.nl.kaviyy.core.network.BookmarkDto
 import com.nl.kaviyy.core.network.MarkVolumesReadDto
 import com.nl.kaviyy.core.network.ProgressDto
+import com.nl.kaviyy.core.network.ServerClock
 import com.nl.kaviyy.core.network.UpdateRatingDto
 import com.nl.kaviyy.core.network.UpdateWantToReadDto
+import com.nl.kaviyy.core.network.parseUtc
 import com.nl.kaviyy.core.testing.FakeKavitaApi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -47,6 +49,9 @@ class OutboxReplayerTest {
     private val calls = mutableListOf<String>()
     private var offline = false
 
+    /** What the server says it last saw for a chapter (default: never read). */
+    private var remoteProgress = ProgressDto(5, 10, 0, 7, 1)
+
     /** Throws [failWith] for calls whose log line starts with it. */
     private var failWith: Pair<String, Exception>? = null
 
@@ -59,6 +64,10 @@ class OutboxReplayerTest {
             }
 
             override suspend fun markMultipleRead(body: MarkVolumesReadDto) = log("read ${body.chapterIds}")
+
+            override suspend fun markMultipleUnread(body: MarkVolumesReadDto) = log("unread ${body.chapterIds}")
+
+            override suspend fun progress(chapterId: Int) = remoteProgress
 
             override suspend fun addWantToRead(body: UpdateWantToReadDto) = log("wtr+ ${body.seriesIds}")
 
@@ -74,7 +83,8 @@ class OutboxReplayerTest {
             }
         }
     private val apis = ServerApis { api }
-    private val replayer = OutboxReplayer(apis, outbox, db.annotationDao())
+    private val clock = ServerClock()
+    private val replayer = OutboxReplayer(apis, outbox, db.annotationDao(), db.progressDao(), clock)
     private val chapter =
         ReaderChapter(10, 7, 5, 1, "S", "1", "10", null, false, pages = 20, format = 3)
 
@@ -169,7 +179,7 @@ class OutboxReplayerTest {
                         queue("rating", "series:7", """{"seriesId":7,"userRating":1.0}""")
                     }
                 }
-            OutboxReplayer(ServerApis { during }, outbox, db.annotationDao()).flush(server)
+            OutboxReplayer(ServerApis { during }, outbox, db.annotationDao(), db.progressDao(), clock).flush(server)
             assertEquals(listOf("""{"seriesId":7,"userRating":1.0}"""), outbox.pending(serverId).map { it.payload })
         }
 
@@ -180,10 +190,52 @@ class OutboxReplayerTest {
         assertEquals(null, ReadTarget.parse("shelf:1", 7))
     }
 
+    @Test
+    fun aNewerPositionOnTheServerWinsOverAnOlderQueuedOne() =
+        runTest {
+            seed()
+            offline = true
+            OfflineFirstProgressRepository(apis, db.progressDao(), outbox, clock).record(server, chapter, 4, null)
+            offline = false
+            val later =
+                java.time.Instant
+                    .ofEpochMilli(clock.now(serverId) + 60_000)
+                    .toString()
+            remoteProgress = ProgressDto(5, 10, 15, 7, 1, lastModifiedUtc = later) // read on another device since
+            assertEquals(AppResult.Success(Unit), replayer.flush(server))
+            assertEquals(emptyList(), calls) // ours was older: not pushed
+            assertEquals(15, db.progressDao().get(serverId, 10)?.pageNum) // and Room took the server's page
+            assertEquals(emptyList(), outbox.pending(serverId))
+        }
+
+    @Test
+    fun aQueuedUnreadOnlyAppliesWhenNewerThanTheServersLastProgress() =
+        runTest {
+            queue("markRead", "chapter:10", """{"target":"chapter:10","seriesId":7,"read":false}""", createdAt = 1_000)
+            remoteProgress = ProgressDto(5, 10, 12, 7, 1, lastModifiedUtc = "1970-01-01T00:00:05Z") // 5 s, newer
+            replayer.flush(server)
+            assertEquals(emptyList(), calls) // read later elsewhere: the stale unread is dropped
+            queue("markRead", "chapter:10", """{"target":"chapter:10","seriesId":7,"read":false}""", createdAt = 9_000)
+            replayer.flush(server)
+            assertEquals(listOf("unread [10]"), calls)
+            assertEquals(emptyList(), outbox.pending(serverId))
+        }
+
+    @Test
+    fun serverTimesParseWithOrWithoutAZone() {
+        assertEquals(5_000L, parseUtc("1970-01-01T00:00:05Z"))
+        assertEquals(5_000L, parseUtc("1970-01-01T00:00:05"))
+        assertEquals(0L, parseUtc(null))
+        assertEquals(0L, parseUtc("yesterday"))
+        clock.record(serverId, serverTime = 10_000, localTime = 4_000)
+        assertEquals(6_000L, clock.offset(serverId))
+    }
+
     private suspend fun queue(
         type: String,
         key: String,
         payload: String,
+        createdAt: Long = 0,
     ) = outbox.enqueue(
         OutboxEntity(
             0,
@@ -194,7 +246,7 @@ class OutboxReplayerTest {
             java.util.UUID
                 .randomUUID()
                 .toString(),
-            0,
+            createdAt,
         ),
     )
 }

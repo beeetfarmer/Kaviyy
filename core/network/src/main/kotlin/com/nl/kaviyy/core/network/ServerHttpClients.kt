@@ -48,6 +48,7 @@ class ServerHttpClients
     @Inject
     constructor(
         private val base: OkHttpClient,
+        private val clock: ServerClock = ServerClock(),
     ) {
         /** Unauthenticated client (server probe, login, token refresh). */
         fun create(server: Server): OkHttpClient =
@@ -62,6 +63,7 @@ class ServerHttpClients
                 ).followSslRedirects(false)
                 .addInterceptor(JsonSizeLimitInterceptor())
                 .addNetworkInterceptor(TransportPolicyInterceptor(server))
+                .addNetworkInterceptor(ServerClockInterceptor(server.id.value, clock))
                 .apply {
                     server.pinnedCertificate?.let { pin ->
                         val trust =
