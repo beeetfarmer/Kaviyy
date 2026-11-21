@@ -38,6 +38,7 @@ data class YouActions(
     val onScrobbling: () -> Unit = {},
     val onAccount: () -> Unit = {},
     val onPrivacy: () -> Unit = {},
+    val onAbout: () -> Unit = {},
 )
 
 data class YouUiState(

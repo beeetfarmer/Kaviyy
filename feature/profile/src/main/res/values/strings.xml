@@ -157,4 +157,12 @@
     <string name="privacy_hide_note">Shows a blank preview in the app switcher.</string>
     <string name="privacy_hide_note_old">Shows a blank preview in the app switcher and blocks screenshots.</string>
     <string name="privacy_delete_note">Signs out of every server and removes downloads, cache and settings stored on this device.</string>
+    <string name="you_settings_about">About</string>
+    <string name="about_title">About</string>
+    <string name="about_app_version">Kaviyy</string>
+    <string name="about_server">Server</string>
+    <string name="about_kavita_version">Kavita %s</string>
+    <string name="about_unsupported">This server is older than Kavita 0.9.0.2, which fixes a security issue. Ask your server admin to update.</string>
+    <string name="about_licenses">Open-source licenses</string>
+    <string name="about_kavita_note">Kaviyy is an independent client for Kavita servers.</string>
 </resources>

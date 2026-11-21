@@ -230,12 +230,13 @@ private fun androidx.compose.foundation.layout.RowScope.Stat(
     Text(caption, style = Kavita.type.caption, color = Kavita.colors.labelSecondary)
 }
 
-/** [derived] Group 3: Account, Privacy & Security. */
+/** [derived] Group 3: Account, Privacy & Security, About. */
 @Composable
 private fun AccountGroup(actions: YouActions) =
     GroupedList {
         GroupedRow(stringResource(R.string.you_settings_account), onClick = actions.onAccount, divider = true)
-        GroupedRow(stringResource(R.string.you_settings_privacy), onClick = actions.onPrivacy)
+        GroupedRow(stringResource(R.string.you_settings_privacy), onClick = actions.onPrivacy, divider = true)
+        GroupedRow(stringResource(R.string.you_settings_about), onClick = actions.onAbout)
     }
 
 internal fun themeLabel(mode: ThemeMode) =

@@ -43,6 +43,7 @@ import com.nl.kaviyy.feature.lists.ListsRoute
 import com.nl.kaviyy.feature.lists.ReadingListRoute
 import com.nl.kaviyy.feature.lists.WantToReadActions
 import com.nl.kaviyy.feature.lists.WantToReadRoute
+import com.nl.kaviyy.feature.profile.AboutRoute
 import com.nl.kaviyy.feature.profile.AccountRoute
 import com.nl.kaviyy.feature.profile.AllStatsRoute
 import com.nl.kaviyy.feature.profile.AuthKeysRoute
@@ -134,6 +135,9 @@ private data object AuthKeysDestination
 private data object PrivacyDestination
 
 @Serializable
+private data object AboutDestination
+
+@Serializable
 private data class ReadingListDestination(
     val readingListId: Int,
 )
@@ -194,6 +198,7 @@ internal fun MainScreen(
                         onScrobbling = { nav.navigate(ScrobblingDestination) },
                         onAccount = { nav.navigate(AccountDestination) },
                         onPrivacy = { nav.navigate(PrivacyDestination) },
+                        onAbout = { nav.navigate(AboutDestination) },
                     ),
                 ) { filterFor = it }
             }
@@ -241,6 +246,7 @@ internal fun MainScreen(
                     onSignOut = onSignOut,
                 )
             }
+            composable<AboutDestination> { AboutRoute(onBack = { nav.popBackStack() }) }
             composable<PrivacyDestination> {
                 PrivacyRoute(onBack = { nav.popBackStack() }, onDeleteLocalData = onDeleteLocalData)
             }
@@ -331,6 +337,7 @@ private data class TabNav(
     val onScrobbling: () -> Unit,
     val onAccount: () -> Unit,
     val onPrivacy: () -> Unit,
+    val onAbout: () -> Unit,
 )
 
 @Suppress("LongParameterList")
@@ -382,6 +389,7 @@ private fun TabContent(
                     onScrobbling = lists.onScrobbling,
                     onAccount = lists.onAccount,
                     onPrivacy = lists.onPrivacy,
+                    onAbout = lists.onAbout,
                 ),
             )
         }
