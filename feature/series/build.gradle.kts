@@ -4,5 +4,6 @@ plugins {
 
 dependencies {
     implementation(libs.androidx.paging.compose)
+    implementation(libs.androidx.activity.compose)
     implementation(projects.core.download)
 }

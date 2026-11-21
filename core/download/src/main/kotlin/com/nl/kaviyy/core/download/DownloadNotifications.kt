@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.nl.kaviyy.core.database.DownloadEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -52,6 +53,38 @@ class DownloadNotifications
                         ),
                     ).build()
             return id to notification
+        }
+
+        /** Completed or failed; tapping opens the app. Skipped when the user hasn't allowed notifications. */
+        fun finished(
+            row: DownloadEntity,
+            seriesName: String?,
+            ok: Boolean,
+        ) {
+            if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+            ensureChannel()
+            val open =
+                context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
+                    PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE)
+                }
+            val notification =
+                NotificationCompat
+                    .Builder(context, CHANNEL)
+                    .setSmallIcon(R.drawable.ic_download_notification)
+                    .setContentTitle(
+                        context.getString(if (ok) R.string.download_done else R.string.download_failed),
+                    ).setContentText(seriesName)
+                    .setContentIntent(open)
+                    .setAutoCancel(true)
+                    .setGroup(CHANNEL)
+                    .build()
+            // Odd id: never the (even) progress id, which WorkManager removes when the worker ends.
+            runCatching {
+                NotificationManagerCompat
+                    .from(
+                        context,
+                    ).notify(notificationId(row.serverId, row.chapterId) + 1, notification)
+            }
         }
 
         private fun action(

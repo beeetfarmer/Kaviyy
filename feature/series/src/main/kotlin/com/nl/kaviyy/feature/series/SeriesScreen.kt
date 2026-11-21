@@ -104,6 +104,7 @@ fun SeriesRoute(
     viewModel: SeriesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val askNotifications = rememberNotificationAsk()
     var collections by rememberSaveable { mutableStateOf(false) }
     if (collections) CollectionsSheet(viewModel.seriesId, onDismiss = { collections = false })
     var readingLists by rememberSaveable { mutableStateOf(false) }
@@ -126,7 +127,10 @@ fun SeriesRoute(
                 viewModel.showSheet(null)
                 sendTarget = it
             },
-            onDownload = viewModel::download,
+            onDownload = { ids ->
+                askNotifications()
+                viewModel.download(ids)
+            },
             onUpdateDownloads = viewModel::updateDownloads,
             onMark = viewModel::setRead,
             onRate = viewModel::setRating,

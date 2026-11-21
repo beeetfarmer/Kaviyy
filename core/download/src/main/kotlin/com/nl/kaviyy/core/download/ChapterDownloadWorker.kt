@@ -7,6 +7,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.nl.kaviyy.core.data.AuthSession
+import com.nl.kaviyy.core.database.DownloadDao
 import com.nl.kaviyy.core.datastore.AppSettingsStore
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -34,6 +35,8 @@ class ChapterDownloadWorker(
         fun notifications(): DownloadNotifications
 
         fun settings(): AppSettingsStore
+
+        fun dao(): DownloadDao
     }
 
     override suspend fun doWork(): Result {
@@ -64,6 +67,15 @@ class ChapterDownloadWorker(
                         runCatching { setForeground(foregroundInfo(notifications, row)) }
                     }
                 }
+            if (result != RunResult.Retry) {
+                deps.dao().get(serverId, chapterId)?.let { row ->
+                    notifications.finished(
+                        row,
+                        deps.dao().seriesName(serverId, row.seriesId),
+                        result == RunResult.Success,
+                    )
+                }
+            }
             when (result) {
                 RunResult.Success -> Result.success()
                 RunResult.Retry -> Result.retry()

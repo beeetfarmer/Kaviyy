@@ -57,6 +57,12 @@ interface DownloadDao {
         chapterId: Int,
     ): DownloadEntity?
 
+    @Query("SELECT name FROM series WHERE serverId = :serverId AND id = :seriesId")
+    suspend fun seriesName(
+        serverId: Long,
+        seriesId: Int,
+    ): String?
+
     @Query("SELECT * FROM downloads WHERE state = :state")
     suspend fun inState(state: String): List<DownloadEntity>
 
