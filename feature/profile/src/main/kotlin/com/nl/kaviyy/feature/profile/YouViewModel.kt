@@ -33,6 +33,7 @@ data class YouActions(
     val onAllStats: () -> Unit = {},
     val onTheme: () -> Unit = {},
     val onReaderPrefs: () -> Unit = {},
+    val onServers: () -> Unit = {},
     val onSignOut: () -> Unit = {},
     val onDeleteLocalData: () -> Unit = {},
 )

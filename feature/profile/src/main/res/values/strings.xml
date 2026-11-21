@@ -68,4 +68,5 @@
     <string name="prefs_tap_to_turn">Tap to turn pages</string>
     <string name="prefs_pdf_theme">Theme</string>
     <string name="prefs_pdf_scroll">Scroll</string>
+    <string name="you_settings_servers">Servers</string>
 </resources>

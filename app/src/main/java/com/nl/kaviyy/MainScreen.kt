@@ -333,6 +333,7 @@ private fun TabContent(
                     onAllStats = lists.onAllStats,
                     onTheme = lists.onTheme,
                     onReaderPrefs = lists.onReaderPrefs,
+                    onServers = onServerPill,
                     onSignOut = onSignOut,
                     onDeleteLocalData = onDeleteLocalData,
                 ),

@@ -29,6 +29,7 @@ class YouScreenTest {
                     previewYou,
                     YouActions(
                         onAllStats = { calls += "stats" },
+                        onServers = { calls += "servers" },
                         onSignOut = { calls += "out" },
                         onDeleteLocalData = { calls += "wipe" },
                     ),
@@ -40,10 +41,11 @@ class YouScreenTest {
         compose.onNodeWithText("6h").assertExists()
         compose.onNodeWithText("412").assertExists()
         compose.onNodeWithText("All Stats").performClick()
+        compose.onNodeWithText("Servers").performClick()
         compose.onNodeWithText("Sign Out").performClick()
         compose.onNodeWithText("Delete Local Data").performClick() // asks first
         compose.onNodeWithText("Tap again to delete all local data").performClick()
-        assertEquals(listOf("stats", "out", "wipe"), calls)
+        assertEquals(listOf("stats", "servers", "out", "wipe"), calls)
     }
 
     @Test

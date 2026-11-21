@@ -89,6 +89,15 @@ fun YouScreen(
             value = stringResource(themeLabel(state.theme)),
         )
     }
+    GroupedList {
+        SettingsRow(
+            KavitaIcons.Server,
+            SettingsTileColors.servers,
+            stringResource(R.string.you_settings_servers),
+            actions.onServers,
+            value = state.server?.name,
+        )
+    }
     AccountGroup(actions)
     Spacer(Modifier.height(KavitaSpacing.contentBottomPadding))
 }
