@@ -20,6 +20,10 @@ data class CollectionEntity(
     val promoted: Boolean = false,
     val itemCount: Int = 0,
     val owner: String? = null,
+    /** Kavita `ScrobbleProvider`: 0 = made in Kavita; others are synced from an external list ("Smart"). */
+    @ColumnInfo(defaultValue = "0") val source: Int = 0,
+    /** Server-side position (most recently changed first). */
+    @ColumnInfo(defaultValue = "0") val position: Int = 0,
 )
 
 @Entity(

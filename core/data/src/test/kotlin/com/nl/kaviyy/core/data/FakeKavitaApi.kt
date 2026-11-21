@@ -81,7 +81,7 @@ open class FakeKavitaApi : KavitaApi {
 
     override suspend fun peopleByRole(role: Int): List<PersonDto> = error("unused")
 
-    override suspend fun collections(): List<CollectionDto> = error("unused")
+    override suspend fun collections(sortByLastModified: Boolean): List<CollectionDto> = error("unused")
 
     override suspend fun smartFilters(): List<SmartFilterDto> = error("unused")
 

@@ -37,10 +37,12 @@ import com.nl.kaviyy.core.designsystem.component.coverColorFor
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaSpacing
+import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.network.seriesCoverUrl
 
 private const val GRID_COLUMNS = 3
 private const val PERCENT = 100
+private const val SUMMARY_LINES = 6
 
 data class WantToReadActions(
     val onBack: () -> Unit = {},
@@ -64,6 +66,40 @@ fun WantToReadScreen(
     series: LazyPagingItems<SeriesEntity>,
     actions: WantToReadActions,
     modifier: Modifier = Modifier,
+) = SeriesGridScreen(
+    state.server,
+    series,
+    actions.onBack,
+    actions.onOpenSeries,
+    stringResource(R.string.lists_want_to_read_empty),
+    modifier,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LargeTitleHeader(stringResource(R.string.lists_want_to_read))
+        val count = state.filter.activeRules
+        FilterChip(
+            if (count > 0) {
+                stringResource(R.string.lists_filter_count, count)
+            } else {
+                stringResource(R.string.lists_filter)
+            },
+            selected = true,
+            onClick = actions.onOpenFilter,
+            leadingIcon = KavitaIcons.Filter,
+        )
+    }
+}
+
+/** Back button, [header], then the series in a 3-column grid (Library screen 03 pattern). */
+@Composable
+internal fun SeriesGridScreen(
+    server: Server?,
+    series: LazyPagingItems<SeriesEntity>,
+    onBack: () -> Unit,
+    onOpenSeries: (Int) -> Unit,
+    emptyText: String,
+    modifier: Modifier = Modifier,
+    header: @Composable () -> Unit,
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(GRID_COLUMNS),
@@ -80,26 +116,11 @@ fun WantToReadScreen(
     ) {
         fullWidth("back") {
             Column(Modifier.fillMaxWidth()) {
-                CircleIconButton(KavitaIcons.ChevronLeft, stringResource(R.string.lists_back), actions.onBack)
+                CircleIconButton(KavitaIcons.ChevronLeft, stringResource(R.string.lists_back), onBack)
             }
         }
-        fullWidth("header") {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                LargeTitleHeader(stringResource(R.string.lists_want_to_read))
-                val count = state.filter.activeRules
-                FilterChip(
-                    if (count > 0) {
-                        stringResource(R.string.lists_filter_count, count)
-                    } else {
-                        stringResource(R.string.lists_filter)
-                    },
-                    selected = true,
-                    onClick = actions.onOpenFilter,
-                    leadingIcon = KavitaIcons.Filter,
-                )
-            }
-        }
-        grid(state, series, actions.onOpenSeries)
+        fullWidth("header") { header() }
+        grid(server, series, emptyText, onOpenSeries)
     }
 }
 
@@ -109,8 +130,9 @@ private fun LazyGridScope.fullWidth(
 ) = item(key = key, span = { GridItemSpan(maxLineSpan) }) { content() }
 
 private fun LazyGridScope.grid(
-    state: WantToReadUiState,
+    server: Server?,
     series: LazyPagingItems<SeriesEntity>,
+    emptyText: String,
     onOpen: (Int) -> Unit,
 ) {
     val refresh = series.loadState.refresh
@@ -121,9 +143,7 @@ private fun LazyGridScope.grid(
             }
 
             refresh is LoadState.NotLoading -> {
-                fullWidth(
-                    "empty",
-                ) { Hint(stringResource(R.string.lists_want_to_read_empty)) }
+                fullWidth("empty") { Hint(emptyText) }
             }
 
             else -> {
@@ -151,7 +171,7 @@ private fun LazyGridScope.grid(
                     .toFloat()
                     .div(s.pages)
                     .takeIf { s.pagesRead in 1 until s.pages },
-            imageUrl = state.server?.seriesCoverUrl(s.id),
+            imageUrl = server?.seriesCoverUrl(s.id),
         )
     }
     if (series.loadState.append is LoadState.Error) fullWidth("append-error") { Retry(series) }
@@ -176,3 +196,29 @@ private fun Hint(text: String) =
         color = Kavita.colors.labelSecondary,
         textAlign = TextAlign.Center,
     )
+
+/** [derived] A collection: "Collection" overline + title (+ Smart badge), its summary, then the series grid. */
+@Composable
+fun CollectionScreen(
+    state: CollectionUiState,
+    series: LazyPagingItems<SeriesEntity>,
+    onBack: () -> Unit,
+    onOpenSeries: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) = SeriesGridScreen(
+    state.server,
+    series,
+    onBack,
+    onOpenSeries,
+    stringResource(R.string.lists_collection_empty),
+    modifier,
+) {
+    val c = state.collection
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LargeTitleHeader(c?.title.orEmpty(), overline = stringResource(R.string.lists_collection))
+        if (c?.smart == true) SmartBadge()
+        c?.summary?.takeIf { it.isNotBlank() }?.let {
+            Text(it, style = Kavita.type.callout, color = Kavita.colors.labelBody, maxLines = SUMMARY_LINES)
+        }
+    }
+}

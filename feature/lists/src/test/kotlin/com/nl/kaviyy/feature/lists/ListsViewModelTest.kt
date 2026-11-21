@@ -1,5 +1,6 @@
 package com.nl.kaviyy.feature.lists
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.paging.PagingData
 import app.cash.turbine.test
 import com.nl.kaviyy.core.data.AuthSession
@@ -14,6 +15,8 @@ import com.nl.kaviyy.core.data.RelatedSeries
 import com.nl.kaviyy.core.data.RuleValue
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.SeriesSort
+import com.nl.kaviyy.core.data.collectionQuery
+import com.nl.kaviyy.core.database.CollectionEntity
 import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.model.result.AppResult
@@ -65,12 +68,25 @@ class ListsViewModelTest {
         }
 
     private val summary = MutableStateFlow(ListSummary(2, false, listOf(4, 5), 1))
+    private val collections = MutableStateFlow(listOf(CollectionEntity(1, 7, "Comfort reads", itemCount = 3)))
     private val refreshed = mutableListOf<ServerId>()
     private val lists =
         object : ListsRepository {
             override fun wantToRead(server: Server) = summary
 
             override suspend fun refreshWantToRead(server: Server): AppResult<Unit> {
+                refreshed += server.id
+                return AppResult.Success(Unit)
+            }
+
+            override fun collections(server: Server) = collections
+
+            override fun collection(
+                server: Server,
+                id: Int,
+            ) = collections.map { list -> list.firstOrNull { it.id == id } }
+
+            override suspend fun refreshCollections(server: Server): AppResult<Unit> {
                 refreshed += server.id
                 return AppResult.Success(Unit)
             }
@@ -119,14 +135,29 @@ class ListsViewModelTest {
             val vm = ListsViewModel(session, lists)
             vm.state.test {
                 runCurrent()
-                assertEquals(ListSummary(2, false, listOf(4, 5), 1), expectMostRecentItem().wantToRead)
+                val first = expectMostRecentItem()
+                assertEquals(ListSummary(2, false, listOf(4, 5), 1), first.wantToRead)
+                assertEquals(listOf("Comfort reads"), first.collections.map { it.title })
                 summary.value = ListSummary(3, false, listOf(4, 5, 6), 1)
                 assertEquals(3, expectMostRecentItem().wantToRead.count)
-                assertEquals(listOf(server.id), refreshed)
+                assertEquals(listOf(server.id, server.id), refreshed) // want to read + collections
                 active.value = null
                 assertEquals(ListsUiState(), expectMostRecentItem())
                 cancelAndIgnoreRemainingEvents()
             }
+        }
+
+    @Test
+    fun aCollectionPagesItsSeriesByTheCollectionRule() =
+        runTest {
+            val vm = CollectionViewModel(session, catalog, lists, SavedStateHandle(mapOf(COLLECTION_ID_ARG to 7)))
+            backgroundScope.launch { vm.series.collect {} }
+            vm.state.test {
+                runCurrent()
+                assertEquals("Comfort reads", expectMostRecentItem().collection?.title)
+                cancelAndIgnoreRemainingEvents()
+            }
+            assertEquals(collectionQuery(7), queries.last())
         }
 
     @Test

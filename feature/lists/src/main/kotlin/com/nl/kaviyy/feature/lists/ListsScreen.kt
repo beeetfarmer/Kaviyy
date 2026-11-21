@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.nl.kaviyy.core.data.ListSummary
 import com.nl.kaviyy.core.designsystem.component.CoverImage
 import com.nl.kaviyy.core.designsystem.component.LargeTitleHeader
@@ -47,13 +50,35 @@ import com.nl.kaviyy.core.network.seriesCoverUrl
 @Composable
 fun ListsRoute(
     onOpenWantToRead: () -> Unit,
+    onOpenCollection: (Int) -> Unit,
+    onSeeAllCollections: () -> Unit,
     viewModel: ListsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    ListsScreen(state, ListsActions(onOpenWantToRead))
+    ListsScreen(state, ListsActions(onOpenWantToRead, onOpenCollection, onSeeAllCollections))
 }
 
-/** Screen 08 (DESIGN.md §7). Collections and Reading Lists join with M13.2/M13.3. */
+@Composable
+fun AllCollectionsRoute(
+    onBack: () -> Unit,
+    onOpenCollection: (Int) -> Unit,
+    viewModel: ListsViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    AllCollectionsScreen(state, ListsActions(onOpenCollection = onOpenCollection), onBack)
+}
+
+@Composable
+fun CollectionRoute(
+    onBack: () -> Unit,
+    onOpenSeries: (Int) -> Unit,
+    viewModel: CollectionViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    CollectionScreen(state, viewModel.series.collectAsLazyPagingItems(), onBack, onOpenSeries)
+}
+
+/** Screen 08 (DESIGN.md §7). Reading Lists join with M13.3. */
 @Composable
 fun ListsScreen(
     state: ListsUiState,
@@ -70,6 +95,8 @@ fun ListsScreen(
 ) {
     LargeTitleHeader(stringResource(R.string.lists_title), Modifier.padding(top = KavitaSpacing.topBelowStatusBar))
     WantToReadCard(state.wantToRead, state.server, actions.onOpenWantToRead)
+    CollectionsSection(state, actions)
+    Spacer(Modifier.height(KavitaSpacing.contentBottomPadding))
 }
 
 /**

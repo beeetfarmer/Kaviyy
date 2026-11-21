@@ -8,6 +8,7 @@ import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
+import com.nl.kaviyy.core.network.CollectionDto
 import com.nl.kaviyy.core.network.SeriesDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
 import kotlinx.coroutines.flow.first
@@ -51,8 +52,15 @@ class ListsRepositoryTest {
                     SeriesDto(4, name = "D"),
                 )
             }
+
+            override suspend fun collections(sortByLastModified: Boolean) = collectionsRemote
         }
-    private val repo = OfflineFirstListsRepository({ api }, db.seriesDao())
+    private var collectionsRemote =
+        listOf(
+            CollectionDto(7, "Comfort reads", itemCount = 12, owner = "neo"),
+            CollectionDto(3, "MAL: Isekai", itemCount = 40, source = 2, promoted = true),
+        )
+    private val repo = OfflineFirstListsRepository({ api }, db.seriesDao(), db.collectionDao())
 
     @After
     fun tearDown() = db.close()
@@ -65,6 +73,37 @@ class ListsRepositoryTest {
             assertEquals(listOf("wtr page 1 rules 0"), calls) // Kavita's own list, no hidden rules
             assertEquals(ListSummary(4, false, listOf(1, 2, 3), 2), repo.wantToRead(server).first())
         }
+
+    @Test
+    fun collectionsAreCachedInServerOrderAndReplaced() =
+        runTest {
+            repo.refreshCollections(server)
+            val first = repo.collections(server).first()
+            assertEquals(listOf(7 to 0, 3 to 2), first.map { it.id to it.source })
+            assertEquals("Comfort reads", repo.collection(server, 7).first()?.title)
+            collectionsRemote = collectionsRemote.drop(1)
+            repo.refreshCollections(server)
+            assertEquals(listOf(3), repo.collections(server).first().map { it.id }) // deleted on the server
+        }
+
+    @Test
+    fun collectionQueryAddsTheCollectionRule() {
+        val q = collectionQuery(7)
+        assertEquals(null, q.libraryId)
+        assertEquals(
+            listOf("7"),
+            q.filter.rules
+                .single()
+                .values
+                .map { it.code },
+        )
+        assertEquals(
+            FilterField.CollectionTags,
+            q.filter.rules
+                .single()
+                .field,
+        )
+    }
 
     @Test
     fun wantToReadQueriesAreSeparateFromTheLibraryAndKeepTheFilter() {

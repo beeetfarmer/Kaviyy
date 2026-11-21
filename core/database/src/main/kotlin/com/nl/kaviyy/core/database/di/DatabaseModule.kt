@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.nl.kaviyy.core.database.AnnotationDao
 import com.nl.kaviyy.core.database.BookmarkDao
+import com.nl.kaviyy.core.database.CollectionDao
 import com.nl.kaviyy.core.database.DashboardDao
 import com.nl.kaviyy.core.database.KaviyyDatabase
 import com.nl.kaviyy.core.database.LibraryDao
@@ -55,6 +56,9 @@ object DatabaseModule {
 
     @Provides
     fun annotationDao(db: KaviyyDatabase): AnnotationDao = db.annotationDao()
+
+    @Provides
+    fun collectionDao(db: KaviyyDatabase): CollectionDao = db.collectionDao()
 
     @Provides
     fun dashboardDao(db: KaviyyDatabase): DashboardDao = db.dashboardDao()

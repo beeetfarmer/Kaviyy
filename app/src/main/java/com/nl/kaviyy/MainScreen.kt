@@ -37,6 +37,8 @@ import com.nl.kaviyy.feature.filter.FilterSheet
 import com.nl.kaviyy.feature.home.HomeActions
 import com.nl.kaviyy.feature.home.HomeRoute
 import com.nl.kaviyy.feature.library.LibraryRoute
+import com.nl.kaviyy.feature.lists.AllCollectionsRoute
+import com.nl.kaviyy.feature.lists.CollectionRoute
 import com.nl.kaviyy.feature.lists.ListsRoute
 import com.nl.kaviyy.feature.lists.WantToReadActions
 import com.nl.kaviyy.feature.lists.WantToReadRoute
@@ -90,6 +92,14 @@ private data class ReaderDestination(
 @Serializable
 private data object WantToReadDestination
 
+@Serializable
+private data object CollectionsDestination
+
+@Serializable
+private data class CollectionDestination(
+    val collectionId: Int,
+)
+
 private const val NO_LIBRARY = -1
 
 /** [filterFor] value: the filter sheet is open for the Want to Read list. */
@@ -120,12 +130,24 @@ internal fun MainScreen(
     Box(Modifier.fillMaxSize().background(Kavita.colors.background)) {
         NavHost(nav, startDestination = TabsDestination) {
             composable<TabsDestination> {
-                TabContent(Tab.entries[selected], server, tabs[selected].label, openSeries, onSelect = {
-                    selected =
-                        it.ordinal
-                }, onServerPill, onSignOut, onDeleteLocalData, onOpenWantToRead = {
-                    nav.navigate(WantToReadDestination)
-                }) { filterFor = it }
+                TabContent(
+                    Tab.entries[selected],
+                    server,
+                    tabs[selected].label,
+                    openSeries,
+                    onSelect = {
+                        selected =
+                            it.ordinal
+                    },
+                    onServerPill,
+                    onSignOut,
+                    onDeleteLocalData,
+                    ListsNav(
+                        onOpenWantToRead = { nav.navigate(WantToReadDestination) },
+                        onOpenCollection = { nav.navigate(CollectionDestination(it)) },
+                        onSeeAllCollections = { nav.navigate(CollectionsDestination) },
+                    ),
+                ) { filterFor = it }
             }
             composable<SeriesDestination> {
                 SeriesRoute(
@@ -160,6 +182,17 @@ internal fun MainScreen(
             }
             composable<EpubDestination> { EpubReaderRoute(onClose = { nav.popBackStack() }) }
             composable<BrowseDestination> { BrowseRoute(onBack = { nav.popBackStack() }, onOpenSeries = openSeries) }
+            composable<CollectionsDestination> {
+                AllCollectionsRoute(onBack = { nav.popBackStack() }, onOpenCollection = {
+                    nav.navigate(CollectionDestination(it))
+                })
+            }
+            composable<CollectionDestination> {
+                CollectionRoute(
+                    onBack = { nav.popBackStack() },
+                    onOpenSeries = openSeries,
+                )
+            }
             composable<WantToReadDestination> {
                 WantToReadRoute(
                     WantToReadActions(
@@ -200,6 +233,12 @@ internal fun MainScreen(
     }
 }
 
+private data class ListsNav(
+    val onOpenWantToRead: () -> Unit,
+    val onOpenCollection: (Int) -> Unit,
+    val onSeeAllCollections: () -> Unit,
+)
+
 @Suppress("LongParameterList")
 @Composable
 private fun TabContent(
@@ -211,7 +250,7 @@ private fun TabContent(
     onServerPill: () -> Unit,
     onSignOut: () -> Unit,
     onDeleteLocalData: () -> Unit,
-    onOpenWantToRead: () -> Unit,
+    lists: ListsNav,
     onOpenFilter: (Int) -> Unit,
 ) {
     when (tab) {
@@ -232,7 +271,7 @@ private fun TabContent(
         }
 
         Tab.Lists -> {
-            ListsRoute(onOpenWantToRead = onOpenWantToRead)
+            ListsRoute(lists.onOpenWantToRead, lists.onOpenCollection, lists.onSeeAllCollections)
         }
 
         Tab.You -> {

@@ -156,6 +156,12 @@ data class PersonDto(
 data class CollectionDto(
     val id: Int,
     val title: String? = null,
+    val summary: String? = null,
+    val promoted: Boolean = false,
+    val itemCount: Int = 0,
+    val owner: String? = null,
+    /** Kavita `ScrobbleProvider`; non-zero = synced from an external list. */
+    val source: Int = 0,
 )
 
 @Serializable

@@ -76,6 +76,42 @@ class ListsScreenTest {
     }
 
     @Test
+    fun collectionsShowFourWithSeeAllAndOpen() {
+        val calls = mutableListOf<String>()
+        compose.setContent {
+            ListsScreen(
+                previewLists,
+                ListsActions(onOpenCollection = { calls += "open $it" }, onSeeAllCollections = { calls += "all" }),
+            )
+        }
+        compose.onNodeWithText("Re-read soon").assertDoesNotExist() // fifth: behind See All
+        compose.onNodeWithText("Smart").assertExists()
+        compose.onNodeWithText("40 series").assertExists()
+        compose.onNodeWithText("Comfort reads").performClick()
+        compose.onNodeWithText("See All").performClick()
+        assertEquals(listOf("open 1", "all"), calls)
+    }
+
+    @Test
+    fun collectionScreenShowsTitleSummaryAndSeries() {
+        compose.setContent { CollectionPreview() }
+        compose.onNodeWithText("MAL: Isekai Gems").assertExists()
+        compose.onNodeWithText("Synced from a MyAnimeList interest stack.").assertExists()
+        compose.onNodeWithText("North of Quiet").assertExists()
+    }
+
+    @Test
+    fun screenshotCollection() = shot("collection_light") { CollectionPreview() }
+
+    @Test
+    fun screenshotAllCollectionsDark() =
+        shot("collections_all_dark") {
+            com.nl.kaviyy.core.designsystem.theme.KavitaTheme(appearance = Appearance.Dark) {
+                AllCollectionsScreen(previewLists, ListsActions(), {})
+            }
+        }
+
+    @Test
     fun screenshotListsLight() = shot("lists_light") { ListsPreview() }
 
     @Test

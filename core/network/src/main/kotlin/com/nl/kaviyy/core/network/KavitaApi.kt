@@ -85,7 +85,9 @@ interface KavitaApi {
 
     /** Collections the user can see (own + promoted). */
     @GET("api/Collection")
-    suspend fun collections(): List<CollectionDto>
+    suspend fun collections(
+        @Query("sortByLastModified") sortByLastModified: Boolean = true,
+    ): List<CollectionDto>
 
     /** The user's saved smart filters. */
     @GET("api/Filter")
