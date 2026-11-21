@@ -12,10 +12,12 @@ import com.nl.kaviyy.core.network.ChapterInfoDto
 import com.nl.kaviyy.core.network.CollectionAddDto
 import com.nl.kaviyy.core.network.CollectionDto
 import com.nl.kaviyy.core.network.CollectionRemoveDto
+import com.nl.kaviyy.core.network.CreateEmailDeviceDto
 import com.nl.kaviyy.core.network.CreateReadingListDto
 import com.nl.kaviyy.core.network.DashboardStreamDto
 import com.nl.kaviyy.core.network.DateStatCountDto
 import com.nl.kaviyy.core.network.DecodeFilterDto
+import com.nl.kaviyy.core.network.EmailDeviceDto
 import com.nl.kaviyy.core.network.GenreTagDto
 import com.nl.kaviyy.core.network.GroupedSeriesDto
 import com.nl.kaviyy.core.network.HourEstimateRangeDto
@@ -37,6 +39,8 @@ import com.nl.kaviyy.core.network.ReadingPaceDto
 import com.nl.kaviyy.core.network.RefreshSeriesDto
 import com.nl.kaviyy.core.network.RelatedSeriesDto
 import com.nl.kaviyy.core.network.SearchResultGroupDto
+import com.nl.kaviyy.core.network.SendSeriesToEmailDeviceDto
+import com.nl.kaviyy.core.network.SendToEmailDeviceDto
 import com.nl.kaviyy.core.network.SeriesDetailDto
 import com.nl.kaviyy.core.network.SeriesDetailPlusDto
 import com.nl.kaviyy.core.network.SeriesDto
@@ -169,6 +173,31 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun readingList(readingListId: Int): ReadingListDto = error("unused")
 
     override suspend fun account(): AccountDto = error("unused")
+
+    var deviceList = listOf<EmailDeviceDto>()
+    val deviceCalls = mutableListOf<String>()
+
+    override suspend fun devices() = deviceList
+
+    override suspend fun createDevice(device: CreateEmailDeviceDto) =
+        EmailDeviceDto(9, device.name, device.emailAddress, device.platform).also {
+            deviceCalls +=
+                "create ${device.name}"
+        }
+
+    override suspend fun updateDevice(device: EmailDeviceDto) = device.also { deviceCalls += "update ${device.id}" }
+
+    override suspend fun deleteDevice(deviceId: Int) {
+        deviceCalls += "delete $deviceId"
+    }
+
+    override suspend fun sendToDevice(body: SendToEmailDeviceDto) {
+        deviceCalls += "send ${body.chapterIds} to ${body.deviceId}"
+    }
+
+    override suspend fun sendSeriesToDevice(body: SendSeriesToEmailDeviceDto) {
+        deviceCalls += "send series ${body.seriesId} to ${body.deviceId}"
+    }
 
     override suspend fun readingPace(
         userId: Int,

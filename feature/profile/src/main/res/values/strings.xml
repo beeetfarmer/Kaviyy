@@ -69,4 +69,24 @@
     <string name="prefs_pdf_theme">Theme</string>
     <string name="prefs_pdf_scroll">Scroll</string>
     <string name="you_settings_servers">Servers</string>
+    <string name="you_settings_devices">Send to Device</string>
+    <string name="devices_title">Send to Device</string>
+    <string name="devices_intro">Your server e-mails books and chapters to these devices. Add the server\'s sender address to the device\'s approved list.</string>
+    <string name="devices_offline">Devices are stored on your server. Connect to it to see them.</string>
+    <string name="devices_add">Add Device</string>
+    <string name="devices_new">New device</string>
+    <string name="devices_edit">Edit device</string>
+    <string name="devices_cancel">Cancel</string>
+    <string name="devices_save">Save</string>
+    <string name="devices_name">Name</string>
+    <string name="devices_email">E-mail</string>
+    <string name="devices_email_hint">name@kindle.com</string>
+    <string name="devices_invalid_email">Enter the device\'s e-mail address.</string>
+    <string name="devices_change_failed">That didn\'t save. Check your connection and try again.</string>
+    <string name="devices_delete">Delete device</string>
+    <string name="devices_delete_confirm">Tap again to delete</string>
+    <string name="devices_kindle">Kindle</string>
+    <string name="devices_kobo">Kobo</string>
+    <string name="devices_pocketbook">PocketBook</string>
+    <string name="devices_other">Other</string>
 </resources>

@@ -96,6 +96,13 @@ fun YouScreen(
             stringResource(R.string.you_settings_servers),
             actions.onServers,
             value = state.server?.name,
+            divider = true,
+        )
+        SettingsRow(
+            KavitaIcons.Device,
+            SettingsTileColors.sendToDevice,
+            stringResource(R.string.you_settings_devices),
+            actions.onDevices,
         )
     }
     AccountGroup(actions)

@@ -662,3 +662,31 @@ data class StringStatCountDto(
 data class StringBreakdownDto(
     val data: List<StringStatCountDto> = emptyList(),
 )
+
+/** Kavita `EmailDeviceDto`; platform 0 Custom, 1 PocketBook, 2 Kindle, 3 Kobo. Also the update body. */
+@Serializable
+data class EmailDeviceDto(
+    val id: Int,
+    val name: String? = null,
+    val emailAddress: String? = null,
+    val platform: Int = 0,
+)
+
+@Serializable
+data class CreateEmailDeviceDto(
+    val name: String,
+    val platform: Int,
+    val emailAddress: String,
+)
+
+@Serializable
+data class SendToEmailDeviceDto(
+    val deviceId: Int,
+    val chapterIds: List<Int>,
+)
+
+@Serializable
+data class SendSeriesToEmailDeviceDto(
+    val deviceId: Int,
+    val seriesId: Int,
+)

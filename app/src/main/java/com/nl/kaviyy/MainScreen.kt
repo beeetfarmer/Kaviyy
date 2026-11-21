@@ -44,6 +44,7 @@ import com.nl.kaviyy.feature.lists.ReadingListRoute
 import com.nl.kaviyy.feature.lists.WantToReadActions
 import com.nl.kaviyy.feature.lists.WantToReadRoute
 import com.nl.kaviyy.feature.profile.AllStatsRoute
+import com.nl.kaviyy.feature.profile.DevicesRoute
 import com.nl.kaviyy.feature.profile.ReaderPrefsRoute
 import com.nl.kaviyy.feature.profile.ThemeRoute
 import com.nl.kaviyy.feature.profile.YouActions
@@ -114,6 +115,9 @@ private data object ThemeDestination
 private data object ReaderPrefsDestination
 
 @Serializable
+private data object DevicesDestination
+
+@Serializable
 private data class ReadingListDestination(
     val readingListId: Int,
 )
@@ -172,6 +176,7 @@ internal fun MainScreen(
                         onAllStats = { nav.navigate(AllStatsDestination) },
                         onTheme = { nav.navigate(ThemeDestination) },
                         onReaderPrefs = { nav.navigate(ReaderPrefsDestination) },
+                        onDevices = { nav.navigate(DevicesDestination) },
                     ),
                 ) { filterFor = it }
             }
@@ -211,6 +216,7 @@ internal fun MainScreen(
             composable<AllStatsDestination> { AllStatsRoute(onBack = { nav.popBackStack() }) }
             composable<ThemeDestination> { ThemeRoute(onBack = { nav.popBackStack() }) }
             composable<ReaderPrefsDestination> { ReaderPrefsRoute(onBack = { nav.popBackStack() }) }
+            composable<DevicesDestination> { DevicesRoute(onBack = { nav.popBackStack() }) }
             composable<ReadingListsDestination> {
                 AllReadingListsRoute(
                     onBack = { nav.popBackStack() },
@@ -285,6 +291,7 @@ private data class TabNav(
     val onAllStats: () -> Unit,
     val onTheme: () -> Unit,
     val onReaderPrefs: () -> Unit,
+    val onDevices: () -> Unit,
 )
 
 @Suppress("LongParameterList")
@@ -334,6 +341,7 @@ private fun TabContent(
                     onTheme = lists.onTheme,
                     onReaderPrefs = lists.onReaderPrefs,
                     onServers = onServerPill,
+                    onDevices = lists.onDevices,
                     onSignOut = onSignOut,
                     onDeleteLocalData = onDeleteLocalData,
                 ),

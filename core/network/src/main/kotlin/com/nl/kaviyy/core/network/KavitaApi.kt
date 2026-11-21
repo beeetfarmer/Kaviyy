@@ -90,6 +90,36 @@ interface KavitaApi {
         @Query("role") role: Int,
     ): List<PersonDto>
 
+    /** Send to Device: the user's e-mail devices (Kindle, Kobo, …). */
+    @GET("api/Device")
+    suspend fun devices(): List<EmailDeviceDto>
+
+    @POST("api/Device/create")
+    suspend fun createDevice(
+        @Body device: CreateEmailDeviceDto,
+    ): EmailDeviceDto
+
+    @POST("api/Device/update")
+    suspend fun updateDevice(
+        @Body device: EmailDeviceDto,
+    ): EmailDeviceDto
+
+    @DELETE("api/Device")
+    suspend fun deleteDevice(
+        @Query("deviceId") deviceId: Int,
+    )
+
+    /** The server e-mails these chapters' files to the device. */
+    @POST("api/Device/send-to")
+    suspend fun sendToDevice(
+        @Body body: SendToEmailDeviceDto,
+    )
+
+    @POST("api/Device/send-series-to")
+    suspend fun sendSeriesToDevice(
+        @Body body: SendSeriesToEmailDeviceDto,
+    )
+
     /** The signed-in user (only the profile fields are decoded; tokens in the response are ignored). */
     @GET("api/Account")
     suspend fun account(): AccountDto

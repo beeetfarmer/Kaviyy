@@ -8,9 +8,11 @@ import com.nl.kaviyy.core.data.BookmarkRepository
 import com.nl.kaviyy.core.data.CachedBookFileRepository
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.ConnectivityNetworkMonitor
+import com.nl.kaviyy.core.data.DeviceRepository
 import com.nl.kaviyy.core.data.HomeRepository
 import com.nl.kaviyy.core.data.ImageReaderRepository
 import com.nl.kaviyy.core.data.KavitaAdminRepository
+import com.nl.kaviyy.core.data.KavitaDeviceRepository
 import com.nl.kaviyy.core.data.KavitaImageReaderRepository
 import com.nl.kaviyy.core.data.KavitaPersonRepository
 import com.nl.kaviyy.core.data.KavitaProfileRepository
@@ -78,6 +80,9 @@ internal interface DataModule {
 
     @Binds
     fun readingLists(repository: OfflineFirstReadingListRepository): ReadingListRepository
+
+    @Binds
+    fun devices(repository: KavitaDeviceRepository): DeviceRepository
 
     @Binds
     fun profile(repository: KavitaProfileRepository): ProfileRepository
