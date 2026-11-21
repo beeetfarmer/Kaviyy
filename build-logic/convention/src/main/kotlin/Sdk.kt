@@ -91,6 +91,8 @@ internal fun Project.configureUnitTests(android: Boolean) {
     tasks.withType<Test>().configureEach {
         // ponytail: skeleton modules have no tests yet; flip to true once every module has some.
         failOnNoDiscoveredTests.set(false)
+        // Same results on every machine: dates in screenshots and tests don't shift with the local time zone.
+        systemProperty("user.timezone", "UTC")
         testLogging {
             events("failed")
             exceptionFormat = TestExceptionFormat.FULL
