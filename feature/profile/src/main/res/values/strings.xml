@@ -242,4 +242,26 @@
     <string name="trackers_anilist_help">Create an API client at anilist.co/settings/developer with the redirect URL https://anilist.co/api/v2/oauth/pin. Paste its client ID, approve, then paste the token AniList shows.</string>
     <string name="trackers_mal_help">Create an app (type: other) at myanimelist.net/apiconfig with any redirect URL. Paste its client ID, approve, then paste the address the browser lands on.</string>
     <string name="trackers_kitsu_help">Your password goes to Kitsu once to sign in and is not kept. Only the sign-in token is saved, encrypted on this phone.</string>
+    <string name="you_settings_home">Home Screen</string>
+    <string name="home_layout_title">Home Screen</string>
+    <string name="home_layout_sections">Sections</string>
+    <string name="home_layout_footnote">Turn sections on or off and move them up or down. Empty sections are hidden on Home. Offline, downloads always come first.</string>
+    <string name="home_layout_up">Move %1$s up</string>
+    <string name="home_layout_down">Move %1$s down</string>
+    <string name="home_layout_sort">%1$s order</string>
+    <string name="home_section_continue">Continue Reading</string>
+    <string name="home_section_on_deck">On Deck</string>
+    <string name="home_section_updated">Recently Updated</string>
+    <string name="home_section_added">Recently Added</string>
+    <string name="home_section_smart_filters">Smart Filters</string>
+    <string name="home_section_want_to_read">Want to Read</string>
+    <string name="home_section_collections">Collections</string>
+    <string name="home_section_reading_lists">Reading Lists</string>
+    <string name="home_section_libraries">Libraries</string>
+    <string name="home_section_downloaded">Downloaded</string>
+    <string name="home_sort_recent">Recent</string>
+    <string name="home_sort_scanned">Scanned</string>
+    <string name="home_sort_az">A–Z</string>
+    <string name="home_sort_za">Z–A</string>
+    <string name="home_sort_largest">Largest</string>
 </resources>

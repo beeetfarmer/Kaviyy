@@ -10,9 +10,12 @@ import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.ChapterDto
+import com.nl.kaviyy.core.network.CollectionDto
 import com.nl.kaviyy.core.network.DashboardStreamDto
 import com.nl.kaviyy.core.network.DecodeFilterDto
 import com.nl.kaviyy.core.network.GroupedSeriesDto
+import com.nl.kaviyy.core.network.LibraryDto
+import com.nl.kaviyy.core.network.ReadingListDto
 import com.nl.kaviyy.core.network.SeriesDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
 import com.nl.kaviyy.core.testing.FakeKavitaApi
@@ -54,6 +57,7 @@ class HomeRepositoryTest {
             DashboardStreamDto(12, "Newly Added", 2, StreamType.NEWLY_ADDED),
         )
     private var sentFilter: JsonObject? = null
+    private var onDeckFilter: SeriesFilterV2Dto? = null
 
     private val api =
         object : FakeKavitaApi() {
@@ -74,11 +78,35 @@ class HomeRepositoryTest {
                 return listOf(SeriesDto(7, name = "Filtered"))
             }
 
-            override suspend fun onDeck(
+            override suspend fun series(
+                filter: SeriesFilterV2Dto,
                 pageNumber: Int,
                 pageSize: Int,
-                libraryId: Int,
-            ): List<SeriesDto> = if (offline) throw IOException("offline") else onDeck
+            ): List<SeriesDto> {
+                if (offline) throw IOException("offline")
+                onDeckFilter = filter
+                return onDeck
+            }
+
+            override suspend fun wantToRead(
+                filter: SeriesFilterV2Dto,
+                pageNumber: Int,
+                pageSize: Int,
+            ) = online { listOf(SeriesDto(9, name = "Wanted")) }
+
+            override suspend fun collections(sortByLastModified: Boolean) =
+                online { listOf(CollectionDto(3, "Zeta", itemCount = 2), CollectionDto(4, "Alpha", itemCount = 9)) }
+
+            override suspend fun readingLists(
+                pageNumber: Int,
+                pageSize: Int,
+                includePromoted: Boolean,
+                sortByLastModified: Boolean,
+            ) = online { emptyList<ReadingListDto>() }
+
+            override suspend fun libraries() = online { listOf(LibraryDto(2, "Manga")) }
+
+            private fun <T> online(value: () -> T): T = if (offline) throw IOException("offline") else value()
 
             override suspend fun continuePoint(seriesId: Int) =
                 if (seriesId == 1) ChapterDto(49, volumeId = 5, range = "49", pages = 20) else throw IOException("x")
@@ -95,7 +123,15 @@ class HomeRepositoryTest {
             ) = listOf(SeriesDto(4, name = "New"))
         }
 
-    private val repo = OfflineFirstHomeRepository(db.dashboardDao(), db.seriesDao(), { api })
+    private val repo =
+        OfflineFirstHomeRepository(
+            db.dashboardDao(),
+            db.seriesDao(),
+            { api },
+            OfflineFirstListsRepository({ api }, db.seriesDao(), db.collectionDao()),
+            OfflineFirstReadingListRepository({ api }, db.readingListDao()),
+            OfflineFirstCatalogRepository(db.libraryDao(), db.seriesDao(), { api }),
+        )
 
     @After
     fun tearDown() = db.close()
@@ -122,6 +158,21 @@ class HomeRepositoryTest {
         }
 
     @Test
+    fun onDeckIsStartedButUnfinishedLastReadFirstAndShelvesAreCached() =
+        runTest {
+            repo.refresh(server)
+            val filter = checkNotNull(onDeckFilter)
+            assertEquals(listOf(1 to "0", 3 to "100"), filter.statements.map { it.comparison to it.value })
+            assertEquals(setOf(FilterField.ReadProgress.api), filter.statements.map { it.field }.toSet())
+            assertEquals(SeriesSort.ReadProgress.field, filter.sortOptions?.sortField)
+            assertEquals(false, filter.sortOptions?.isAscending)
+            val home = repo.home(server).first()
+            assertEquals(listOf("Wanted"), home.wantToRead.map { it.title })
+            assertEquals(listOf("Zeta", "Alpha"), home.collections.map { it.title })
+            assertEquals(listOf("Manga"), home.libraries.map { it.name })
+        }
+
+    @Test
     fun followsServerLayoutAndDecodesSmartFilters() =
         runTest {
             layout =
@@ -134,10 +185,12 @@ class HomeRepositoryTest {
                 )
             assertEquals(AppResult.Success(Unit), repo.refresh(server))
             val home = repo.home(server).first()
-            assertEquals(listOf(20, 21, 10), home.rails.map { it.streamId })
-            assertEquals(listOf("Filtered"), home.rails[0].items.map { it.title })
+            // Built-ins are always kept (the app's Home layout decides);
+            // only visible smart filters come from the server.
+            assertEquals(listOf(-1, -2, -3, 20, 21), home.rails.map { it.streamId })
+            assertEquals(listOf("Filtered"), home.rails[3].items.map { it.title })
             assertEquals("fav", (sentFilter?.get("name") as JsonPrimitive).content) // decoded filter sent unchanged
-            assertTrue(home.rails[1].items.isEmpty()) // non-series smart filter skipped
+            assertTrue(home.rails[4].items.isEmpty()) // non-series smart filter skipped
         }
 
     @Test
@@ -156,14 +209,9 @@ class HomeRepositoryTest {
             )
             offline = false
             repo.refresh(server)
-            assertEquals(
-                listOf(10, 11, 12),
-                repo
-                    .home(server)
-                    .first()
-                    .rails
-                    .map { it.streamId },
-            ) // built-ins replaced
+            val rails = repo.home(server).first().rails
+            assertEquals(listOf(-1, -2, -3), rails.map { it.streamId })
+            assertTrue(rails.all { it.items.isNotEmpty() })
         }
 
     @Test

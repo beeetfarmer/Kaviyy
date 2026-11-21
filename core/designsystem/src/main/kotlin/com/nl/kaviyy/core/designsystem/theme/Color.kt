@@ -201,6 +201,7 @@ object SettingsTileColors {
     val servers = Color(0xFF187A4F)
     val sendToDevice = Color(0xFF475569)
     val scrobbling = Color(0xFFDB2777)
+    val home = Color(0xFF0891B2)
 }
 
 object HighlightColors {

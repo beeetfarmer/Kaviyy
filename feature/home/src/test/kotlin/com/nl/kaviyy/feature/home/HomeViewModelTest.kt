@@ -4,6 +4,10 @@ import app.cash.turbine.test
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.Home
 import com.nl.kaviyy.core.data.HomeRepository
+import com.nl.kaviyy.core.data.HomeSection
+import com.nl.kaviyy.core.data.ListSort
+import com.nl.kaviyy.core.datastore.AppSettings
+import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
@@ -11,6 +15,7 @@ import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
 import com.nl.kaviyy.core.network.LoginMethod
+import com.nl.kaviyy.core.testing.InMemoryDataStore
 import com.nl.kaviyy.core.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +40,7 @@ class HomeViewModelTest {
     private var result: AppResult<Unit> = AppResult.Success(Unit)
     private val homes = MutableStateFlow(Home(null, emptyList()))
     private val online = MutableStateFlow(true)
+    private val settings = AppSettingsStore(InMemoryDataStore(AppSettings()))
 
     private val session =
         object : AuthSession {
@@ -73,7 +79,7 @@ class HomeViewModelTest {
     @Test
     fun refreshesOnOpenAndOnServerSwitch() =
         runTest {
-            val vm = HomeViewModel(session, repo, { online })
+            val vm = HomeViewModel(session, repo, { online }, settings)
             vm.state.test {
                 skipItems(1)
                 runCurrent()
@@ -88,7 +94,7 @@ class HomeViewModelTest {
     @Test
     fun goingOfflineFlagsStateAndComingBackRefreshes() =
         runTest {
-            val vm = HomeViewModel(session, repo, { online })
+            val vm = HomeViewModel(session, repo, { online }, settings)
             vm.state.test {
                 runCurrent()
                 online.value = false
@@ -105,7 +111,7 @@ class HomeViewModelTest {
     fun failedRefreshKeepsContentAndExposesTheError() =
         runTest {
             result = AppResult.Failure(AppError.Network)
-            val vm = HomeViewModel(session, repo, { online })
+            val vm = HomeViewModel(session, repo, { online }, settings)
             vm.state.test {
                 runCurrent()
                 val s = expectMostRecentItem()
@@ -115,6 +121,25 @@ class HomeViewModelTest {
                 vm.refresh()
                 runCurrent()
                 assertNull(expectMostRecentItem().error)
+            }
+        }
+
+    @Test
+    fun layoutAndSortsComeFromSettingsAndDownloadedJumpsFirstOffline() =
+        runTest {
+            settings.update { it.copy(homeLayout = "Downloaded,Collections,!OnDeck", librarySort = "NameDesc") }
+            val vm = HomeViewModel(session, repo, { online }, settings)
+            vm.state.test {
+                runCurrent()
+                val on = expectMostRecentItem()
+                assertTrue(on.sections.indexOf(HomeSection.Downloaded) < on.sections.indexOf(HomeSection.Collections))
+                assertTrue(HomeSection.OnDeck !in on.sections)
+                assertEquals(ListSort.NameDesc, on.librarySort)
+                online.value = false
+                runCurrent()
+                // Offline, downloads are shown first by the screen itself, so the section isn't repeated.
+                assertTrue(HomeSection.Downloaded !in expectMostRecentItem().sections)
+                cancelAndIgnoreRemainingEvents()
             }
         }
 }

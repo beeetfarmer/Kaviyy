@@ -9,6 +9,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.nl.kaviyy.core.data.Home
+import com.nl.kaviyy.core.data.ListSort
+import com.nl.kaviyy.core.data.parseHomeLayout
 import com.nl.kaviyy.core.designsystem.theme.Appearance
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
 import com.nl.kaviyy.core.model.result.AppError
@@ -18,6 +20,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w412dp-h915dp-xhdpi")
@@ -63,6 +66,53 @@ class HomeScreenTest {
         compose.onNodeWithText("3 new chapters").assertExists()
         compose.onNodeWithText("Resume").performClick()
         assertEquals(1, resumed)
+    }
+
+    @Test
+    fun followsTheUsersSectionOrderAndOpensShelves() {
+        var collection = 0
+        var library = 0
+        val layout =
+            parseHomeLayout("Libraries,Collections,!OnDeck,!RecentlyUpdated,!ContinueReading")
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) {
+                HomeScreen(
+                    previewState().copy(layout = layout, collectionSort = ListSort.NameAsc),
+                    "Friday",
+                    HomeActions(onOpenCollection = { collection = it }, onOpenLibrary = { library = it }),
+                    {},
+                )
+            }
+        }
+        compose.onNodeWithText("On Deck").assertDoesNotExist()
+        compose.onNodeWithText("Resume").assertDoesNotExist()
+        val libraries =
+            compose
+                .onNodeWithText("Libraries")
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+        val collections =
+            compose
+                .onNodeWithText("Collections")
+                .fetchSemanticsNode()
+                .boundsInRoot.top
+        assertTrue(libraries < collections)
+        compose.onNodeWithText("Books").performClick()
+        assertEquals(2, library)
+        // A–Z: "Award Winners" before "Weekend Reads".
+        val award =
+            compose
+                .onNodeWithText("Award Winners")
+                .fetchSemanticsNode()
+                .boundsInRoot.left
+        val weekend =
+            compose
+                .onNodeWithText("Weekend Reads")
+                .fetchSemanticsNode()
+                .boundsInRoot.left
+        assertTrue(award < weekend)
+        compose.onNodeWithText("Award Winners").performClick()
+        assertEquals(2, collection)
     }
 
     @Test

@@ -30,4 +30,22 @@
     <string name="home_error_body">Couldn’t reach your server. Check your connection and try again.</string>
     <string name="home_retry">Try Again</string>
     <string name="home_refresh_failed">Couldn’t update. Showing saved items.</string>
+    <string name="home_want_to_read">Want to Read</string>
+    <string name="home_collections">Collections</string>
+    <string name="home_reading_lists">Reading Lists</string>
+    <string name="home_libraries">Libraries</string>
+    <plurals name="home_series_count">
+        <item quantity="one">%1$d series</item>
+        <item quantity="other">%1$d series</item>
+    </plurals>
+    <plurals name="home_items_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <string name="home_library_manga">Manga</string>
+    <string name="home_library_comic">Comics</string>
+    <string name="home_library_book">Books</string>
+    <string name="home_library_image">Images</string>
+    <string name="home_library_light_novel">Light Novels</string>
+    <string name="home_library_other">Library</string>
 </resources>

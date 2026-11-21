@@ -1,9 +1,12 @@
 package com.nl.kaviyy.core.data
 
 import com.nl.kaviyy.core.database.ChapterEntity
+import com.nl.kaviyy.core.database.CollectionEntity
 import com.nl.kaviyy.core.database.DashboardDao
 import com.nl.kaviyy.core.database.DashboardItemEntity
 import com.nl.kaviyy.core.database.DashboardStreamEntity
+import com.nl.kaviyy.core.database.LibraryEntity
+import com.nl.kaviyy.core.database.ReadingListRow
 import com.nl.kaviyy.core.database.SeriesDao
 import com.nl.kaviyy.core.database.SeriesEntity
 import com.nl.kaviyy.core.model.result.AppResult
@@ -13,7 +16,9 @@ import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.network.DashboardStreamDto
 import com.nl.kaviyy.core.network.DecodeFilterDto
 import com.nl.kaviyy.core.network.KavitaApi
+import com.nl.kaviyy.core.network.SeriesFilterStatementDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
+import com.nl.kaviyy.core.network.SeriesSortOptionDto
 import com.nl.kaviyy.core.network.apiCall
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -59,8 +64,19 @@ data class Home(
     val rails: List<HomeRail>,
     /** Series with finished downloads: the first rail when offline. */
     val downloaded: List<HomeItem> = emptyList(),
+    /** The cached first page of Want to Read. */
+    val wantToRead: List<HomeItem> = emptyList(),
+    /** Cached shelves for the Collections / Reading Lists / Libraries rails (server order; sorted in the UI). */
+    val collections: List<CollectionEntity> = emptyList(),
+    val readingLists: List<ReadingListRow> = emptyList(),
+    val libraries: List<LibraryEntity> = emptyList(),
 ) {
-    val isEmpty: Boolean get() = continueReading == null && rails.all { it.items.isEmpty() } && downloaded.isEmpty()
+    val isEmpty: Boolean
+        get() =
+            continueReading == null && rails.all { it.items.isEmpty() } && downloaded.isEmpty() &&
+                wantToRead.isEmpty()
+
+    fun rail(type: Int): HomeRail? = rails.firstOrNull { it.type == type }
 
     val downloadedIds: Set<Int> by lazy { downloaded.mapTo(HashSet()) { it.seriesId } }
 }
@@ -70,11 +86,26 @@ internal const val RAIL_SIZE = 20
 /** Kavita `FilterEntityType.Series`. */
 private const val ENTITY_SERIES = 0
 
-/** Visible stream types this app renders (On Deck … Smart Filter); others (e.g. More In Genre) are skipped. */
+/**
+ * The server's visible smart-filter streams ("Show on Home"). The built-in rails are always kept locally instead:
+ * which ones show, and where, is the user's Home layout in this app.
+ */
 private fun DashboardStreamDto.toEntity(serverId: Long): DashboardStreamEntity? =
-    takeIf { visible && streamType in StreamType.ON_DECK..StreamType.SMART_FILTER }?.let {
+    takeIf { visible && streamType == StreamType.SMART_FILTER }?.let {
         DashboardStreamEntity(serverId, id, name.orEmpty(), order, streamType, true, smartFilterEncoded)
     }
+
+/** On Deck: series started but not finished, most recently read first. */
+internal val ON_DECK_FILTER =
+    SeriesFilterV2Dto(
+        statements =
+            listOf(
+                SeriesFilterStatementDto(Comparison.GreaterThan.api, FilterField.ReadProgress.api, "0"),
+                SeriesFilterStatementDto(Comparison.LessThan.api, FilterField.ReadProgress.api, "100"),
+            ),
+        // Kavita sorts "ReadProgress" by last read date.
+        sortOptions = SeriesSortOptionDto(SeriesSort.ReadProgress.field, SeriesSort.ReadProgress.ascending),
+    )
 
 /** Continue-point lookups per refresh (one request each), for the On Deck subtitles and the Continue card. */
 internal const val CONTINUE_LOOKUPS = 10
@@ -94,6 +125,9 @@ class OfflineFirstHomeRepository
         private val dashboard: DashboardDao,
         private val series: SeriesDao,
         private val apis: ServerApis,
+        private val lists: ListsRepository,
+        private val readingLists: ReadingListRepository,
+        private val catalog: CatalogRepository,
     ) : HomeRepository {
         override fun home(server: Server): Flow<Home> {
             val id = server.id.value
@@ -104,25 +138,49 @@ class OfflineFirstHomeRepository
                 dashboard.observeChapters(id),
                 dashboard.observeDownloadedSeries(id),
                 ::assemble,
-            )
+            ).let { streams ->
+                combine(
+                    streams,
+                    series.observeQuery(id, wantToReadQuery().key),
+                    lists.collections(server),
+                    readingLists.lists(server),
+                    catalog.libraries(server),
+                ) { home, wanted, collections, lists, libraries ->
+                    home.copy(
+                        wantToRead = wanted.take(RAIL_SIZE).map { it.toHomeItem() },
+                        collections = collections,
+                        readingLists = lists,
+                        libraries = libraries,
+                    )
+                }
+            }
         }
 
         override suspend fun refresh(server: Server): AppResult<Unit> {
             val id = server.id.value
             val api = apis.api(server)
             val layout = apiCall { api.dashboard() }
-            val streams =
+            val smartFilters =
                 when (layout) {
-                    is AppResult.Success -> {
-                        layout.value.mapNotNull { it.toEntity(id) }.also { dashboard.replaceStreams(id, it) }
-                    }
+                    is AppResult.Success -> layout.value.mapNotNull { it.toEntity(id) }
 
-                    // Offline / failed: keep the cached layout; first run falls back to the built-ins.
-                    is AppResult.Failure -> {
-                        dashboard.streams(id).ifEmpty { builtInStreams(id).also { dashboard.replaceStreams(id, it) } }
-                    }
+                    // Offline / failed: keep the cached smart filters.
+                    is AppResult.Failure -> dashboard.streams(id).filter { it.streamType == StreamType.SMART_FILTER }
+                }.sortedBy { it.position }
+            val streams =
+                (builtInStreams(id) + smartFilters)
+                    .mapIndexed { i, stream -> stream.copy(position = i) }
+                    .also { dashboard.replaceStreams(id, it) }
+            val shelves =
+                coroutineScope {
+                    listOf(
+                        async { lists.refreshWantToRead(server) },
+                        async { lists.refreshCollections(server) },
+                        async { readingLists.refreshLists(server) },
+                        async { catalog.refreshLibraries(server) },
+                    ).awaitAll()
                 }
-            val results = listOf(layout.map {}) + streams.map { refreshStream(id, api, it) }
+            val results = listOf(layout.map {}) + streams.map { refreshStream(id, api, it) } + shelves
             return results.firstOrNull { it is AppResult.Failure } ?: AppResult.Success(Unit)
         }
 
@@ -137,7 +195,7 @@ class OfflineFirstHomeRepository
             ) = DashboardItemEntity(serverId, stream.id, position, seriesId)
             return when (stream.streamType) {
                 StreamType.ON_DECK -> {
-                    apiCall { api.onDeck(1, RAIL_SIZE) }.map { list ->
+                    apiCall { api.series(ON_DECK_FILTER, 1, RAIL_SIZE) }.map { list ->
                         val chapters = continuePoints(serverId, api, list.take(CONTINUE_LOOKUPS).map { it.id })
                         series.upsertSeries(list.map { it.toEntity(serverId) })
                         series.upsertChapters(chapters.filterNotNull())
@@ -226,7 +284,7 @@ class OfflineFirstHomeRepository
                     }.awaitAll()
             }
 
-        /** Used only before the server's layout has ever loaded (first refresh while offline). */
+        /** On Deck, Recently Updated and Recently Added, with fixed local ids (server stream ids are positive). */
         private fun builtInStreams(serverId: Long) =
             listOf(StreamType.ON_DECK, StreamType.RECENTLY_UPDATED, StreamType.NEWLY_ADDED).mapIndexed { i, type ->
                 DashboardStreamEntity(serverId, id = -type, name = "", position = i, streamType = type, visible = true)

@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,8 +76,17 @@ fun LibraryRoute(
     onOpenSeries: (seriesId: Int) -> Unit,
     onOpenFilter: (libraryId: Int?) -> Unit,
     modifier: Modifier = Modifier,
+    /** A library to select once (picked on Home); [onLibraryOpened] clears the request. */
+    openLibrary: Int? = null,
+    onLibraryOpened: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(openLibrary) {
+        openLibrary?.let {
+            viewModel.select(it)
+            onLibraryOpened()
+        }
+    }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val series = viewModel.series.collectAsLazyPagingItems()
     val downloaded by viewModel.downloaded.collectAsStateWithLifecycle()

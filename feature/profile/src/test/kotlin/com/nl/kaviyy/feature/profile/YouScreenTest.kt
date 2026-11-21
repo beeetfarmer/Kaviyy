@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.nl.kaviyy.core.designsystem.theme.Appearance
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
@@ -60,8 +61,8 @@ class YouScreenTest {
         compose.onNodeWithText("All Stats").performClick()
         compose.onNodeWithText("Servers").performClick()
         compose.onNodeWithText("Account").performClick()
-        compose.onNodeWithText("Privacy & Security").performClick()
-        compose.onNodeWithText("Server Admin").performClick()
+        compose.onNodeWithText("Privacy & Security").performScrollTo().performClick()
+        compose.onNodeWithText("Server Admin").performScrollTo().performClick()
         assertEquals(listOf("stats", "servers", "account", "privacy", "admin"), calls)
     }
 

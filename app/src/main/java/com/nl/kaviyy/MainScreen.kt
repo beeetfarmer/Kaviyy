@@ -56,6 +56,7 @@ import com.nl.kaviyy.feature.profile.AdminRoute
 import com.nl.kaviyy.feature.profile.AllStatsRoute
 import com.nl.kaviyy.feature.profile.AuthKeysRoute
 import com.nl.kaviyy.feature.profile.DevicesRoute
+import com.nl.kaviyy.feature.profile.HomeLayoutRoute
 import com.nl.kaviyy.feature.profile.PrivacyRoute
 import com.nl.kaviyy.feature.profile.ReaderPrefsRoute
 import com.nl.kaviyy.feature.profile.ScrobblingRoute
@@ -128,6 +129,9 @@ private data object ThemeDestination
 private data object ReaderPrefsDestination
 
 @Serializable
+private data object HomeLayoutDestination
+
+@Serializable
 private data object DevicesDestination
 
 @Serializable
@@ -182,6 +186,8 @@ internal fun MainScreen(
     var selected by rememberSaveable { mutableIntStateOf(Tab.Home.ordinal) }
     // Library id the filter sheet is open for (or WANT_TO_READ_FILTER); null = closed.
     var filterFor by rememberSaveable { mutableStateOf<Int?>(null) }
+    // A library picked on Home, for the Library tab to select once.
+    var openLibrary by rememberSaveable { mutableStateOf<Int?>(null) }
     val tabs =
         listOf(
             TabItem(stringResource(R.string.tab_home), KavitaIcons.Home),
@@ -224,6 +230,7 @@ internal fun MainScreen(
                         onSeeAllReadingLists = { nav.navigate(ReadingListsDestination) },
                         onAllStats = { nav.navigate(AllStatsDestination) },
                         onTheme = { nav.navigate(ThemeDestination) },
+                        onHomeLayout = { nav.navigate(HomeLayoutDestination) },
                         onReaderPrefs = { nav.navigate(ReaderPrefsDestination) },
                         onDevices = { nav.navigate(DevicesDestination) },
                         onScrobbling = { nav.navigate(ScrobblingDestination) },
@@ -233,6 +240,12 @@ internal fun MainScreen(
                         onAdmin = { nav.navigate(AdminDestination) },
                         onOpenDownloadedSeries = { nav.navigate(DownloadedSeriesDestination(it)) },
                         onDownloadSettings = { nav.navigate(DownloadSettingsDestination) },
+                        openLibrary = openLibrary,
+                        onOpenLibrary = {
+                            openLibrary = it
+                            selected = Tab.Library.ordinal
+                        },
+                        onLibraryOpened = { openLibrary = null },
                     ),
                 ) { filterFor = it }
             }
@@ -272,6 +285,7 @@ internal fun MainScreen(
             composable<AllStatsDestination> { AllStatsRoute(onBack = { nav.popBackStack() }) }
             composable<ThemeDestination> { ThemeRoute(onBack = { nav.popBackStack() }) }
             composable<ReaderPrefsDestination> { ReaderPrefsRoute(onBack = { nav.popBackStack() }) }
+            composable<HomeLayoutDestination> { HomeLayoutRoute(onBack = { nav.popBackStack() }) }
             composable<DevicesDestination> { DevicesRoute(onBack = { nav.popBackStack() }) }
             composable<AccountDestination> {
                 AccountRoute(
@@ -365,6 +379,7 @@ private data class TabNav(
     val onSeeAllReadingLists: () -> Unit,
     val onAllStats: () -> Unit,
     val onTheme: () -> Unit,
+    val onHomeLayout: () -> Unit,
     val onReaderPrefs: () -> Unit,
     val onDevices: () -> Unit,
     val onScrobbling: () -> Unit,
@@ -374,6 +389,9 @@ private data class TabNav(
     val onAdmin: () -> Unit,
     val onOpenDownloadedSeries: (Int) -> Unit,
     val onDownloadSettings: () -> Unit,
+    val openLibrary: Int? = null,
+    val onOpenLibrary: (Int) -> Unit = {},
+    val onLibraryOpened: () -> Unit = {},
 )
 
 @Suppress("LongParameterList")
@@ -395,12 +413,23 @@ private fun TabContent(
                     onSeeAll = { onSelect(Tab.Library) },
                     onSeeDownloads = { onSelect(Tab.Downloads) },
                     onOpenSeries = onOpenSeries,
+                    onSeeWantToRead = lists.onOpenWantToRead,
+                    onOpenCollection = lists.onOpenCollection,
+                    onSeeAllCollections = lists.onSeeAllCollections,
+                    onOpenReadingList = lists.onOpenReadingList,
+                    onSeeAllReadingLists = lists.onSeeAllReadingLists,
+                    onOpenLibrary = lists.onOpenLibrary,
                 ),
             )
         }
 
         Tab.Library -> {
-            LibraryRoute(onOpenSeries = onOpenSeries, onOpenFilter = { onOpenFilter(it ?: NO_LIBRARY) })
+            LibraryRoute(
+                onOpenSeries = onOpenSeries,
+                onOpenFilter = { onOpenFilter(it ?: NO_LIBRARY) },
+                openLibrary = lists.openLibrary,
+                onLibraryOpened = lists.onLibraryOpened,
+            )
         }
 
         Tab.Lists -> {
@@ -418,6 +447,7 @@ private fun TabContent(
                 YouActions(
                     onAllStats = lists.onAllStats,
                     onTheme = lists.onTheme,
+                    onHomeLayout = lists.onHomeLayout,
                     onReaderPrefs = lists.onReaderPrefs,
                     onServers = onServerPill,
                     onDevices = lists.onDevices,

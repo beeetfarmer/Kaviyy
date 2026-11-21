@@ -49,10 +49,10 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 /** Local-only rail id; server stream ids are positive, built-ins negative small. */
-private const val DOWNLOADED_RAIL = Int.MIN_VALUE
+internal const val DOWNLOADED_RAIL = Int.MIN_VALUE
 
 /** DESIGN.md §8: non-downloaded items at 50% while offline. */
-private const val DIMMED = 0.5f
+internal const val DIMMED = 0.5f
 
 @Composable
 fun HomeRoute(
@@ -86,25 +86,14 @@ fun HomeScreen(
         item(key = "header") { HomeHeader(state, today, actions) }
         if (state.downloadedRail.isNotEmpty()) {
             item(key = "downloaded") {
-                val rail = HomeRail(DOWNLOADED_RAIL, 0, stringResource(R.string.home_downloaded), state.downloadedRail)
+                val rail = HomeRail(DOWNLOADED_RAIL, 0, "", state.downloadedRail)
                 Rail(rail, coverUrl, actions.copy(onSeeAll = { actions.onSeeDownloads() }), state::isDimmed)
             }
         }
         if (state.showStaleNotice) {
             item(key = "stale") { Notice(stringResource(R.string.home_refresh_failed)) }
         }
-        state.home?.continueReading?.let { item ->
-            item(key = "continue") {
-                val padding =
-                    Modifier
-                        .padding(horizontal = KavitaSpacing.screenHorizontal)
-                        .alpha(if (state.isDimmed(item.seriesId)) DIMMED else 1f)
-                ContinueCard(item, coverUrl(item.seriesId), actions, padding)
-            }
-        }
-        state.home?.rails.orEmpty().filter { it.items.isNotEmpty() }.forEach { rail ->
-            item(key = "rail-${rail.streamId}") { Rail(rail, coverUrl, actions, state::isDimmed, isDownloaded) }
-        }
+        state.sections.forEach { homeSection(it, state, actions, coverUrl, isDownloaded) }
         if (state.showEmpty) {
             item(key = "empty") { EmptyState(failed = state.error != null, onRetry = onRetry) }
         }
@@ -135,7 +124,7 @@ private fun HomeHeader(
 }
 
 @Composable
-private fun ContinueCard(
+internal fun ContinueCard(
     item: HomeItem,
     imageUrl: String?,
     actions: HomeActions,
@@ -173,7 +162,7 @@ private fun ContinueCard(
 }
 
 @Composable
-private fun Rail(
+internal fun Rail(
     rail: HomeRail,
     coverUrl: (Int) -> String?,
     actions: HomeActions,
@@ -182,10 +171,25 @@ private fun Rail(
 ) {
     val title =
         when (rail.type) {
-            StreamType.ON_DECK -> stringResource(R.string.home_on_deck)
-            StreamType.RECENTLY_UPDATED -> stringResource(R.string.home_recently_updated)
-            StreamType.NEWLY_ADDED -> stringResource(R.string.home_recently_added)
-            else -> rail.name
+            StreamType.ON_DECK -> {
+                stringResource(R.string.home_on_deck)
+            }
+
+            StreamType.RECENTLY_UPDATED -> {
+                stringResource(R.string.home_recently_updated)
+            }
+
+            StreamType.NEWLY_ADDED -> {
+                stringResource(R.string.home_recently_added)
+            }
+
+            else -> {
+                when (rail.streamId) {
+                    DOWNLOADED_RAIL -> stringResource(R.string.home_downloaded)
+                    WANT_TO_READ_RAIL -> stringResource(R.string.home_want_to_read)
+                    else -> rail.name
+                }
+            }
         }
     // Canvas gap is 12; the header's 48dp touch target already adds ~10 below the 22sp title.
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {

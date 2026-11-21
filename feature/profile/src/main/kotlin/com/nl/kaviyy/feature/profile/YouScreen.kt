@@ -90,6 +90,13 @@ fun YouScreen(
             divider = true,
         )
         SettingsRow(
+            KavitaIcons.Home,
+            SettingsTileColors.home,
+            stringResource(R.string.you_settings_home),
+            actions.onHomeLayout,
+            divider = true,
+        )
+        SettingsRow(
             KavitaIcons.Download,
             SettingsTileColors.downloads,
             stringResource(R.string.you_settings_downloads),

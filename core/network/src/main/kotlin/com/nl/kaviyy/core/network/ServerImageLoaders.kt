@@ -109,6 +109,11 @@ fun Server.volumeCoverUrl(volumeId: Int): String = url.resolve("api/Image/volume
 fun Server.collectionCoverUrl(collectionId: Int): String =
     url.resolve("api/Image/collection-cover?collectionTagId=$collectionId")
 
+fun Server.readingListCoverUrl(readingListId: Int): String =
+    url.resolve("api/Image/readinglist-cover?readingListId=$readingListId")
+
+fun Server.libraryCoverUrl(libraryId: Int): String = url.resolve("api/Image/library-cover?libraryId=$libraryId")
+
 fun Server.chapterCoverUrl(chapterId: Int): String = url.resolve("api/Image/chapter-cover?chapterId=$chapterId")
 
 /** One page of an image chapter (0-based [page]); for a PDF, Kavita renders the page to an image (`extractPdf`). */

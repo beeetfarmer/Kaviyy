@@ -48,6 +48,15 @@ data class AppSettings(
     @ProtoNumber(12) val keepReadCount: Int = 0,
     /** Chapters downloading at once (1–4). */
     @ProtoNumber(13) val concurrentDownloads: Int = 2,
+    /**
+     * Home sections in order, comma-separated `HomeSection` names, "!" before hidden ones. Empty = the default
+     * layout; sections missing from the string (added in later versions) are appended in their default place.
+     */
+    @ProtoNumber(14) val homeLayout: String = "",
+    /** `ListSort` names for the Collections, Reading Lists and Libraries rails; empty = default. */
+    @ProtoNumber(15) val collectionSort: String = "",
+    @ProtoNumber(16) val readingListSort: String = "",
+    @ProtoNumber(17) val librarySort: String = "",
 ) {
     companion object {
         const val DEFAULT_ACCENT = "KavitaGreen"

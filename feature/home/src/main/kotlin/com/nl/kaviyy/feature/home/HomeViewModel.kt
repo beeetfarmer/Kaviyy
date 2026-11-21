@@ -6,7 +6,18 @@ import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.Home
 import com.nl.kaviyy.core.data.HomeItem
 import com.nl.kaviyy.core.data.HomeRepository
+import com.nl.kaviyy.core.data.HomeSection
+import com.nl.kaviyy.core.data.HomeSectionPref
+import com.nl.kaviyy.core.data.ListSort
 import com.nl.kaviyy.core.data.NetworkMonitor
+import com.nl.kaviyy.core.data.parseHomeLayout
+import com.nl.kaviyy.core.data.sortedCollections
+import com.nl.kaviyy.core.data.sortedLibraries
+import com.nl.kaviyy.core.data.sortedReadingLists
+import com.nl.kaviyy.core.database.CollectionEntity
+import com.nl.kaviyy.core.database.LibraryEntity
+import com.nl.kaviyy.core.database.ReadingListRow
+import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
@@ -37,8 +48,22 @@ data class HomeUiState(
     val error: AppError? = null,
     /** No validated network: Downloaded rail first, grey "Offline" pill, other covers dimmed. */
     val offline: Boolean = false,
+    /** The user's sections, in order (hidden ones included, flagged). */
+    val layout: List<HomeSectionPref> = parseHomeLayout(""),
+    val collectionSort: ListSort = ListSort.Recent,
+    val readingListSort: ListSort = ListSort.Recent,
+    val librarySort: ListSort = ListSort.NameAsc,
 ) {
+    /** Offline, downloads always come first, whatever the layout says. */
     val downloadedRail: List<HomeItem> get() = if (offline) home?.downloaded.orEmpty() else emptyList()
+
+    /** Visible sections in order; Downloaded is skipped offline (it's already first). */
+    val sections: List<HomeSection>
+        get() = layout.filter { it.visible && !(offline && it.section == HomeSection.Downloaded) }.map { it.section }
+
+    val collections: List<CollectionEntity> get() = home?.collections.orEmpty().sortedCollections(collectionSort)
+    val readingLists: List<ReadingListRow> get() = home?.readingLists.orEmpty().sortedReadingLists(readingListSort)
+    val libraries: List<LibraryEntity> get() = home?.libraries.orEmpty().sortedLibraries(librarySort)
 
     /** Offline already explains itself via the pill. */
     val showStaleNotice: Boolean get() = error != null && !offline && home?.isEmpty == false
@@ -57,6 +82,12 @@ data class HomeActions(
     val onSeeDownloads: () -> Unit = {},
     val onOpenSeries: (seriesId: Int) -> Unit = {},
     val onResume: (com.nl.kaviyy.core.data.HomeItem) -> Unit = {},
+    val onSeeWantToRead: () -> Unit = {},
+    val onOpenCollection: (Int) -> Unit = {},
+    val onSeeAllCollections: () -> Unit = {},
+    val onOpenReadingList: (Int) -> Unit = {},
+    val onSeeAllReadingLists: () -> Unit = {},
+    val onOpenLibrary: (Int) -> Unit = {},
 )
 
 private data class RefreshStatus(
@@ -74,6 +105,7 @@ class HomeViewModel
         session: AuthSession,
         private val repository: HomeRepository,
         network: NetworkMonitor,
+        settings: AppSettingsStore,
     ) : ViewModel() {
         private val online = network.isOnline().stateIn(viewModelScope, SharingStarted.Eagerly, true)
         private val server = session.activeServer.stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -85,7 +117,14 @@ class HomeViewModel
                     if (s == null) flowOf(HomeUiState()) else repository.home(s).map { home -> HomeUiState(s, home) }
                 }.combine(status) { ui, st -> ui.copy(refreshing = st.running, error = st.error) }
                 .combine(online) { ui, on -> ui.copy(offline = !on) }
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeUiState())
+                .combine(settings.settings) { ui, a ->
+                    ui.copy(
+                        layout = parseHomeLayout(a.homeLayout),
+                        collectionSort = ListSort.of(a.collectionSort),
+                        readingListSort = ListSort.of(a.readingListSort),
+                        librarySort = ListSort.of(a.librarySort, ListSort.NameAsc),
+                    )
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeUiState())
 
         init {
             // Refresh when Home opens and whenever the user switches server.

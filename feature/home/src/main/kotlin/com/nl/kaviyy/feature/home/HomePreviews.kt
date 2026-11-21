@@ -7,6 +7,8 @@ import com.nl.kaviyy.core.data.HomeItem
 import com.nl.kaviyy.core.data.HomeRail
 import com.nl.kaviyy.core.data.StreamType
 import com.nl.kaviyy.core.database.ChapterEntity
+import com.nl.kaviyy.core.database.CollectionEntity
+import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.designsystem.theme.Appearance
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
 import com.nl.kaviyy.core.model.server.Server
@@ -55,6 +57,12 @@ internal val previewHome =
                     ),
                 ),
             ),
+        collections =
+            listOf(
+                CollectionEntity(1, 1, "Weekend Reads", itemCount = 12, position = 0),
+                CollectionEntity(1, 2, "Award Winners", itemCount = 5, position = 1),
+            ),
+        libraries = listOf(LibraryEntity(1, 1, "Manga", 0), LibraryEntity(1, 2, "Books", 2)),
     )
 
 internal fun previewState(home: Home? = previewHome) = HomeUiState(server = previewServer, home = home)
