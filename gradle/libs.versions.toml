@@ -1,4 +1,6 @@
 [versions]
+# Security floor for a transitive dep (media3 via Readium): GHSA-xxph-c9ww-hj94 fixed in 33.7.2.
+guava = "33.7.2-android"
 agp = "9.3.3"
 kotlin = "2.4.21"
 ksp = "2.3.14"
@@ -32,6 +34,7 @@ turbine = "1.2.1"
 javaxInject = "1"
 
 [libraries]
+guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragment" }

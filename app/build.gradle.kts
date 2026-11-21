@@ -76,4 +76,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
+    constraints {
+        implementation(libs.guava) { because("GHSA-xxph-c9ww-hj94 (unreachable here: no Java deserialization)") }
+    }
 }
