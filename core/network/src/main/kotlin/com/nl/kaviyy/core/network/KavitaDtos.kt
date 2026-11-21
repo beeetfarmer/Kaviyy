@@ -606,3 +606,59 @@ data class CblFinalizeDto(
     val sha: String?,
     val promote: Boolean = false,
 )
+
+/** Kavita `UserDto`: the profile fields only. */
+@Serializable
+data class AccountDto(
+    val id: Int,
+    val username: String? = null,
+    val email: String? = null,
+    val roles: List<String> = emptyList(),
+    val kavitaVersion: String? = null,
+)
+
+/** Kavita `ReadingPaceDto`. */
+@Serializable
+data class ReadingPaceDto(
+    val hoursRead: Int = 0,
+    val pagesRead: Int = 0,
+    val wordsRead: Long = 0,
+    val booksRead: Int = 0,
+    val comicsRead: Int = 0,
+)
+
+/** Kavita `DateTimeStatCountWithFormat`: [value] is an ISO date-time. */
+@Serializable
+data class DateStatCountDto(
+    val value: String? = null,
+    val count: Int = 0,
+)
+
+/** Kavita `UserReadStatistics`; [timeSpentReading] is in hours. */
+@Serializable
+data class UserReadStatsDto(
+    val totalPagesRead: Long = 0,
+    val totalWordsRead: Long = 0,
+    val timeSpentReading: Long = 0,
+    val avgHoursPerWeekSpentReading: Double = 0.0,
+)
+
+/** Kavita `Int32StatCount` / `DayOfWeekStatCount`. */
+@Serializable
+data class IntStatCountDto(
+    val value: Int = 0,
+    val count: Long = 0,
+)
+
+/** Kavita `StringStatCount`. */
+@Serializable
+data class StringStatCountDto(
+    val value: String? = null,
+    val count: Long = 0,
+)
+
+/** Kavita `StringBreakDownDto`. */
+@Serializable
+data class StringBreakdownDto(
+    val data: List<StringStatCountDto> = emptyList(),
+)

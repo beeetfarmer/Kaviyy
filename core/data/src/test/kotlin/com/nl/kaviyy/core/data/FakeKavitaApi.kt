@@ -1,5 +1,6 @@
 package com.nl.kaviyy.core.data
 
+import com.nl.kaviyy.core.network.AccountDto
 import com.nl.kaviyy.core.network.AnnotationDto
 import com.nl.kaviyy.core.network.BookmarkDto
 import com.nl.kaviyy.core.network.CblFinalizeDto
@@ -13,10 +14,12 @@ import com.nl.kaviyy.core.network.CollectionDto
 import com.nl.kaviyy.core.network.CollectionRemoveDto
 import com.nl.kaviyy.core.network.CreateReadingListDto
 import com.nl.kaviyy.core.network.DashboardStreamDto
+import com.nl.kaviyy.core.network.DateStatCountDto
 import com.nl.kaviyy.core.network.DecodeFilterDto
 import com.nl.kaviyy.core.network.GenreTagDto
 import com.nl.kaviyy.core.network.GroupedSeriesDto
 import com.nl.kaviyy.core.network.HourEstimateRangeDto
+import com.nl.kaviyy.core.network.IntStatCountDto
 import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.LanguageDto
 import com.nl.kaviyy.core.network.LibraryDto
@@ -30,6 +33,7 @@ import com.nl.kaviyy.core.network.ReadingListDto
 import com.nl.kaviyy.core.network.ReadingListItemDto
 import com.nl.kaviyy.core.network.ReadingListPositionDto
 import com.nl.kaviyy.core.network.ReadingListSeriesDto
+import com.nl.kaviyy.core.network.ReadingPaceDto
 import com.nl.kaviyy.core.network.RefreshSeriesDto
 import com.nl.kaviyy.core.network.RelatedSeriesDto
 import com.nl.kaviyy.core.network.SearchResultGroupDto
@@ -40,10 +44,12 @@ import com.nl.kaviyy.core.network.SeriesFilterV2Dto
 import com.nl.kaviyy.core.network.SeriesMetadataDto
 import com.nl.kaviyy.core.network.SideNavStreamDto
 import com.nl.kaviyy.core.network.SmartFilterDto
+import com.nl.kaviyy.core.network.StringBreakdownDto
 import com.nl.kaviyy.core.network.UpdateRatingDto
 import com.nl.kaviyy.core.network.UpdateReadingListDto
 import com.nl.kaviyy.core.network.UpdateUserReviewDto
 import com.nl.kaviyy.core.network.UpdateWantToReadDto
+import com.nl.kaviyy.core.network.UserReadStatsDto
 import com.nl.kaviyy.core.network.UserReviewDto
 import kotlinx.serialization.json.JsonObject
 import okhttp3.MultipartBody
@@ -161,6 +167,30 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun readingListItems(readingListId: Int): List<ReadingListItemDto> = error("unused")
 
     override suspend fun readingList(readingListId: Int): ReadingListDto = error("unused")
+
+    override suspend fun account(): AccountDto = error("unused")
+
+    override suspend fun readingPace(
+        userId: Int,
+        startDate: String,
+        endDate: String,
+        timeZoneId: String,
+    ): ReadingPaceDto = error("unused")
+
+    override suspend fun readingCounts(
+        userId: Int,
+        startDate: String,
+        endDate: String,
+        timeZoneId: String,
+    ): List<DateStatCountDto> = error("unused")
+
+    override suspend fun userReadStats(userId: Int): UserReadStatsDto = error("unused")
+
+    override suspend fun pagesPerYear(userId: Int): List<IntStatCountDto> = error("unused")
+
+    override suspend fun dayBreakdown(userId: Int): List<IntStatCountDto> = error("unused")
+
+    override suspend fun genreBreakdown(userId: Int): StringBreakdownDto = error("unused")
 
     override suspend fun saveCblFile(cblFile: MultipartBody.Part): CblSavedFileDto = error("unused")
 

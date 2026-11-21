@@ -90,6 +90,49 @@ interface KavitaApi {
         @Query("role") role: Int,
     ): List<PersonDto>
 
+    /** The signed-in user (only the profile fields are decoded; tokens in the response are ignored). */
+    @GET("api/Account")
+    suspend fun account(): AccountDto
+
+    /** Hours, pages and chapters read in a time range. */
+    @GET("api/Stats/reading-pace")
+    suspend fun readingPace(
+        @Query("userId") userId: Int,
+        @Query("StartDate") startDate: String,
+        @Query("EndDate") endDate: String,
+        @Query("TimeZoneId") timeZoneId: String,
+    ): ReadingPaceDto
+
+    /** Reading events per day (one entry per day and format). */
+    @GET("api/Stats/reading-counts")
+    suspend fun readingCounts(
+        @Query("userId") userId: Int,
+        @Query("StartDate") startDate: String,
+        @Query("EndDate") endDate: String,
+        @Query("TimeZoneId") timeZoneId: String,
+    ): List<DateStatCountDto>
+
+    @GET("api/Stats/user-read")
+    suspend fun userReadStats(
+        @Query("userId") userId: Int,
+    ): UserReadStatsDto
+
+    @GET("api/Stats/pages-per-year")
+    suspend fun pagesPerYear(
+        @Query("userId") userId: Int,
+    ): List<IntStatCountDto>
+
+    /** Kavita `DayOfWeek`: 0 = Sunday. */
+    @GET("api/Stats/day-breakdown")
+    suspend fun dayBreakdown(
+        @Query("userId") userId: Int,
+    ): List<IntStatCountDto>
+
+    @GET("api/Stats/genre-breakdown")
+    suspend fun genreBreakdown(
+        @Query("userId") userId: Int,
+    ): StringBreakdownDto
+
     /** Reading lists the user can see (own + promoted), most recently changed first. */
     @POST("api/ReadingList/lists")
     suspend fun readingLists(

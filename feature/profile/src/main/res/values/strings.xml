@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="you_title">You</string>
+    <string name="you_back">Back</string>
+    <string name="you_role_admin">Admin</string>
+    <string name="you_role_user">Reader</string>
+    <string name="you_this_week">This Week</string>
+    <string name="you_all_stats">All Stats</string>
+    <string name="you_hours">%dh</string>
+    <string name="you_time_reading">Time reading</string>
+    <string name="you_pages_read">Pages read</string>
+    <string name="you_words_read">Words read</string>
+    <string name="you_chapters">Chapters</string>
+    <string name="you_week_bars">Reading activity this week, %d reads</string>
+    <string name="you_stats_unavailable">Stats aren\'t available right now. Connect to your server to see them.</string>
+    <string name="you_loading">Loading…</string>
+    <string name="you_hours_per_week">%.1f hours a week on average</string>
+    <string name="you_pages_per_year">Pages per year</string>
+    <string name="you_by_weekday">Reading by weekday</string>
+    <string name="you_top_genres">Top genres</string>
+    <string name="you_sign_out">Sign Out</string>
+    <string name="you_delete_local_data">Delete Local Data</string>
+    <string name="you_delete_local_data_confirm">Tap again to delete all local data</string>
+</resources>

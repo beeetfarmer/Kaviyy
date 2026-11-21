@@ -89,7 +89,6 @@ private fun KaviyyApp(
             is AppState.SignedIn -> {
                 CompositionLocalProvider(LocalCoverImageLoader provides images.loader(s.server)) {
                     MainScreen(
-                        s.server,
                         onServerPill = { switcher = true },
                         onSignOut = { viewModel.signOut(s.server) },
                         onDeleteLocalData = viewModel::deleteAllLocalData,

@@ -32,7 +32,6 @@ import com.nl.kaviyy.core.designsystem.component.TabItem
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaSpacing
-import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.feature.filter.FilterSheet
 import com.nl.kaviyy.feature.home.HomeActions
 import com.nl.kaviyy.feature.home.HomeRoute
@@ -44,6 +43,9 @@ import com.nl.kaviyy.feature.lists.ListsRoute
 import com.nl.kaviyy.feature.lists.ReadingListRoute
 import com.nl.kaviyy.feature.lists.WantToReadActions
 import com.nl.kaviyy.feature.lists.WantToReadRoute
+import com.nl.kaviyy.feature.profile.AllStatsRoute
+import com.nl.kaviyy.feature.profile.YouActions
+import com.nl.kaviyy.feature.profile.YouRoute
 import com.nl.kaviyy.feature.readerepub.EpubReaderRoute
 import com.nl.kaviyy.feature.readerimage.ImageReaderRoute
 import com.nl.kaviyy.feature.search.SearchDestination
@@ -101,6 +103,9 @@ private data object CollectionsDestination
 private data object ReadingListsDestination
 
 @Serializable
+private data object AllStatsDestination
+
+@Serializable
 private data class ReadingListDestination(
     val readingListId: Int,
 )
@@ -118,7 +123,6 @@ private const val WANT_TO_READ_FILTER = -2
 /** Signed-in shell: tab content + FloatingTabBar (DESIGN.md §6; Downloads is the derived fifth tab). */
 @Composable
 internal fun MainScreen(
-    server: Server,
     onServerPill: () -> Unit,
     onSignOut: () -> Unit,
     onDeleteLocalData: () -> Unit,
@@ -142,7 +146,6 @@ internal fun MainScreen(
             composable<TabsDestination> {
                 TabContent(
                     Tab.entries[selected],
-                    server,
                     tabs[selected].label,
                     openSeries,
                     onSelect = {
@@ -152,12 +155,13 @@ internal fun MainScreen(
                     onServerPill,
                     onSignOut,
                     onDeleteLocalData,
-                    ListsNav(
+                    TabNav(
                         onOpenWantToRead = { nav.navigate(WantToReadDestination) },
                         onOpenCollection = { nav.navigate(CollectionDestination(it)) },
                         onSeeAllCollections = { nav.navigate(CollectionsDestination) },
                         onOpenReadingList = { nav.navigate(ReadingListDestination(it)) },
                         onSeeAllReadingLists = { nav.navigate(ReadingListsDestination) },
+                        onAllStats = { nav.navigate(AllStatsDestination) },
                     ),
                 ) { filterFor = it }
             }
@@ -194,6 +198,7 @@ internal fun MainScreen(
             }
             composable<EpubDestination> { EpubReaderRoute(onClose = { nav.popBackStack() }) }
             composable<BrowseDestination> { BrowseRoute(onBack = { nav.popBackStack() }, onOpenSeries = openSeries) }
+            composable<AllStatsDestination> { AllStatsRoute(onBack = { nav.popBackStack() }) }
             composable<ReadingListsDestination> {
                 AllReadingListsRoute(
                     onBack = { nav.popBackStack() },
@@ -259,26 +264,26 @@ internal fun MainScreen(
     }
 }
 
-private data class ListsNav(
+private data class TabNav(
     val onOpenWantToRead: () -> Unit,
     val onOpenCollection: (Int) -> Unit,
     val onSeeAllCollections: () -> Unit,
     val onOpenReadingList: (Int) -> Unit,
     val onSeeAllReadingLists: () -> Unit,
+    val onAllStats: () -> Unit,
 )
 
 @Suppress("LongParameterList")
 @Composable
 private fun TabContent(
     tab: Tab,
-    server: Server,
     label: String,
     onOpenSeries: (Int) -> Unit,
     onSelect: (Tab) -> Unit,
     onServerPill: () -> Unit,
     onSignOut: () -> Unit,
     onDeleteLocalData: () -> Unit,
-    lists: ListsNav,
+    lists: TabNav,
     onOpenFilter: (Int) -> Unit,
 ) {
     when (tab) {
@@ -309,7 +314,9 @@ private fun TabContent(
         }
 
         Tab.You -> {
-            YouPlaceholder(server, label, onSignOut, onDeleteLocalData)
+            YouRoute(
+                YouActions(onAllStats = lists.onAllStats, onSignOut = onSignOut, onDeleteLocalData = onDeleteLocalData),
+            )
         }
 
         else -> {
@@ -327,34 +334,5 @@ private fun ComingSoon(title: String) {
     ) {
         LargeTitleHeader(title, Modifier.padding(top = KavitaSpacing.topBelowStatusBar))
         Text(stringResource(R.string.coming_soon), style = Kavita.type.callout, color = Kavita.colors.labelSecondary)
-    }
-}
-
-/** Stand-in for You (M14): keeps Sign Out and Delete Local Data reachable. */
-@Composable
-private fun YouPlaceholder(
-    server: Server,
-    title: String,
-    onSignOut: () -> Unit,
-    onDeleteLocalData: () -> Unit,
-) {
-    var confirmWipe by rememberSaveable { mutableStateOf(false) }
-    Column(
-        Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = KavitaSpacing.screenHorizontal),
-        verticalArrangement = Arrangement.spacedBy(KavitaSpacing.sectionGapProfile),
-    ) {
-        LargeTitleHeader(title, Modifier.padding(top = KavitaSpacing.topBelowStatusBar))
-        Text(
-            stringResource(R.string.signed_in_body, server.name),
-            style = Kavita.type.callout,
-            color = Kavita.colors.labelSecondary,
-        )
-        PrimaryButton(stringResource(R.string.sign_out), onSignOut, Modifier.fillMaxWidth())
-        // [derived] Final home: You › Privacy & security › Delete local data (DESIGN.md §10). Two taps.
-        SecondaryButton(
-            stringResource(if (confirmWipe) R.string.delete_local_data_confirm else R.string.delete_local_data),
-            { if (confirmWipe) onDeleteLocalData() else confirmWipe = true },
-            Modifier.fillMaxWidth(),
-        )
     }
 }

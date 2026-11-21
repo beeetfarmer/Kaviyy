@@ -13,6 +13,7 @@ import com.nl.kaviyy.core.data.ImageReaderRepository
 import com.nl.kaviyy.core.data.KavitaAdminRepository
 import com.nl.kaviyy.core.data.KavitaImageReaderRepository
 import com.nl.kaviyy.core.data.KavitaPersonRepository
+import com.nl.kaviyy.core.data.KavitaProfileRepository
 import com.nl.kaviyy.core.data.KavitaReviewRepository
 import com.nl.kaviyy.core.data.KavitaSearchRepository
 import com.nl.kaviyy.core.data.KavitaSmartFilterRepository
@@ -28,6 +29,7 @@ import com.nl.kaviyy.core.data.OfflineFirstReadStateRepository
 import com.nl.kaviyy.core.data.OfflineFirstReaderSettingsRepository
 import com.nl.kaviyy.core.data.OfflineFirstReadingListRepository
 import com.nl.kaviyy.core.data.PersonRepository
+import com.nl.kaviyy.core.data.ProfileRepository
 import com.nl.kaviyy.core.data.ProgressRepository
 import com.nl.kaviyy.core.data.ReadStateRepository
 import com.nl.kaviyy.core.data.ReaderDisplayRepository
@@ -45,6 +47,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import java.time.Clock
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -75,6 +78,9 @@ internal interface DataModule {
 
     @Binds
     fun readingLists(repository: OfflineFirstReadingListRepository): ReadingListRepository
+
+    @Binds
+    fun profile(repository: KavitaProfileRepository): ProfileRepository
 
     @Binds
     fun annotations(repository: OfflineFirstAnnotationRepository): AnnotationRepository
@@ -112,5 +118,9 @@ internal interface DataModule {
             apis: KavitaApis,
             session: AuthSession,
         ): ServerApis = ServerApis { server -> apis.forServer(server, session.credentialSource(server.id)) }
+
+        /** The device clock and time zone; tests pass a fixed one. */
+        @Provides
+        fun clock(): Clock = Clock.systemDefaultZone()
     }
 }

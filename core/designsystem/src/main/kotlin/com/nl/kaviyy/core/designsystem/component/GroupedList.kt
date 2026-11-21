@@ -76,8 +76,9 @@ private fun Modifier.rowDivider(
 private fun Modifier.rowClick(onClick: (() -> Unit)?): Modifier =
     if (onClick != null) clickable(role = Role.Button, onClick = onClick) else this
 
+/** Row chevron: 14, tertiary. */
 @Composable
-private fun Chevron() = Icon(KavitaIcons.ChevronRight, null, Modifier.size(14.dp), tint = Kavita.colors.labelTertiary)
+fun Chevron() = Icon(KavitaIcons.ChevronRight, null, Modifier.size(14.dp), tint = Kavita.colors.labelTertiary)
 
 /** Generic 52 high row: label, optional value, optional trailing slot and chevron. */
 @Composable
