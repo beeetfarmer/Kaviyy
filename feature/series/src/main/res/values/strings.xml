@@ -169,4 +169,5 @@
     <string name="series_downloading">Downloading</string>
     <string name="series_downloaded">Downloaded</string>
     <string name="series_download_retry">Download failed, tap to retry</string>
+    <string name="series_offline_not_downloaded">You’re offline. Download this chapter to read it without a connection.</string>
 </resources>

@@ -63,8 +63,16 @@ internal fun noticeText(notice: SeriesNotice): Int =
         SeriesNotice.AlreadyDownloaded -> R.string.series_download_nothing_new
         SeriesNotice.NoDownloadRole -> R.string.series_download_no_role
         SeriesNotice.StorageLimit -> R.string.series_download_over_limit
+        SeriesNotice.NotDownloaded -> R.string.series_offline_not_downloaded
     }
 
 /** Notices that report a problem (shown in the destructive colour). */
 internal val SeriesNotice.isProblem: Boolean
-    get() = this == SeriesNotice.Failed || this == SeriesNotice.NoDownloadRole || this == SeriesNotice.StorageLimit
+    get() =
+        this in
+            setOf(
+                SeriesNotice.Failed,
+                SeriesNotice.NoDownloadRole,
+                SeriesNotice.StorageLimit,
+                SeriesNotice.NotDownloaded,
+            )

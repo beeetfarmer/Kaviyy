@@ -206,6 +206,17 @@ private fun SeriesLightPreview() = SeriesPreview(Appearance.Light)
 @Composable
 private fun SeriesDarkPreview() = SeriesPreview(Appearance.Dark)
 
+/** Offline on the Chapters tab: only the downloaded chapter (48) is at full strength. */
+internal val previewOfflineChapters = previewSeries.copy(tab = SeriesTab.Chapters, offline = true)
+
+@Preview(widthDp = 412, heightDp = 1400)
+@Composable
+private fun SeriesOfflineLightPreview() = SeriesPreview(Appearance.Light, previewOfflineChapters)
+
+@Preview(widthDp = 412, heightDp = 1400)
+@Composable
+private fun SeriesOfflineDarkPreview() = SeriesPreview(Appearance.Dark, previewOfflineChapters)
+
 /** Tall preview so the Volumes list is visible below the summary. */
 @Preview(widthDp = 412, heightDp = 1400)
 @Composable

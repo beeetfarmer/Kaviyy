@@ -114,7 +114,7 @@ fun SeriesRoute(
         state,
         SeriesActions(
             onBack = onBack,
-            onRead = { onRead(viewModel.seriesId, it) },
+            onRead = { if (viewModel.canRead(it)) onRead(viewModel.seriesId, it) },
             onRetry = viewModel::refresh,
             onTab = viewModel::selectTab,
             onSheet = viewModel::showSheet,
@@ -316,6 +316,7 @@ private fun Body(
                     d.chapterId to
                         d.downloadState
                 },
+                dimmed = { c -> !state.canRead(c) },
             )
         }
     }

@@ -263,6 +263,15 @@ class SeriesScreenTest {
 
     @Test
     @Config(qualifiers = "w412dp-h1400dp-xhdpi")
+    fun screenshotOfflineLight() =
+        shot("series_offline_light") { SeriesPreview(Appearance.Light, previewOfflineChapters) }
+
+    @Test
+    @Config(qualifiers = "w412dp-h1400dp-xhdpi")
+    fun screenshotOfflineDark() = shot("series_offline_dark") { SeriesPreview(Appearance.Dark, previewOfflineChapters) }
+
+    @Test
+    @Config(qualifiers = "w412dp-h1400dp-xhdpi")
     fun screenshotVolumes() = shot("series_volumes_light") { SeriesPreview(Appearance.Light) }
 
     @Test

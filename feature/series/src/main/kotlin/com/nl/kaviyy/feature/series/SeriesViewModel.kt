@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.nl.kaviyy.core.data.AdminRepository
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
+import com.nl.kaviyy.core.data.NetworkMonitor
 import com.nl.kaviyy.core.data.ReadStateRepository
 import com.nl.kaviyy.core.data.ReadTarget
 import com.nl.kaviyy.core.data.RelatedSeries
@@ -18,7 +19,9 @@ import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.database.DownloadEntity
 import com.nl.kaviyy.core.database.OutdatedDownload
 import com.nl.kaviyy.core.download.DownloadQueue
+import com.nl.kaviyy.core.download.DownloadState
 import com.nl.kaviyy.core.download.EnqueueResult
+import com.nl.kaviyy.core.download.downloadState
 import com.nl.kaviyy.core.download.toDownload
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
@@ -60,7 +63,19 @@ data class SeriesUiState(
     val outdated: List<OutdatedDownload> = emptyList(),
     /** This series' download rows, any state. */
     val downloads: List<DownloadEntity> = emptyList(),
+    /** No validated network: only downloaded chapters can be read (DESIGN.md §8). */
+    val offline: Boolean = false,
 ) {
+    /** Chapters on the device. */
+    val downloaded: Set<Int> get() =
+        downloads
+            .filter {
+                it.downloadState == DownloadState.COMPLETED
+            }.mapTo(HashSet()) { it.chapterId }
+
+    /** Online always; offline only a downloaded chapter (null = the continue point). */
+    fun canRead(chapterId: Int?): Boolean = !offline || (chapterId ?: continueChapter?.id) in downloaded
+
     val download: SeriesDownload get() = seriesDownload(detail?.chapters.orEmpty(), downloads)
 
     /** The server's continue point, when it's among the cached chapters. */
@@ -89,7 +104,16 @@ sealed interface SeriesSheet {
 }
 
 /** One-line outcome shown under the actions (admin jobs, downloads). */
-enum class SeriesNotice { Started, Saved, Failed, DownloadQueued, AlreadyDownloaded, NoDownloadRole, StorageLimit }
+enum class SeriesNotice {
+    Started,
+    Saved,
+    Failed,
+    DownloadQueued,
+    AlreadyDownloaded,
+    NoDownloadRole,
+    StorageLimit,
+    NotDownloaded,
+}
 
 sealed interface ReviewsState {
     data object Loading : ReviewsState
@@ -141,6 +165,7 @@ class SeriesViewModel
         private val admin: AdminRepository,
         private val downloads: DownloadQueue,
         saved: SavedStateHandle,
+        network: NetworkMonitor = NetworkMonitor { flowOf(true) },
     ) : ViewModel() {
         /** Admin summary draft (EditSummary sheet). */
         val summaryText = TextFieldState()
@@ -163,8 +188,13 @@ class SeriesViewModel
                             repository.libraries(s),
                             status,
                             relatedState,
-                            combine(downloads.outdated(s, seriesId), downloads.seriesDownloads(s, seriesId), ::Pair),
-                        ) { d, libs, st, rel, (outdated, rows) ->
+                            combine(
+                                downloads.outdated(s, seriesId),
+                                downloads.seriesDownloads(s, seriesId),
+                                network.isOnline(),
+                                ::Triple,
+                            ),
+                        ) { d, libs, st, rel, (outdated, rows, online) ->
                             val library = libs.firstOrNull { it.id == d.series?.libraryId }
                             libraryType = library?.type ?: 0
                             SeriesUiState(
@@ -182,6 +212,7 @@ class SeriesViewModel
                                 st.notice,
                                 outdated,
                                 rows,
+                                !online,
                             )
                         }
                     }
@@ -190,6 +221,12 @@ class SeriesViewModel
         init {
             refresh()
         }
+
+        /** False (with a hint) when offline and [chapterId] isn't downloaded. */
+        fun canRead(chapterId: Int?): Boolean =
+            state.value.canRead(chapterId).also { ok ->
+                if (!ok) status.update { it.copy(notice = SeriesNotice.NotDownloaded, sheet = null) }
+            }
 
         fun selectTab(tab: SeriesTab) {
             status.update { it.copy(tab = tab) }

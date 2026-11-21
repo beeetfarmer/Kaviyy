@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nl.kaviyy.core.data.SeriesDetail
@@ -27,6 +28,7 @@ internal fun SeriesTabs(
     related: RelatedState,
     actions: SeriesActions,
     downloads: Map<Int, DownloadState> = emptyMap(),
+    dimmed: (chapterId: Int) -> Boolean = { false },
 ) {
     val tabs = detail.tabs()
     val selected = tab.takeIf { it in tabs } ?: tabs.first()
@@ -35,8 +37,8 @@ internal fun SeriesTabs(
         Column(Modifier.padding(top = 16.dp)) {
             when (selected) {
                 SeriesTab.Volumes -> VolumeRows(detail, server, actions)
-                SeriesTab.Chapters -> ChapterRows(detail.numberedChapters(), server, actions, downloads)
-                SeriesTab.Specials -> ChapterRows(detail.specials(), server, actions, downloads)
+                SeriesTab.Chapters -> ChapterRows(detail.numberedChapters(), server, actions, downloads, dimmed)
+                SeriesTab.Specials -> ChapterRows(detail.specials(), server, actions, downloads, dimmed)
                 SeriesTab.Related -> RelatedRows(related, server, actions)
             }
         }
@@ -70,6 +72,7 @@ private fun ChapterRows(
     server: Server?,
     actions: SeriesActions,
     downloads: Map<Int, DownloadState>,
+    dimmed: (Int) -> Boolean,
 ) {
     GroupedList {
         chapters.forEachIndexed { i, c ->
@@ -82,6 +85,7 @@ private fun ChapterRows(
                 stateColor = stateColor(state),
                 onClick = { actions.onSheet(SeriesSheet.Chapter(c.id)) },
                 divider = i < chapters.lastIndex,
+                modifier = Modifier.alpha(if (dimmed(c.id)) OFFLINE_DIMMED else 1f),
             ) { Thumb(c.seriesId, server?.chapterCoverUrl(c.id)) }
         }
     }
@@ -132,3 +136,6 @@ internal fun downloadLabel(state: DownloadState?): Int? =
         DownloadState.QUEUED, DownloadState.RUNNING -> R.string.series_downloading
         else -> null
     }
+
+/** DESIGN.md §8: what can't be opened offline is shown at 50%. */
+private const val OFFLINE_DIMMED = 0.5f

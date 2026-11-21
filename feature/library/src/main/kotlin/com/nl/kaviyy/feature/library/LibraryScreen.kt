@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -23,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,6 +65,7 @@ fun LibraryRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val series = viewModel.series.collectAsLazyPagingItems()
     val downloaded by viewModel.downloaded.collectAsStateWithLifecycle()
+    val offline by viewModel.offline.collectAsStateWithLifecycle()
     val actions =
         LibraryActions(
             onSelect = viewModel::select,
@@ -76,7 +79,7 @@ fun LibraryRoute(
             onOpenFilter = { onOpenFilter(state.selectedId) },
             onOpenPinned = viewModel::openPinned,
         )
-    LibraryScreen(state, series, actions, modifier, downloaded)
+    LibraryScreen(state, series, actions, modifier, downloaded, offline)
     LibrarySheets(state, actions)
 }
 
@@ -101,6 +104,7 @@ fun LibraryScreen(
     actions: LibraryActions,
     modifier: Modifier = Modifier,
     downloaded: Set<Int> = emptySet(),
+    offline: Boolean = false,
 ) {
     val coverUrl: (Int) -> String? = { id -> state.server?.seriesCoverUrl(id) }
     LazyVerticalGrid(
@@ -136,7 +140,7 @@ fun LibraryScreen(
                     fullWidth("libraries") { Libraries(state, actions.onSelect) }
                 }
                 fullWidth("chips") { QuickChips(state.filter, actions, state.pinned) }
-                seriesItems(series, state.grid, coverUrl, actions.onOpenSeries, downloaded)
+                seriesItems(series, state.grid, coverUrl, actions.onOpenSeries, downloaded, offline)
             }
         }
     }
@@ -147,12 +151,14 @@ private fun LazyGridScope.fullWidth(
     content: @Composable () -> Unit,
 ) = item(key = key, span = { GridItemSpan(maxLineSpan) }) { content() }
 
+@Suppress("LongParameterList") // LazyGridScope builder, not @Composable, so the composable exemption misses it
 private fun LazyGridScope.seriesItems(
     series: LazyPagingItems<SeriesEntity>,
     grid: Boolean,
     coverUrl: (Int) -> String?,
     onOpen: (Int) -> Unit,
     downloaded: Set<Int>,
+    offline: Boolean,
 ) {
     val refresh = series.loadState.refresh
     if (series.itemCount == 0) {
@@ -173,7 +179,9 @@ private fun LazyGridScope.seriesItems(
     }
     items(series.itemCount, key = series.itemKey { it.id }) { index ->
         val s = series[index] ?: return@items
-        if (grid) GridCard(s, coverUrl(s.id), onOpen, s.id in downloaded) else ListRow(s, coverUrl(s.id), onOpen)
+        Box(Modifier.alpha(if (offline && s.id !in downloaded) OFFLINE_DIMMED else 1f)) {
+            if (grid) GridCard(s, coverUrl(s.id), onOpen, s.id in downloaded) else ListRow(s, coverUrl(s.id), onOpen)
+        }
     }
     if (series.loadState.append is LoadState.Error) {
         fullWidth("append-error") {
@@ -284,3 +292,6 @@ private fun ListRow(
         }
     }
 }
+
+/** DESIGN.md §8: series without downloads at 50% while offline. */
+private const val OFFLINE_DIMMED = 0.5f

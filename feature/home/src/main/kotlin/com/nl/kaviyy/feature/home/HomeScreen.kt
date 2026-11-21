@@ -219,7 +219,7 @@ private fun Rail(
                             null
                         },
                     imageUrl = coverUrl(item.seriesId),
-                    // ponytail: no cloud-off hint on tap yet; Series (M8) opens cached data offline.
+                    // Still opens: Series shows its cache and explains when a chapter needs downloading.
                     modifier = Modifier.alpha(if (dimmed(item.seriesId)) DIMMED else 1f),
                 )
             }

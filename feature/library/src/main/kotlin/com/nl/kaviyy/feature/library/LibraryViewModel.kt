@@ -12,6 +12,7 @@ import com.nl.kaviyy.core.data.FilterField
 import com.nl.kaviyy.core.data.FilterRule
 import com.nl.kaviyy.core.data.LibraryFilterStore
 import com.nl.kaviyy.core.data.LibraryQuery
+import com.nl.kaviyy.core.data.NetworkMonitor
 import com.nl.kaviyy.core.data.OptionSource
 import com.nl.kaviyy.core.data.RuleValue
 import com.nl.kaviyy.core.data.SavedFilter
@@ -127,7 +128,15 @@ class LibraryViewModel
         private val store: LibraryFilterStore,
         private val smartFilters: SmartFilterRepository,
         private val saved: SavedStateHandle,
+        network: NetworkMonitor = NetworkMonitor { flowOf(true) },
     ) : ViewModel() {
+        /** Offline, covers without downloads are dimmed (DESIGN.md §8); Series still opens from the cache. */
+        val offline: StateFlow<Boolean> =
+            network
+                .isOnline()
+                .map { !it }
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
+
         private val server = session.activeServer.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
         /** Series with downloads, for the cover badge. */

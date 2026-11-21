@@ -11,6 +11,7 @@ import com.nl.kaviyy.core.data.FilterPlacement
 import com.nl.kaviyy.core.data.FilterRule
 import com.nl.kaviyy.core.data.LibraryFilterStore
 import com.nl.kaviyy.core.data.LibraryQuery
+import com.nl.kaviyy.core.data.NetworkMonitor
 import com.nl.kaviyy.core.data.OptionSource
 import com.nl.kaviyy.core.data.RelatedSeries
 import com.nl.kaviyy.core.data.RuleValue
@@ -144,6 +145,18 @@ class LibraryViewModelTest {
                 server: Server,
                 seriesId: Int,
             ): AppResult<List<RelatedSeries>> = error("unused")
+        }
+
+    @Test
+    fun followsConnectivitySoCoversCanDimOffline() =
+        runTest {
+            val online = MutableStateFlow(true)
+            val vm = LibraryViewModel(session, repo, store, smart, SavedStateHandle(), NetworkMonitor { online })
+            vm.offline.test {
+                assertEquals(false, awaitItem())
+                online.value = false
+                assertEquals(true, awaitItem())
+            }
         }
 
     @Test

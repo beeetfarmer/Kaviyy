@@ -9,6 +9,7 @@ import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.FilterField
 import com.nl.kaviyy.core.data.LibraryQuery
+import com.nl.kaviyy.core.data.NetworkMonitor
 import com.nl.kaviyy.core.data.OptionSource
 import com.nl.kaviyy.core.data.PersonRepository
 import com.nl.kaviyy.core.data.ReadStateRepository
@@ -22,6 +23,7 @@ import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.SeriesMetadata
 import com.nl.kaviyy.core.data.SeriesReviews
 import com.nl.kaviyy.core.database.ChapterEntity
+import com.nl.kaviyy.core.database.DownloadEntity
 import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.database.OutdatedDownload
 import com.nl.kaviyy.core.database.SeriesEntity
@@ -277,6 +279,52 @@ class SeriesViewModelTest {
                 assertEquals(ch, s.continueChapter)
                 assertEquals(false, s.refreshing)
             }
+        }
+
+    @Test
+    fun offlineOnlyDownloadedChaptersOpenAndOthersExplainWhy() =
+        runTest {
+            val vm =
+                SeriesViewModel(
+                    session,
+                    repo,
+                    readState,
+                    reviews,
+                    admin,
+                    downloads,
+                    SavedStateHandle(mapOf(SERIES_ID_ARG to 7)),
+                    NetworkMonitor { flowOf(false) },
+                )
+            vm.state.test {
+                runCurrent()
+                assertEquals(true, expectMostRecentItem().offline)
+                assertEquals(false, vm.canRead(50))
+                runCurrent()
+                assertEquals(SeriesNotice.NotDownloaded, expectMostRecentItem().notice)
+                cancelAndIgnoreRemainingEvents()
+            }
+            val ch = ChapterEntity(1, 49, 5, 7, pages = 30, pagesRead = 4, format = 0)
+            val offline =
+                SeriesUiState(
+                    detail =
+                        SeriesDetail(
+                            SeriesEntity(1, 7, 3, "E", "e", format = 0, pages = 30, pagesRead = 4),
+                            emptyList(),
+                            listOf(ch),
+                            SeriesMetadata(continueChapterId = 49),
+                        ),
+                    downloads =
+                        listOf(
+                            DownloadEntity(1, 49, 7, 5, "COMPLETED", true),
+                            DownloadEntity(1, 50, 7, 5, "RUNNING", true),
+                        ),
+                    offline = true,
+                )
+            assertEquals(
+                listOf(true, true, false),
+                listOf(offline.canRead(49), offline.canRead(null), offline.canRead(50)),
+            )
+            assertEquals(true, offline.copy(offline = false).canRead(50))
         }
 
     @Test
