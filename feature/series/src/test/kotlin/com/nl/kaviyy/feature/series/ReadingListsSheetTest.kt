@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.nl.kaviyy.core.data.AuthSession
+import com.nl.kaviyy.core.data.CblPreview
 import com.nl.kaviyy.core.data.ReadingListRepository
 import com.nl.kaviyy.core.database.ReadingListEntity
 import com.nl.kaviyy.core.database.ReadingListItemEntity
@@ -121,6 +122,17 @@ class ReadingListsSheetTest {
                 holding = holding + id
                 return AppResult.Success(Unit)
             }
+
+            override suspend fun previewCbl(
+                server: Server,
+                fileName: String,
+                bytes: ByteArray,
+            ): AppResult<CblPreview> = error("unused")
+
+            override suspend fun importCbl(
+                server: Server,
+                preview: CblPreview,
+            ): AppResult<Int> = error("unused")
         }
 
     private val session =

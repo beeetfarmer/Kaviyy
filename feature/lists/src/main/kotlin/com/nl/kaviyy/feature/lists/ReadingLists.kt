@@ -107,13 +107,14 @@ internal fun ReadingListsSection(
     state: ListsUiState,
     actions: ListsActions,
 ) = Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(
             stringResource(R.string.lists_reading_lists),
             Modifier.weight(1f),
             style = Kavita.type.title2,
             color = Kavita.colors.label,
         )
+        ImportCblPill(actions.onImportCbl)
         if (state.readingLists.size > READING_LISTS_SHOWN) {
             Text(
                 stringResource(R.string.lists_see_all),
@@ -121,7 +122,7 @@ internal fun ReadingListsSection(
                     .clickable(
                         role = Role.Button,
                         onClick = actions.onSeeAllReadingLists,
-                    ).padding(vertical = 12.dp),
+                    ).padding(start = 12.dp, top = 12.dp, bottom = 12.dp),
                 style = Kavita.type.callout.copy(fontWeight = FontWeight.Medium),
                 color = Kavita.colors.accent,
             )

@@ -1,5 +1,7 @@
 package com.nl.kaviyy.feature.lists
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -62,8 +64,19 @@ fun ListsRoute(
     onOpenReadingList: (Int) -> Unit,
     onSeeAllReadingLists: () -> Unit,
     viewModel: ListsViewModel = hiltViewModel(),
+    cbl: CblImportViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val cblState by cbl.state.collectAsStateWithLifecycle()
+    val pick =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(cbl::picked) }
+    LaunchedEffect(cblState.imported) {
+        cblState.imported?.let {
+            cbl.consumeImported()
+            onOpenReadingList(it)
+        }
+    }
+    if (cblState.open) CblImportSheet(cblState, cbl::close, cbl::import)
     LaunchedEffect(state.newList.created) {
         state.newList.created?.let {
             viewModel.consumeCreated()
@@ -79,6 +92,8 @@ fun ListsRoute(
             onOpenReadingList,
             onSeeAllReadingLists,
             viewModel::openNew,
+            // CBL has no registered MIME type, so let the user pick any file; Kavita validates it.
+            { pick.launch(arrayOf("*/*")) },
         ),
     )
     if (state.newList.open) {

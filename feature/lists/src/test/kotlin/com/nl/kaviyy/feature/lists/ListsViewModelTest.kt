@@ -6,6 +6,7 @@ import androidx.paging.PagingData
 import app.cash.turbine.test
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
+import com.nl.kaviyy.core.data.CblPreview
 import com.nl.kaviyy.core.data.FilterScope
 import com.nl.kaviyy.core.data.LibraryFilterStore
 import com.nl.kaviyy.core.data.LibraryQuery
@@ -172,6 +173,17 @@ class ListsViewModelTest {
                 id: Int,
                 seriesId: Int,
             ): AppResult<Unit> = error("unused")
+
+            override suspend fun previewCbl(
+                server: Server,
+                fileName: String,
+                bytes: ByteArray,
+            ): AppResult<CblPreview> = error("unused")
+
+            override suspend fun importCbl(
+                server: Server,
+                preview: CblPreview,
+            ): AppResult<Int> = error("unused")
         }
 
     private val lists =

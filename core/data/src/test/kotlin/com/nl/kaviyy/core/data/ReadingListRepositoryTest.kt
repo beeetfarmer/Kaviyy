@@ -10,6 +10,11 @@ import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.model.server.ServerId
 import com.nl.kaviyy.core.model.server.ServerUrl
 import com.nl.kaviyy.core.model.server.ServerUrlResult
+import com.nl.kaviyy.core.network.CblBookResultDto
+import com.nl.kaviyy.core.network.CblFinalizeDto
+import com.nl.kaviyy.core.network.CblImportSummaryDto
+import com.nl.kaviyy.core.network.CblSavedFileDto
+import com.nl.kaviyy.core.network.CblValidateDto
 import com.nl.kaviyy.core.network.CreateReadingListDto
 import com.nl.kaviyy.core.network.ReadingListDto
 import com.nl.kaviyy.core.network.ReadingListItemDto
@@ -20,6 +25,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonPrimitive
+import okhttp3.MultipartBody
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -89,6 +95,30 @@ class ReadingListRepositoryTest {
             }
 
             override suspend fun readingListsWithSeries(seriesId: Int) = remote.take(2)
+
+            override suspend fun saveCblFile(cblFile: MultipartBody.Part): CblSavedFileDto {
+                calls += "save ${cblFile.headers?.get("Content-Disposition")}"
+                return CblSavedFileDto("Civil War", "civil-war.cbl", provider = 1, sha = "abc")
+            }
+
+            override suspend fun validateCbl(body: CblValidateDto): CblImportSummaryDto {
+                calls += "validate ${body.fileName}"
+                return CblImportSummaryDto(
+                    cblName = "Civil War",
+                    results =
+                        listOf(
+                            CblBookResultDto(1, "Civil War", number = "1", reason = 8),
+                            CblBookResultDto(2, "Iron Man", number = "13", reason = 0),
+                            CblBookResultDto(3, "Civil War", number = "2", reason = 8),
+                        ),
+                    success = 1,
+                )
+            }
+
+            override suspend fun finalizeCbl(body: CblFinalizeDto): CblImportSummaryDto {
+                calls += "finalize ${body.fileName} ${body.provider} ${body.sha}"
+                return CblImportSummaryDto(readingListId = 4)
+            }
         }
     private val repo = OfflineFirstReadingListRepository({ api }, db.readingListDao())
 
@@ -133,6 +163,24 @@ class ReadingListRepositoryTest {
                 calls,
             )
             assertEquals(null, repo.list(server, 1).first())
+        }
+
+    @Test
+    fun cblIsPreviewedThenImportedWithTheSavedFile() =
+        runTest {
+            val preview = (repo.previewCbl(server, "civil-war.cbl", "<cbl/>".toByteArray()) as AppResult.Success).value
+            assertEquals("Civil War" to (2 to 3), preview.name to (preview.found to preview.total))
+            assertEquals(listOf("Iron Man #13"), preview.missing)
+            assertEquals(true, preview.importable)
+            assertEquals(AppResult.Success(4), repo.importCbl(server, preview))
+            assertEquals(
+                listOf(
+                    "save form-data; name=\"cblFile\"; filename=\"civil-war.cbl\"",
+                    "validate civil-war.cbl",
+                    "finalize civil-war.cbl 1 abc",
+                ),
+                calls,
+            )
         }
 
     @Test

@@ -550,3 +550,59 @@ data class ReadingListSeriesDto(
     val seriesId: Int,
     val readingListId: Int,
 )
+
+/** Kavita `CblSavedFileDto`. */
+@Serializable
+data class CblSavedFileDto(
+    val name: String? = null,
+    val fileName: String? = null,
+    val provider: Int = 0,
+    val repoPath: String? = null,
+    val downloadUrl: String? = null,
+    val sha: String? = null,
+)
+
+/** Kavita `CblReValidateRequestDto`. */
+@Serializable
+data class CblValidateDto(
+    val fileName: String,
+)
+
+/** Kavita `CblBookResult` (the fields we show). `reason` 8 = matched. */
+@Serializable
+data class CblBookResultDto(
+    val order: Int = 0,
+    val series: String? = null,
+    val volume: String? = null,
+    val number: String? = null,
+    val reason: Int = 0,
+)
+
+/** Kavita `CblImportSummaryDto`. `success`: 0 fail, 1 partial, 2 success. */
+@Serializable
+data class CblImportSummaryDto(
+    val cblName: String? = null,
+    val fileName: String? = null,
+    val results: List<CblBookResultDto> = emptyList(),
+    val success: Int = 0,
+    val successfulInserts: List<CblBookResultDto> = emptyList(),
+    val readingListId: Int = 0,
+)
+
+/** Kavita `CblImportDecisions`: no manual matches. */
+@Serializable
+data class CblDecisionsDto(
+    val saveAsRemapRules: Boolean = false,
+)
+
+/** Kavita `CblFinalizeRequestDto`; the file fields come back from [CblSavedFileDto]. */
+@Serializable
+data class CblFinalizeDto(
+    val fileName: String,
+    val decisions: CblDecisionsDto,
+    val provider: Int,
+    val repoPath: String?,
+    val downloadUrl: String?,
+    val sha: String?,
+    val promote: Boolean = false,
+)

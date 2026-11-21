@@ -85,6 +85,7 @@ data class ListsActions(
     val onOpenReadingList: (Int) -> Unit = {},
     val onSeeAllReadingLists: () -> Unit = {},
     val onNew: () -> Unit = {},
+    val onImportCbl: () -> Unit = {},
 )
 
 /** Screen 08. */

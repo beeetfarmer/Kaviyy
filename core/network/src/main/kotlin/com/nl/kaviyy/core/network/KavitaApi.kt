@@ -8,6 +8,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.ResponseBody
 import retrofit2.HttpException
 import retrofit2.Response
@@ -16,7 +18,9 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.http.Streaming
@@ -135,6 +139,25 @@ interface KavitaApi {
     suspend fun readingListsWithSeries(
         @Query("seriesId") seriesId: Int,
     ): List<ReadingListDto>
+
+    /** Saves a CBL file on the server without importing it. */
+    @Multipart
+    @POST("api/Cbl/file-import")
+    suspend fun saveCblFile(
+        @Part cblFile: MultipartBody.Part,
+    ): CblSavedFileDto
+
+    /** Matches a saved CBL file against the library (nothing is created). */
+    @POST("api/Cbl/re-validate")
+    suspend fun validateCbl(
+        @Body body: CblValidateDto,
+    ): CblImportSummaryDto
+
+    /** Creates (or updates) the reading list from a saved CBL file. */
+    @POST("api/Cbl/finalize-import")
+    suspend fun finalizeCbl(
+        @Body body: CblFinalizeDto,
+    ): CblImportSummaryDto
 
     @GET("api/ReadingList/items")
     suspend fun readingListItems(
@@ -535,3 +558,12 @@ suspend fun <T> apiCall(block: suspend () -> T): AppResult<T> =
     } catch (e: Exception) {
         AppResult.Failure(AppError.from(e))
     }
+
+/** Uploads a CBL file as the `cblFile` form part. */
+suspend fun KavitaApi.saveCbl(
+    fileName: String,
+    bytes: ByteArray,
+): CblSavedFileDto =
+    saveCblFile(
+        MultipartBody.Part.createFormData("cblFile", fileName, bytes.toRequestBody("application/xml".toMediaType())),
+    )

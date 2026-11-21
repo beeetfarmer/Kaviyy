@@ -8,6 +8,10 @@ import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.result.map
 import com.nl.kaviyy.core.model.result.onSuccess
 import com.nl.kaviyy.core.model.server.Server
+import com.nl.kaviyy.core.network.CblDecisionsDto
+import com.nl.kaviyy.core.network.CblFinalizeDto
+import com.nl.kaviyy.core.network.CblSavedFileDto
+import com.nl.kaviyy.core.network.CblValidateDto
 import com.nl.kaviyy.core.network.CreateReadingListDto
 import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.ReadingListDto
@@ -16,6 +20,7 @@ import com.nl.kaviyy.core.network.ReadingListPositionDto
 import com.nl.kaviyy.core.network.ReadingListSeriesDto
 import com.nl.kaviyy.core.network.UpdateReadingListDto
 import com.nl.kaviyy.core.network.apiCall
+import com.nl.kaviyy.core.network.saveCbl
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -85,7 +90,34 @@ interface ReadingListRepository {
         id: Int,
         seriesId: Int,
     ): AppResult<Unit>
+
+    /** Uploads a CBL file and matches it against the library; nothing is created yet. */
+    suspend fun previewCbl(
+        server: Server,
+        fileName: String,
+        bytes: ByteArray,
+    ): AppResult<CblPreview>
+
+    /** Creates the reading list from a previewed file; the new list's id. Unmatched issues are skipped. */
+    suspend fun importCbl(
+        server: Server,
+        preview: CblPreview,
+    ): AppResult<Int>
 }
+
+/** A matched CBL file: [found] of [total] issues are in the library; [missing] are labels of the rest. */
+data class CblPreview(
+    val name: String,
+    val found: Int,
+    val total: Int,
+    val missing: List<String>,
+    /** Kavita found at least one issue. */
+    val importable: Boolean,
+    internal val saved: CblSavedFileDto,
+)
+
+private const val CBL_MATCHED = 8
+private const val CBL_FAILED = 0
 
 /** Only the owner changes a reading list (promoted lists from others are read-only). */
 fun ReadingListEntity.editableBy(server: Server): Boolean =
@@ -189,6 +221,47 @@ class OfflineFirstReadingListRepository
             id: Int,
             seriesId: Int,
         ) = changed(server, id) { addSeriesToReadingList(ReadingListSeriesDto(seriesId, id)) }
+
+        override suspend fun previewCbl(
+            server: Server,
+            fileName: String,
+            bytes: ByteArray,
+        ): AppResult<CblPreview> =
+            apiCall {
+                val api = apis.api(server)
+                val saved = api.saveCbl(fileName, bytes)
+                val summary = api.validateCbl(CblValidateDto(saved.fileName ?: fileName))
+                val missing = summary.results.filter { it.reason != CBL_MATCHED }
+                val found = summary.successfulInserts.size.takeIf { it > 0 } ?: (summary.results.size - missing.size)
+                CblPreview(
+                    summary.cblName ?: saved.name ?: fileName,
+                    found,
+                    found + missing.size,
+                    missing.map { m -> listOfNotNull(m.series, m.number?.let { "#$it" }).joinToString(" ") },
+                    summary.success != CBL_FAILED && found > 0,
+                    saved,
+                )
+            }
+
+        override suspend fun importCbl(
+            server: Server,
+            preview: CblPreview,
+        ): AppResult<Int> =
+            apiCall {
+                val s = preview.saved
+                apis
+                    .api(server)
+                    .finalizeCbl(
+                        CblFinalizeDto(
+                            s.fileName.orEmpty(),
+                            CblDecisionsDto(),
+                            s.provider,
+                            s.repoPath,
+                            s.downloadUrl,
+                            s.sha,
+                        ),
+                    ).readingListId
+            }.onSuccess { refreshLists(server) }
 
         /**
          * Reading list changes are online-only (ponytail: no outbox; Kavita validates names and ownership). Afterwards

@@ -2,6 +2,10 @@ package com.nl.kaviyy.core.data
 
 import com.nl.kaviyy.core.network.AnnotationDto
 import com.nl.kaviyy.core.network.BookmarkDto
+import com.nl.kaviyy.core.network.CblFinalizeDto
+import com.nl.kaviyy.core.network.CblImportSummaryDto
+import com.nl.kaviyy.core.network.CblSavedFileDto
+import com.nl.kaviyy.core.network.CblValidateDto
 import com.nl.kaviyy.core.network.ChapterDto
 import com.nl.kaviyy.core.network.ChapterInfoDto
 import com.nl.kaviyy.core.network.CollectionAddDto
@@ -42,6 +46,7 @@ import com.nl.kaviyy.core.network.UpdateUserReviewDto
 import com.nl.kaviyy.core.network.UpdateWantToReadDto
 import com.nl.kaviyy.core.network.UserReviewDto
 import kotlinx.serialization.json.JsonObject
+import okhttp3.MultipartBody
 import retrofit2.Response
 
 /** Base fake: every call fails loudly unless a test overrides it. */
@@ -156,6 +161,12 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun readingListItems(readingListId: Int): List<ReadingListItemDto> = error("unused")
 
     override suspend fun readingList(readingListId: Int): ReadingListDto = error("unused")
+
+    override suspend fun saveCblFile(cblFile: MultipartBody.Part): CblSavedFileDto = error("unused")
+
+    override suspend fun validateCbl(body: CblValidateDto): CblImportSummaryDto = error("unused")
+
+    override suspend fun finalizeCbl(body: CblFinalizeDto): CblImportSummaryDto = error("unused")
 
     override suspend fun createReadingList(body: CreateReadingListDto): ReadingListDto = error("unused")
 

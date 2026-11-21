@@ -53,4 +53,16 @@
     <string name="lists_new_reading_list">New reading list</string>
     <string name="lists_new_reading_list_hint">e.g. Civil War order</string>
     <string name="lists_create">Create</string>
+    <string name="lists_import_cbl">Import CBL</string>
+    <string name="lists_cbl_checking">Checking the file against your library…</string>
+    <string name="lists_cbl_found">%1$d of %2$d issues found in your library.</string>
+    <string name="lists_cbl_missing">Not in your library (skipped):</string>
+    <plurals name="lists_cbl_more">
+        <item quantity="one">and %d more</item>
+        <item quantity="other">and %d more</item>
+    </plurals>
+    <string name="lists_cbl_import">Import reading list</string>
+    <string name="lists_cbl_too_big">That file is too large to be a CBL reading list.</string>
+    <string name="lists_cbl_unreadable">Couldn\'t read that file.</string>
+    <string name="lists_cbl_failed">Kavita couldn\'t import that file. Check it\'s a CBL reading list and that you\'re online.</string>
 </resources>
