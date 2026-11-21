@@ -184,6 +184,22 @@ class OutboxReplayerTest {
         }
 
     @Test
+    fun repeatedChangesAreSentOnceAndASecondFlushSendsNothing() =
+        runTest {
+            seed()
+            offline = true
+            val readState = OfflineFirstReadStateRepository(apis, db.seriesDao(), outbox)
+            repeat(3) { readState.setWantToRead(server, 7, true) } // same change, three taps
+            readState.setRating(server, 7, 2f)
+            readState.setRating(server, 7, 5f) // only the latest rating matters
+            assertEquals(2, outbox.pending(serverId).size)
+            offline = false
+            replayer.flush(server)
+            replayer.flush(server) // e.g. the periodic job right after the one-time one
+            assertEquals(listOf("wtr+ [7]", "rate 5.0"), calls)
+        }
+
+    @Test
     fun readTargetsRoundTripThroughTheirKeys() {
         val targets = listOf(ReadTarget.Series(7), ReadTarget.Volume(7, 5), ReadTarget.Chapter(7, 10))
         assertEquals(targets, targets.map { ReadTarget.parse(it.key, 7) })
