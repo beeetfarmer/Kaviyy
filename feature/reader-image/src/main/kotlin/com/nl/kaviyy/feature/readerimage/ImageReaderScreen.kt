@@ -103,7 +103,14 @@ fun ImageReaderScreen(
         if (chapter?.isImage == true) Prefetch(state)
         ReaderWindowEffects(state.settings.keepScreenOn, state.settings.brightness, immersive = !state.chromeVisible)
         if (state.chromeVisible) ReaderChrome(state, actions)
-        if (state.settingsOpen) ReaderSettingsSheet(state.settings, actions)
+        if (state.settingsOpen) {
+            ReaderSettingsSheet(
+                state.settings,
+                actions,
+                webtoon =
+                    state.layout == ReaderLayout.Webtoon,
+            )
+        }
     }
 }
 

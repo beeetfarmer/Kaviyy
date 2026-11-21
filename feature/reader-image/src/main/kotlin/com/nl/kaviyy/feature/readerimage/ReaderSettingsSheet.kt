@@ -40,6 +40,8 @@ internal fun ReaderSettings.backgroundColor(): Color =
 internal fun ReaderSettingsSheet(
     settings: ReaderSettings,
     actions: ImageReaderActions,
+    /** Webtoon always fills the width and scrolls, so Fit and Swipe don't apply. */
+    webtoon: Boolean = false,
 ) = KavitaTheme(appearance = Appearance.Dark) {
     val close = { actions.onShowSettings(false) }
     val set = actions.onSettings
@@ -55,17 +57,19 @@ internal fun ReaderSettingsSheet(
                 ).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Label(R.string.reader_fit)
-            SegmentedControl(
-                listOf(
-                    R.string.reader_fit_auto,
-                    R.string.reader_fit_width,
-                    R.string.reader_fit_height,
-                    R.string.reader_fit_original,
-                ).map { stringResource(it) },
-                FITS.indexOf(settings.scaling).coerceAtLeast(0),
-                { set(settings.copy(scaling = FITS[it])) },
-            )
+            if (!webtoon) {
+                Label(R.string.reader_fit)
+                SegmentedControl(
+                    listOf(
+                        R.string.reader_fit_auto,
+                        R.string.reader_fit_width,
+                        R.string.reader_fit_height,
+                        R.string.reader_fit_original,
+                    ).map { stringResource(it) },
+                    FITS.indexOf(settings.scaling).coerceAtLeast(0),
+                    { set(settings.copy(scaling = FITS[it])) },
+                )
+            }
             Label(R.string.reader_background)
             SegmentedControl(
                 listOf(
@@ -77,9 +81,11 @@ internal fun ReaderSettingsSheet(
                 { set(settings.copy(background = BACKGROUNDS[it])) },
             )
             GroupedList {
-                GroupedSwitchRow(stringResource(R.string.reader_swipe), settings.swipeToTurn, {
-                    set(settings.copy(swipeToTurn = it))
-                }, divider = true)
+                if (!webtoon) {
+                    GroupedSwitchRow(stringResource(R.string.reader_swipe), settings.swipeToTurn, {
+                        set(settings.copy(swipeToTurn = it))
+                    }, divider = true)
+                }
                 GroupedSwitchRow(stringResource(R.string.reader_auto_close), settings.autoCloseMenu, {
                     set(settings.copy(autoCloseMenu = it))
                 })

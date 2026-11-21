@@ -75,7 +75,7 @@
     <string name="prefs_title">Reader Preferences</string>
     <string name="prefs_offline">Reader preferences are stored on your server. Connect to it to change them.</string>
     <string name="prefs_save_failed">That change didn\'t save. Check your connection and try again.</string>
-    <string name="prefs_images">Manga &amp; comics</string>
+    <string name="prefs_images">Manga, comics &amp; PDFs</string>
     <string name="prefs_books">Books</string>
     <string name="prefs_pdf">PDF</string>
     <string name="prefs_direction">Reading direction</string>
@@ -100,10 +100,10 @@
     <string name="prefs_emulate_book">Emulate book</string>
     <string name="prefs_scroll">Scroll</string>
     <string name="prefs_one_column">1 column</string>
-    <string name="prefs_two_columns">2 columns</string>
+    <string name="prefs_two_columns">Two columns in books</string>
     <string name="prefs_tap_to_turn">Tap to turn pages</string>
-    <string name="prefs_pdf_theme">Theme</string>
-    <string name="prefs_pdf_scroll">Scroll</string>
+    <string name="prefs_pdf_theme">PDF theme</string>
+    <string name="prefs_pdf_scroll">PDF scrolling</string>
     <string name="you_settings_servers">Servers</string>
     <string name="you_settings_devices">Send to Device</string>
     <string name="devices_title">Send to Device</string>
@@ -264,4 +264,11 @@
     <string name="home_sort_az">A–Z</string>
     <string name="home_sort_za">Z–A</string>
     <string name="home_sort_largest">Largest</string>
+    <string name="prefs_page_layout">Page layout</string>
+    <string name="prefs_webtoon_note">Webtoon scrolls down continuously at full width, so reading direction, page layout and fit don\'t apply.</string>
+    <string name="prefs_images_note">Saved to your account as the default; a series can still override it from the reader.</string>
+    <string name="prefs_books_note">Page direction comes from each book. Font, size, spacing and theme are set inside the reader.</string>
+    <string name="prefs_web_only">Kavita web reader only</string>
+    <string name="prefs_web_only_note">Also saved to your account, but only Kavita\'s web reader uses these.</string>
+    <string name="prefs_book_direction">Book reading direction</string>
 </resources>

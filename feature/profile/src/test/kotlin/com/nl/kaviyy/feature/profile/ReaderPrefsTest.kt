@@ -1,6 +1,7 @@
 package com.nl.kaviyy.feature.profile
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -149,9 +150,34 @@ class ReaderPrefsTest {
     }
 
     @Test
+    fun webtoonHidesWhatDoesNotApplyAndUpDownCountsAsPaged() {
+        var s = ReadingProfileDto(readerMode = 2, bookReaderLayoutMode = 2)
+        compose.setContent { KavitaTheme { ReaderPrefsScreen(ReaderPrefsUiState(s), {}, { s = it(s) }) } }
+        compose.onNodeWithText("Reading direction").assertDoesNotExist()
+        compose.onNodeWithText("Page layout").assertDoesNotExist()
+        compose.onNodeWithText("Swipe to turn pages").assertDoesNotExist()
+        compose.onNodeWithText("Close menu automatically").assertExists()
+        compose.onAllNodesWithText("Paged")[0].performClick()
+        assertEquals(0, s.readerMode)
+        // Paged books keep the web's two columns.
+        assertEquals(2, s.bookReaderLayoutMode)
+    }
+
+    @Test
+    fun upDownFromTheWebShowsAsPagedWithItsOptions() {
+        compose.setContent {
+            KavitaTheme { ReaderPrefsScreen(ReaderPrefsUiState(ReadingProfileDto(readerMode = 1)), {}, {}) }
+        }
+        compose.onNodeWithText("Reading direction").assertExists()
+        compose.onNodeWithText("Vertical").assertExists() // only as a PDF option in the web-only section
+    }
+
+    @Test
+    @Config(qualifiers = "w412dp-h1900dp-xhdpi") // the whole page
     fun screenshotReaderPrefsLight() = shot("reader_prefs_light", Appearance.Light)
 
     @Test
+    @Config(qualifiers = "w412dp-h1900dp-xhdpi") // the whole page
     fun screenshotReaderPrefsDark() = shot("reader_prefs_dark", Appearance.Dark)
 
     private fun shot(
