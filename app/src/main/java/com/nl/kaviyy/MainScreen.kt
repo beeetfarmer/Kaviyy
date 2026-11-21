@@ -3,6 +3,7 @@ package com.nl.kaviyy
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -25,10 +27,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.nl.kaviyy.core.data.FilterScope
 import com.nl.kaviyy.core.designsystem.component.FloatingTabBar
+import com.nl.kaviyy.core.designsystem.component.FloatingTabRail
 import com.nl.kaviyy.core.designsystem.component.LargeTitleHeader
 import com.nl.kaviyy.core.designsystem.component.PrimaryButton
 import com.nl.kaviyy.core.designsystem.component.SecondaryButton
 import com.nl.kaviyy.core.designsystem.component.TabItem
+import com.nl.kaviyy.core.designsystem.component.TabRailWidth
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaSpacing
@@ -189,8 +193,20 @@ internal fun MainScreen(
     val nav = rememberNavController()
     val openSeries: (Int) -> Unit = { nav.navigate(SeriesDestination(it)) }
     val browse: (BrowseTarget) -> Unit = { nav.navigate(BrowseDestination(it.field.name, it.id, it.name)) }
-    Box(Modifier.fillMaxSize().background(Kavita.colors.background)) {
-        NavHost(nav, startDestination = TabsDestination) {
+    val entry by nav.currentBackStackEntryAsState()
+    val fullScreen =
+        entry?.destination?.let {
+            it.hasRoute<SearchRouteDestination>() || it.hasRoute<ReaderDestination>() ||
+                it.hasRoute<EpubDestination>()
+        } ==
+            true
+    BoxWithConstraints(Modifier.fillMaxSize().background(Kavita.colors.background)) {
+        val rail = maxWidth >= RAIL_MIN_WIDTH
+        NavHost(
+            nav,
+            startDestination = TabsDestination,
+            modifier = Modifier.padding(start = if (rail && !fullScreen) TabRailWidth else 0.dp),
+        ) {
             composable<TabsDestination> {
                 TabContent(
                     Tab.entries[selected],
@@ -322,25 +338,16 @@ internal fun MainScreen(
                 FilterSheet(id.takeIf { it != NO_LIBRARY }, onDismiss = { filterFor = null })
             }
         }
-        val entry by nav.currentBackStackEntryAsState()
-        val fullScreen =
-            entry?.destination?.let {
-                it.hasRoute<SearchRouteDestination>() || it.hasRoute<ReaderDestination>() ||
-                    it.hasRoute<EpubDestination>()
-            } ==
-                true
-        if (!fullScreen) {
-            FloatingTabBar(
-                items = tabs,
-                selectedIndex = selected,
-                onSelect = {
-                    selected = it
-                    nav.popBackStack(TabsDestination, inclusive = false)
-                },
-                searchLabel = stringResource(R.string.tab_search),
-                onSearch = { nav.navigate(SearchRouteDestination) { launchSingleTop = true } },
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
+        val onTab: (Int) -> Unit = {
+            selected = it
+            nav.popBackStack(TabsDestination, inclusive = false)
+        }
+        val onSearch = { nav.navigate(SearchRouteDestination) { launchSingleTop = true } }
+        val searchLabel = stringResource(R.string.tab_search)
+        when {
+            fullScreen -> Unit
+            rail -> FloatingTabRail(tabs, selected, onTab, searchLabel, onSearch, Modifier.align(Alignment.CenterStart))
+            else -> FloatingTabBar(tabs, selected, onTab, searchLabel, onSearch, Modifier.align(Alignment.BottomCenter))
         }
     }
 }
@@ -426,3 +433,6 @@ private fun TabContent(
         }
     }
 }
+
+/** [derived] DESIGN.md tablet: the tab bar becomes a left rail from 840dp. */
+private val RAIL_MIN_WIDTH = 840.dp

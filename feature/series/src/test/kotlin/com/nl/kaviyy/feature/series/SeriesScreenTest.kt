@@ -262,6 +262,16 @@ class SeriesScreenTest {
     fun screenshotDark() = shot("series_dark") { SeriesPreview(Appearance.Dark) }
 
     @Test
+    @Config(qualifiers = "w960dp-h600dp-mdpi")
+    fun screenshotTabletLight() =
+        shot("series_tablet_light") { SeriesPreview(Appearance.Light, previewSeries.copy(tab = SeriesTab.Chapters)) }
+
+    @Test
+    @Config(qualifiers = "w960dp-h600dp-mdpi")
+    fun screenshotTabletDark() =
+        shot("series_tablet_dark") { SeriesPreview(Appearance.Dark, previewSeries.copy(tab = SeriesTab.Chapters)) }
+
+    @Test
     @Config(qualifiers = "w412dp-h1400dp-xhdpi")
     fun screenshotOfflineLight() =
         shot("series_offline_light") { SeriesPreview(Appearance.Light, previewOfflineChapters) }

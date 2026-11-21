@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,7 +54,21 @@ import com.nl.kaviyy.core.network.seriesCoverUrl
 /** More than this many libraries: the segmented control scrolls (DESIGN.md §7 screen 03). */
 private const val MAX_FIXED_SEGMENTS = 4
 private const val SKELETON_COUNT = 9
-private const val GRID_COLUMNS = 3
+
+/** DESIGN.md: 3 columns on phones; [derived] 5 from 600dp and 6 from 840dp (tablets, unfolded foldables). */
+internal fun gridColumns(widthDp: Int): Int =
+    when {
+        widthDp >= EXPANDED_DP -> EXPANDED_COLUMNS
+        widthDp >= MEDIUM_DP -> MEDIUM_COLUMNS
+        else -> PHONE_COLUMNS
+    }
+
+private const val PHONE_COLUMNS = 3
+private const val MEDIUM_COLUMNS = 5
+private const val EXPANDED_COLUMNS = 6
+
+private const val MEDIUM_DP = 600
+private const val EXPANDED_DP = 840
 
 @Composable
 fun LibraryRoute(
@@ -108,7 +123,7 @@ fun LibraryScreen(
 ) {
     val coverUrl: (Int) -> String? = { id -> state.server?.seriesCoverUrl(id) }
     LazyVerticalGrid(
-        columns = GridCells.Fixed(if (state.grid) GRID_COLUMNS else 1),
+        columns = GridCells.Fixed(if (state.grid) gridColumns(LocalConfiguration.current.screenWidthDp) else 1),
         modifier = modifier.fillMaxSize().background(Kavita.colors.background).statusBarsPadding(),
         contentPadding =
             PaddingValues(

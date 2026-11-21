@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.BasicText
@@ -50,13 +52,7 @@ fun FloatingTabBar(
     modifier: Modifier = Modifier,
 ) {
     val colors = Kavita.colors
-    val ring = if (colors.isDark) colors.hairline else Color.Black.copy(alpha = 0.10f)
-    val glass =
-        Modifier
-            .cssShadow(KavitaShapes.pill, 10.dp, 30.dp, colors.tabBarShadow.alpha)
-            .clip(KavitaShapes.pill)
-            .background(colors.tabBar)
-            .border(0.5.dp, ring, KavitaShapes.pill)
+    val glass = glass()
     Row(
         modifier =
             modifier
@@ -82,47 +78,103 @@ fun FloatingTabBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             items.forEachIndexed { index, item ->
-                val selected = index == selectedIndex
-                val bg by animateColorAsState(
-                    if (selected) colors.accentContainer else Color.Transparent,
-                    tween(TAB_ANIM_MS),
-                    label = "tab",
-                )
-                val fg = if (selected) colors.accent else colors.tabInactive
-                Column(
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .height(56.dp)
-                            .clip(KavitaShapes.pill)
-                            .background(bg)
-                            .selectable(selected = selected, role = Role.Tab) { onSelect(index) },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
-                ) {
-                    Icon(if (selected) item.selectedIcon else item.icon, null, Modifier.size(24.dp), tint = fg)
-                    // Five tabs leave ~53–61dp per label: shrink (11 → 9sp) rather than truncate "Downloads".
-                    BasicText(
-                        item.label,
-                        style = Kavita.type.tabLabel,
-                        color = { fg },
-                        maxLines = 1,
-                        autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = 11.sp, stepSize = 0.5.sp),
-                    )
-                }
+                TabCell(item, index == selectedIndex, { onSelect(index) }, Modifier.weight(1f).height(56.dp))
             }
         }
-        Box(
-            modifier =
-                Modifier
-                    .size(KavitaSpacing.tabBarHeight)
-                    .then(glass)
-                    .clickable(role = Role.Button, onClick = onSearch),
-            contentAlignment = Alignment.Center,
+        SearchButton(searchLabel, onSearch, glass)
+    }
+}
+
+/** [derived] DESIGN.md §tablet: from 840dp the tab bar becomes a floating rail on the left, Search on top. */
+@Composable
+fun FloatingTabRail(
+    items: List<TabItem>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    searchLabel: String,
+    onSearch: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val glass = glass()
+    Column(
+        modifier.systemBarsPadding().padding(start = KavitaSpacing.tabBarSideInset),
+        verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
+    ) {
+        SearchButton(searchLabel, onSearch, glass)
+        Column(
+            Modifier
+                .width(KavitaSpacing.tabBarHeight)
+                .then(glass)
+                .padding(4.dp)
+                .selectableGroup(),
         ) {
-            Icon(KavitaIcons.Search, searchLabel, Modifier.size(24.dp), tint = colors.tabInactive)
+            items.forEachIndexed { index, item ->
+                TabCell(item, index == selectedIndex, { onSelect(index) }, Modifier.fillMaxWidth().height(64.dp))
+            }
         }
     }
+}
+
+/** Width the rail takes from the content, inset included. */
+val TabRailWidth = KavitaSpacing.tabBarHeight + KavitaSpacing.tabBarSideInset * 2
+
+@Composable
+private fun glass(): Modifier {
+    val colors = Kavita.colors
+    val ring = if (colors.isDark) colors.hairline else Color.Black.copy(alpha = 0.10f)
+    return Modifier
+        .cssShadow(KavitaShapes.pill, 10.dp, 30.dp, colors.tabBarShadow.alpha)
+        .clip(KavitaShapes.pill)
+        .background(colors.tabBar)
+        .border(0.5.dp, ring, KavitaShapes.pill)
+}
+
+@Composable
+private fun TabCell(
+    item: TabItem,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
+    val colors = Kavita.colors
+    val bg by animateColorAsState(
+        if (selected) colors.accentContainer else Color.Transparent,
+        tween(TAB_ANIM_MS),
+        label = "tab",
+    )
+    val fg = if (selected) colors.accent else colors.tabInactive
+    Column(
+        modifier =
+            modifier
+                .clip(
+                    KavitaShapes.pill,
+                ).background(bg)
+                .selectable(selected = selected, role = Role.Tab, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
+    ) {
+        Icon(if (selected) item.selectedIcon else item.icon, null, Modifier.size(24.dp), tint = fg)
+        // Five tabs leave ~53–61dp per label: shrink (11 → 9sp) rather than truncate "Downloads".
+        BasicText(
+            item.label,
+            style = Kavita.type.tabLabel,
+            color = { fg },
+            maxLines = 1,
+            autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = 11.sp, stepSize = 0.5.sp),
+        )
+    }
+}
+
+@Composable
+private fun SearchButton(
+    label: String,
+    onClick: () -> Unit,
+    glass: Modifier,
+) = Box(
+    modifier = Modifier.size(KavitaSpacing.tabBarHeight).then(glass).clickable(role = Role.Button, onClick = onClick),
+    contentAlignment = Alignment.Center,
+) {
+    Icon(KavitaIcons.Search, label, Modifier.size(24.dp), tint = Kavita.colors.tabInactive)
 }
 
 data class TabItem(

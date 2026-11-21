@@ -106,6 +106,15 @@ class LibraryScreenTest {
     fun screenshotDark() = shot("library_dark") { LibraryPreview(Appearance.Dark) }
 
     @Test
+    fun gridWidensOnTablets() {
+        assertEquals(listOf(3, 3, 5, 5, 6), listOf(360, 599, 600, 839, 840).map(::gridColumns))
+    }
+
+    @Test
+    @Config(qualifiers = "w960dp-h600dp-mdpi")
+    fun screenshotTablet() = shot("library_tablet_light") { LibraryPreview(Appearance.Light) }
+
+    @Test
     fun screenshotList() = shot("library_list_light") { LibraryPreview(Appearance.Light, grid = false) }
 
     /** Through the compose rule so paging has delivered before the capture. */

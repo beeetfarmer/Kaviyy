@@ -135,6 +135,18 @@ class ImageReaderScreenTest {
     fun screenshotDouble() = shot("reader_double") { ReaderPreview(previewReader.copy(layout = ReaderLayout.Double)) }
 
     @Test
+    @Config(qualifiers = "w915dp-h412dp-xhdpi")
+    fun screenshotLandscapeDouble() =
+        shot("reader_landscape_double") { ReaderPreview(previewReader.copy(layout = ReaderLayout.Double)) }
+
+    @Test
+    @Config(qualifiers = "w915dp-h412dp-xhdpi")
+    fun screenshotLandscapeChrome() =
+        shot("reader_landscape_chrome") {
+            ReaderPreview(previewReader.copy(chromeVisible = true))
+        }
+
+    @Test
     fun screenshotWebtoon() =
         shot("reader_webtoon") { ReaderPreview(previewReader.copy(layout = ReaderLayout.Webtoon)) }
 

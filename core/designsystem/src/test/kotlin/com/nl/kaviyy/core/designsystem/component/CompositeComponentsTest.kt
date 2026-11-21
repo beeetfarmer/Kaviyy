@@ -117,6 +117,27 @@ class CompositeComponentsTest {
     }
 
     @Test
+    fun tabRailSelectsTabsAndOpensSearch() {
+        var selected = -1
+        var searched = false
+        compose.setContent {
+            KavitaTheme {
+                FloatingTabRail(
+                    items = listOf(TabItem("Home", KavitaIcons.Home), TabItem("Library", KavitaIcons.Library)),
+                    selectedIndex = 0,
+                    onSelect = { selected = it },
+                    searchLabel = "Search",
+                    onSearch = { searched = true },
+                )
+            }
+        }
+        compose.onNodeWithText("Home").assertIsSelected()
+        compose.onNodeWithText("Library").performClick()
+        compose.onNodeWithContentDescription("Search").performClick()
+        assertEquals(1 to true, selected to searched)
+    }
+
+    @Test
     fun sheetHeaderButtonsWork() {
         var cancelled = false
         var applied = false

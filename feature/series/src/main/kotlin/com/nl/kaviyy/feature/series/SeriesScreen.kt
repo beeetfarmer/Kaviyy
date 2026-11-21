@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -160,15 +161,25 @@ fun SeriesScreen(
 ) {
     val series = state.detail?.series
     val heroColor = series?.heroColor() ?: Kavita.colors.fillSegmented
-    Box(modifier.fillMaxSize().background(Kavita.colors.background)) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            Box {
-                Box(Modifier.fillMaxWidth().height(HERO_HEIGHT).background(heroColor))
-                if (series != null) {
-                    Body(series, state, actions, Modifier.padding(top = COVER_TOP))
-                }
+    BoxWithConstraints(modifier.fillMaxSize().background(Kavita.colors.background)) {
+        if (series != null && maxWidth >= TWO_PANE_MIN_WIDTH) {
+            TwoPane(
+                heroColor,
+                HERO_HEIGHT,
+                { Body(series, state, actions, Modifier.padding(top = COVER_TOP), lists = false) },
+            ) {
+                SeriesLists(state, actions)
             }
-            if (series == null) Placeholder(state, actions.onRetry)
+        } else {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                Box {
+                    Box(Modifier.fillMaxWidth().height(HERO_HEIGHT).background(heroColor))
+                    if (series != null) {
+                        Body(series, state, actions, Modifier.padding(top = COVER_TOP))
+                    }
+                }
+                if (series == null) Placeholder(state, actions.onRetry)
+            }
         }
         TopBar(series, state, actions)
         val detail = state.detail
@@ -238,6 +249,7 @@ private fun Body(
     state: SeriesUiState,
     actions: SeriesActions,
     modifier: Modifier = Modifier,
+    lists: Boolean = true,
 ) {
     val meta = state.detail?.metadata
     Column(
@@ -309,20 +321,7 @@ private fun Body(
         }
         Summary(plainSummary(meta?.summary))
         meta?.let { Credits(it, actions.onBrowse) }
-        state.detail?.let {
-            SeriesTabs(
-                it,
-                state.server,
-                state.tab,
-                state.related,
-                actions,
-                state.downloads.associate { d ->
-                    d.chapterId to
-                        d.downloadState
-                },
-                dimmed = { c -> !state.canRead(c) },
-            )
-        }
+        if (lists) SeriesLists(state, actions)
     }
 }
 
