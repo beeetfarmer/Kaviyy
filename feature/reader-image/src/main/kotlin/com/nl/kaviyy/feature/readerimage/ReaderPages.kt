@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import com.nl.kaviyy.core.data.ReaderChapter
 import com.nl.kaviyy.core.designsystem.component.LocalCoverImageLoader
@@ -150,7 +151,15 @@ internal fun Prefetch(state: ImageReaderUiState) {
     val targets = state.prefetch()
     LaunchedEffect(targets) {
         targets.forEach { (chapter, page) ->
-            loader.enqueue(ImageRequest.Builder(context).data(server.pageUrl(chapter, page)).build())
+            // Disk only: a prefetch would otherwise decode full-size pages into memory ahead of need.
+            // ponytail: the next page decodes from disk (~tens of ms); hold it in memory if turns feel slow.
+            loader.enqueue(
+                ImageRequest
+                    .Builder(context)
+                    .data(server.pageUrl(chapter, page))
+                    .memoryCachePolicy(CachePolicy.DISABLED)
+                    .build(),
+            )
         }
     }
 }

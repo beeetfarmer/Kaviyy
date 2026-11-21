@@ -1,0 +1,7 @@
+# Hand-written baseline profile (no device to record one with Macrobenchmark yet).
+# AGP compiles this into the APK; androidx.profileinstaller (pulled in by Compose) installs it on first launch,
+# so cold start and first scroll run AOT-compiled instead of interpreted. Compose/AndroidX ship their own profiles.
+# ponytail: whole-app wildcard; replace with a recorded profile (baselineprofile plugin + macrobenchmark) when a
+# device or Gradle-managed emulator is available in CI.
+HSPLcom/nl/kaviyy/**->**(**)**
+Lcom/nl/kaviyy/**;

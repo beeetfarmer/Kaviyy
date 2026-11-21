@@ -1,5 +1,6 @@
 package com.nl.kaviyy.core.network
 
+import coil3.asImage
 import coil3.request.ImageRequest
 import com.nl.kaviyy.core.model.auth.Credentials
 import com.nl.kaviyy.core.model.server.Server
@@ -37,6 +38,32 @@ class ServerImageLoadersTest {
         assertEquals("https://k.lan/x?a=1", credentialFreeKey("https://k.lan/x?APIKEY=s&a=1&token=t"))
         assertNull(credentialFreeKey("https://k.lan/api/Image/series-cover?seriesId=4"))
         assertNull(credentialFreeKey("not a url"))
+    }
+
+    @Test
+    fun everyServerSharesOneMemoryCacheThatSignOutClears() {
+        val context = RuntimeEnvironment.getApplication()
+
+        fun loader(id: Long) =
+            ServerImageLoaders.create(
+                context,
+                Server(ServerId(id), "S$id", (ServerUrl.parse("https://s$id.lan") as ServerUrlResult.Valid).url),
+                okhttp3.OkHttpClient(),
+            )
+        val a = loader(1)
+        val b = loader(2)
+        val memory = a.memoryCache
+        assertTrue(memory != null && memory === b.memoryCache) // not one heap share per server
+        memory.set(
+            coil3.memory.MemoryCache.Key("k"),
+            coil3.memory.MemoryCache.Value(
+                android.graphics.Bitmap
+                    .createBitmap(4, 4, android.graphics.Bitmap.Config.ARGB_8888)
+                    .asImage(),
+            ),
+        )
+        ServerImageLoaders.clearMemory()
+        assertEquals(0L, memory.size)
     }
 
     @Test

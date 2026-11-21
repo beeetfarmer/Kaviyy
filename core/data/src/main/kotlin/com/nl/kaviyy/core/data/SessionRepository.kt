@@ -101,6 +101,7 @@ class SessionRepository
             // Per-server data isolation: everything cached for a server lives under its id (paths from ids only).
             withContext(io) {
                 server?.let { ServerImageLoaders.cacheDir(context, it).deleteRecursively() }
+                ServerImageLoaders.clearMemory() // shared by all servers: drop it whole rather than leave this one's
                 File(context.cacheDir, "books/${serverId.value}").deleteRecursively()
                 File(context.filesDir, "downloads/${serverId.value}").deleteRecursively()
             }
@@ -114,6 +115,7 @@ class SessionRepository
                 db.clearAllTables()
                 // Everything this app writes outside Room and DataStore: covers, cached books, downloads, reader prefs.
                 File(context.cacheDir, "images").deleteRecursively()
+                ServerImageLoaders.clearMemory()
                 File(context.cacheDir, "books").deleteRecursively()
                 File(context.filesDir, "downloads").deleteRecursively()
                 context.deleteSharedPreferences(SharedPrefsReaderDisplayRepository.FILE)

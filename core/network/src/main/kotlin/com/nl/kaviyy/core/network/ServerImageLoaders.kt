@@ -4,6 +4,7 @@ import android.content.Context
 import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.intercept.Interceptor
+import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.ImageResult
 import com.nl.kaviyy.core.model.server.Server
@@ -55,6 +56,24 @@ internal object CredentialFreeCacheKeys : Interceptor {
  * The `apiKey` image parameter is added on the wire by AuthInterceptor, so request data and cache keys stay clean.
  */
 object ServerImageLoaders {
+    // One memory cache for every server's loader: a loader per signed-in server must not each take Coil's
+    // default share of the heap. Keys are credential-free URLs, so servers can't collide unless they are the same host.
+    @Volatile private var memory: MemoryCache? = null
+
+    /** On server removal or local-data wipe: decoded images must not outlive the account. */
+    fun clearMemory() {
+        memory?.clear()
+    }
+
+    internal fun sharedMemoryCache(context: Context): MemoryCache =
+        memory ?: synchronized(this) {
+            memory ?: MemoryCache
+                .Builder()
+                .maxSizePercent(context, MEMORY_CACHE_PERCENT)
+                .build()
+                .also { memory = it }
+        }
+
     fun cacheDir(
         context: Context,
         server: Server,
@@ -70,7 +89,8 @@ object ServerImageLoaders {
             .components {
                 add(CredentialFreeCacheKeys)
                 add(OkHttpNetworkFetcherFactory(callFactory = { client }))
-            }.diskCache {
+            }.memoryCache { sharedMemoryCache(context) }
+            .diskCache {
                 DiskCache
                     .Builder()
                     .directory(cacheDir(context, server).toOkioPath())
@@ -78,6 +98,8 @@ object ServerImageLoaders {
                     .build()
             }.build()
 }
+
+private const val MEMORY_CACHE_PERCENT = 0.25
 
 /** Cover URLs (api/openapi.json, Image endpoints). `apiKey` is added on the wire by [AuthInterceptor], never here. */
 fun Server.seriesCoverUrl(seriesId: Int): String = url.resolve("api/Image/series-cover?seriesId=$seriesId")
