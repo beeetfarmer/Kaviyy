@@ -34,6 +34,10 @@ data class AppSettings(
     @ProtoNumber(5) val lockAfterMinutes: Int = 1,
     /** Blank the Recents thumbnail (and, before Android 13, block screenshots). */
     @ProtoNumber(6) val hideInRecents: Boolean = false,
+    /** Downloads wait for an unmetered network. */
+    @ProtoNumber(7) val downloadWifiOnly: Boolean = true,
+    /** Total downloads cap in MB; 0 = no limit. */
+    @ProtoNumber(8) val storageLimitMb: Int = 0,
 ) {
     companion object {
         const val DEFAULT_ACCENT = "KavitaGreen"

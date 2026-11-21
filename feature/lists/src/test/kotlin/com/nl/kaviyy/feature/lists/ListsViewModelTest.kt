@@ -25,6 +25,8 @@ import com.nl.kaviyy.core.database.ReadingListEntity
 import com.nl.kaviyy.core.database.ReadingListItemEntity
 import com.nl.kaviyy.core.database.ReadingListRow
 import com.nl.kaviyy.core.database.SeriesEntity
+import com.nl.kaviyy.core.download.DownloadQueue
+import com.nl.kaviyy.core.download.EnqueueResult
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
@@ -300,11 +302,47 @@ class ListsViewModelTest {
             }
         }
 
+    private val queued = mutableListOf<List<Int>>()
+    private val downloads =
+        DownloadQueue { _, chapters ->
+            queued += chapters.map { it.chapterId }
+            EnqueueResult.Queued
+        }
+
+    @Test
+    fun downloadingAReadingListQueuesEveryItem() =
+        runTest {
+            val vm =
+                ReadingListViewModel(
+                    session,
+                    readingLists,
+                    downloads,
+                    SavedStateHandle(
+                        mapOf(READING_LIST_ID_ARG to 3),
+                    ),
+                )
+            vm.state.test {
+                runCurrent()
+                vm.download()
+                runCurrent()
+                assertEquals(listOf(listOf(100, 101)), queued)
+                assertEquals(EnqueueResult.Queued, expectMostRecentItem().download)
+            }
+        }
+
     @Test
     fun aReadingListShowsItsItemsAndKeepsThemWhenRefreshFails() =
         runTest {
             itemsResult = AppResult.Failure(AppError.Network)
-            val vm = ReadingListViewModel(session, readingLists, SavedStateHandle(mapOf(READING_LIST_ID_ARG to 3)))
+            val vm =
+                ReadingListViewModel(
+                    session,
+                    readingLists,
+                    downloads,
+                    SavedStateHandle(
+                        mapOf(READING_LIST_ID_ARG to 3),
+                    ),
+                )
             vm.state.test {
                 runCurrent()
                 val st = expectMostRecentItem()
@@ -318,7 +356,15 @@ class ListsViewModelTest {
     @Test
     fun theOwnerArrangesRenamesAndDeletesAReadingList() =
         runTest {
-            val vm = ReadingListViewModel(session, readingLists, SavedStateHandle(mapOf(READING_LIST_ID_ARG to 3)))
+            val vm =
+                ReadingListViewModel(
+                    session,
+                    readingLists,
+                    downloads,
+                    SavedStateHandle(
+                        mapOf(READING_LIST_ID_ARG to 3),
+                    ),
+                )
             vm.state.test {
                 runCurrent()
                 assertEquals(true, expectMostRecentItem().editable)

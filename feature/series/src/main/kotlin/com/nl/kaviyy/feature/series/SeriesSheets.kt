@@ -125,6 +125,12 @@ internal fun SeriesDetailSheet(
                         GroupedRow(
                             stringResource(R.string.series_send_series_to_device),
                             onClick = { actions.onSendToDevice(SendTarget.Series(series.id)) },
+                            divider = true,
+                        )
+                        GroupedRow(
+                            stringResource(R.string.series_download_series),
+                            onClick = { actions.onDownload(detail.chapters.map { it.id }) },
+                            showChevron = false,
                         )
                     }
                     if (server?.isAdmin == true) AdminSection(actions.admin)
@@ -239,7 +245,16 @@ private fun MarkRow(
         showChevron = false,
         divider = true,
     )
-    GroupedRow(stringResource(R.string.series_send_to_device), onClick = { actions.onSendToDevice(send) })
+    GroupedRow(
+        stringResource(R.string.series_send_to_device),
+        onClick = { actions.onSendToDevice(send) },
+        divider = true,
+    )
+    GroupedRow(
+        stringResource(R.string.series_download),
+        onClick = { actions.onDownload((send as? SendTarget.Chapters)?.ids.orEmpty()) },
+        showChevron = false,
+    )
 }
 
 /** Text drafts owned by the ViewModel, edited inside sheets. */

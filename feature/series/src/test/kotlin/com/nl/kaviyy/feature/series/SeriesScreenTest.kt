@@ -221,7 +221,7 @@ class SeriesScreenTest {
         compose.setContent {
             KavitaTheme(appearance = Appearance.Light) {
                 SeriesScreen(
-                    previewSeries.copy(sheet = SeriesSheet.EditSummary, adminNotice = AdminNotice.Failed),
+                    previewSeries.copy(sheet = SeriesSheet.EditSummary, notice = SeriesNotice.Failed),
                     SeriesActions(admin = AdminActions(onSaveSummary = { saved++ })),
                 )
             }

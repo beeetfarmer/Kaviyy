@@ -25,6 +25,10 @@ interface DownloadDao {
     @Query("SELECT * FROM downloads WHERE state = :state")
     suspend fun inState(state: String): List<DownloadEntity>
 
+    /** Bytes on disk (or written so far) across every server, for the storage limit. */
+    @Query("SELECT COALESCE(SUM(bytesDone), 0) FROM downloads")
+    suspend fun totalBytes(): Long
+
     @Upsert
     suspend fun upsert(download: DownloadEntity)
 

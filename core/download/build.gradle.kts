@@ -4,6 +4,11 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+android {
+    // WorkManager reads its own resources when initialized in Robolectric tests.
+    testOptions.unitTests.isIncludeAndroidResources = true
+}
+
 dependencies {
     api(projects.core.data)
     api(libs.androidx.work.runtime)

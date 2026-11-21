@@ -24,6 +24,8 @@ import com.nl.kaviyy.core.data.SeriesReviews
 import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.database.SeriesEntity
+import com.nl.kaviyy.core.download.DownloadQueue
+import com.nl.kaviyy.core.download.EnqueueResult
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
@@ -105,6 +107,13 @@ class SeriesViewModelTest {
             }
         }
     private val adminCalls = mutableListOf<String>()
+    private val queued = mutableListOf<List<Int>>()
+    private var enqueueResult = EnqueueResult.Queued
+    private val downloads =
+        DownloadQueue { _, chapters ->
+            queued += chapters.map { it.chapterId }
+            enqueueResult
+        }
     private var adminResult: AppResult<Unit> = AppResult.Success(Unit)
     private val admin =
         object : AdminRepository {
@@ -219,7 +228,17 @@ class SeriesViewModelTest {
     fun showsCachedDetailWithLibraryAndContinuePointAndRefreshes() =
         runTest {
             val vm =
-                SeriesViewModel(session, repo, readState, reviews, admin, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+                SeriesViewModel(
+                    session,
+                    repo,
+                    readState,
+                    reviews,
+                    admin,
+                    downloads,
+                    SavedStateHandle(
+                        mapOf(SERIES_ID_ARG to 7),
+                    ),
+                )
             vm.state.test {
                 runCurrent()
                 assertEquals(listOf(7), refreshed)
@@ -244,7 +263,17 @@ class SeriesViewModelTest {
         runTest {
             refreshResult = AppResult.Failure(AppError.Network)
             val vm =
-                SeriesViewModel(session, repo, readState, reviews, admin, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+                SeriesViewModel(
+                    session,
+                    repo,
+                    readState,
+                    reviews,
+                    admin,
+                    downloads,
+                    SavedStateHandle(
+                        mapOf(SERIES_ID_ARG to 7),
+                    ),
+                )
             vm.state.test {
                 runCurrent()
                 assertEquals(AppError.Network, expectMostRecentItem().error)
@@ -260,7 +289,17 @@ class SeriesViewModelTest {
     fun relatedLoadsOnFirstOpenRetriesAfterFailureAndSheetsOpen() =
         runTest {
             val vm =
-                SeriesViewModel(session, repo, readState, reviews, admin, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+                SeriesViewModel(
+                    session,
+                    repo,
+                    readState,
+                    reviews,
+                    admin,
+                    downloads,
+                    SavedStateHandle(
+                        mapOf(SERIES_ID_ARG to 7),
+                    ),
+                )
             vm.state.test {
                 runCurrent()
                 vm.selectTab(SeriesTab.Related)
@@ -289,7 +328,17 @@ class SeriesViewModelTest {
     fun marksPushAndRefreshOrReportPendingSync() =
         runTest {
             val vm =
-                SeriesViewModel(session, repo, readState, reviews, admin, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+                SeriesViewModel(
+                    session,
+                    repo,
+                    readState,
+                    reviews,
+                    admin,
+                    downloads,
+                    SavedStateHandle(
+                        mapOf(SERIES_ID_ARG to 7),
+                    ),
+                )
             vm.state.test {
                 runCurrent()
                 detail.value = detail.value.copy(metadata = SeriesMetadata(wantToRead = true))
@@ -313,7 +362,17 @@ class SeriesViewModelTest {
     fun reviewsSheetLoadsPrefillsMyReviewAndSaves() =
         runTest {
             val vm =
-                SeriesViewModel(session, repo, readState, reviews, admin, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+                SeriesViewModel(
+                    session,
+                    repo,
+                    readState,
+                    reviews,
+                    admin,
+                    downloads,
+                    SavedStateHandle(
+                        mapOf(SERIES_ID_ARG to 7),
+                    ),
+                )
             vm.state.test {
                 runCurrent()
                 vm.showSheet(SeriesSheet.Reviews)
@@ -367,7 +426,17 @@ class SeriesViewModelTest {
     fun adminActionsRunAndReportTheirOutcome() =
         runTest {
             val vm =
-                SeriesViewModel(session, repo, readState, reviews, admin, SavedStateHandle(mapOf(SERIES_ID_ARG to 7)))
+                SeriesViewModel(
+                    session,
+                    repo,
+                    readState,
+                    reviews,
+                    admin,
+                    downloads,
+                    SavedStateHandle(
+                        mapOf(SERIES_ID_ARG to 7),
+                    ),
+                )
             vm.state.test {
                 runCurrent()
                 detail.value =
@@ -386,16 +455,50 @@ class SeriesViewModelTest {
                 runCurrent()
                 var st = expectMostRecentItem()
                 assertEquals(null, st.sheet)
-                assertEquals(AdminNotice.Saved, st.adminNotice)
+                assertEquals(SeriesNotice.Saved, st.notice)
                 assertEquals(listOf(7, 7), refreshed) // init + after the save
                 adminResult = AppResult.Failure(AppError.Forbidden)
                 vm.scan()
                 runCurrent()
                 st = expectMostRecentItem()
-                assertEquals(AdminNotice.Failed, st.adminNotice)
+                assertEquals(SeriesNotice.Failed, st.notice)
                 val lib = st.detail?.series?.libraryId
                 assertEquals(listOf("summary New", "scan $lib 7"), adminCalls)
                 cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun downloadQueuesCachedChaptersAndReportsTheOutcome() =
+        runTest {
+            val vm =
+                SeriesViewModel(
+                    session,
+                    repo,
+                    readState,
+                    reviews,
+                    admin,
+                    downloads,
+                    SavedStateHandle(
+                        mapOf(SERIES_ID_ARG to 7),
+                    ),
+                )
+            vm.state.test {
+                detail.value =
+                    SeriesDetail(
+                        SeriesEntity(1, 7, 3, "Ember Road", "ember road", format = 0, pages = 10, pagesRead = 2),
+                        emptyList(),
+                        listOf(ChapterEntity(1, 49, 5, 7, pages = 30, pagesRead = 4, format = 0)),
+                    )
+                runCurrent()
+                vm.download(listOf(49, 999)) // 999 isn't cached: skipped
+                runCurrent()
+                assertEquals(listOf(listOf(49)), queued)
+                assertEquals(SeriesNotice.DownloadQueued, expectMostRecentItem().notice)
+                enqueueResult = EnqueueResult.NoPermission
+                vm.download(listOf(49))
+                runCurrent()
+                assertEquals(SeriesNotice.NoDownloadRole, expectMostRecentItem().notice)
             }
         }
 }

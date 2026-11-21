@@ -77,6 +77,7 @@ data class SeriesActions(
     val onCollections: () -> Unit = {},
     val onReadingLists: () -> Unit = {},
     val onSendToDevice: (SendTarget) -> Unit = {},
+    val onDownload: (chapterIds: List<Int>) -> Unit = {},
     val onMark: (ReadTarget, read: Boolean) -> Unit = { _, _ -> },
     val onRate: (Float) -> Unit = {},
     val onSaveReview: () -> Unit = {},
@@ -122,6 +123,7 @@ fun SeriesRoute(
                 viewModel.showSheet(null)
                 sendTarget = it
             },
+            onDownload = viewModel::download,
             onMark = viewModel::setRead,
             onRate = viewModel::setRating,
             onSaveReview = viewModel::saveReview,
@@ -278,18 +280,11 @@ private fun Body(
         }
         Chips(series, state) { actions.onSheet(SeriesSheet.Reviews) }
         ActionRow(series, state, actions)
-        if (state.adminNotice != null) {
+        if (state.notice != null) {
             Text(
-                stringResource(adminNoticeText(state.adminNotice)),
+                stringResource(noticeText(state.notice)),
                 style = Kavita.type.footnote,
-                color =
-                    if (state.adminNotice ==
-                        AdminNotice.Failed
-                    ) {
-                        Kavita.colors.destructive
-                    } else {
-                        Kavita.colors.labelSecondary
-                    },
+                color = if (state.notice.isProblem) Kavita.colors.destructive else Kavita.colors.labelSecondary,
             )
         } else if (state.syncPending) {
             Text(

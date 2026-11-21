@@ -15,6 +15,9 @@ import com.nl.kaviyy.core.data.ReviewRepository
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.SeriesReviews
 import com.nl.kaviyy.core.database.ChapterEntity
+import com.nl.kaviyy.core.download.DownloadQueue
+import com.nl.kaviyy.core.download.EnqueueResult
+import com.nl.kaviyy.core.download.toDownload
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
@@ -50,7 +53,7 @@ data class SeriesUiState(
     val reviews: ReviewsState = ReviewsState.Loading,
     /** Saving the review failed (reviews are online only). */
     val reviewError: AppError? = null,
-    val adminNotice: AdminNotice? = null,
+    val notice: SeriesNotice? = null,
 ) {
     /** The server's continue point, when it's among the cached chapters. */
     val continueChapter: ChapterEntity?
@@ -77,8 +80,8 @@ sealed interface SeriesSheet {
     data object EditSummary : SeriesSheet
 }
 
-/** Result line for an admin action. */
-enum class AdminNotice { Started, Saved, Failed }
+/** One-line outcome shown under the actions (admin jobs, downloads). */
+enum class SeriesNotice { Started, Saved, Failed, DownloadQueued, AlreadyDownloaded, NoDownloadRole, StorageLimit }
 
 sealed interface ReviewsState {
     data object Loading : ReviewsState
@@ -115,7 +118,7 @@ private data class Status(
     val syncPending: Boolean = false,
     val reviews: ReviewsState = ReviewsState.Loading,
     val reviewError: AppError? = null,
-    val adminNotice: AdminNotice? = null,
+    val notice: SeriesNotice? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -128,6 +131,7 @@ class SeriesViewModel
         private val readState: ReadStateRepository,
         private val reviewRepository: ReviewRepository,
         private val admin: AdminRepository,
+        private val downloads: DownloadQueue,
         saved: SavedStateHandle,
     ) : ViewModel() {
         /** Admin summary draft (EditSummary sheet). */
@@ -166,7 +170,7 @@ class SeriesViewModel
                                 st.syncPending,
                                 st.reviews,
                                 st.reviewError,
-                                st.adminNotice,
+                                st.notice,
                             )
                         }
                     }
@@ -255,9 +259,9 @@ class SeriesViewModel
         }
 
         fun refreshMetadata() =
-            adminJob(AdminNotice.Started) { s, libraryId -> admin.refreshMetadata(s, libraryId, seriesId) }
+            adminJob(SeriesNotice.Started) { s, libraryId -> admin.refreshMetadata(s, libraryId, seriesId) }
 
-        fun scan() = adminJob(AdminNotice.Started) { s, libraryId -> admin.scan(s, libraryId, seriesId) }
+        fun scan() = adminJob(SeriesNotice.Started) { s, libraryId -> admin.scan(s, libraryId, seriesId) }
 
         fun editSummary() {
             summaryText.setTextAndPlaceCursorAtEnd(
@@ -271,7 +275,7 @@ class SeriesViewModel
         }
 
         fun saveSummary() =
-            adminJob(AdminNotice.Saved) { s, _ ->
+            adminJob(SeriesNotice.Saved) { s, _ ->
                 admin
                     .updateSummary(
                         s,
@@ -280,20 +284,42 @@ class SeriesViewModel
                     ).also { if (it is AppResult.Success) refresh() }
             }
 
+        /** Queues [chapterIds] (cached chapters of this series) for offline reading. */
+        fun download(chapterIds: List<Int>) {
+            val chapters =
+                state.value.detail
+                    ?.chapters
+                    ?.filter { it.id in chapterIds }
+                    .orEmpty()
+            if (chapters.isEmpty()) return
+            status.update { it.copy(sheet = null, notice = null) }
+            viewModelScope.launch {
+                val s = session.activeServer.first() ?: return@launch
+                val notice =
+                    when (downloads.enqueue(s, chapters.map { it.toDownload() })) {
+                        EnqueueResult.Queued -> SeriesNotice.DownloadQueued
+                        EnqueueResult.NothingNew -> SeriesNotice.AlreadyDownloaded
+                        EnqueueResult.NoPermission -> SeriesNotice.NoDownloadRole
+                        EnqueueResult.OverLimit -> SeriesNotice.StorageLimit
+                    }
+                status.update { it.copy(notice = notice) }
+            }
+        }
+
         /** Closes the sheet, runs [block] and reports its outcome under the actions. */
         private fun adminJob(
-            success: AdminNotice,
+            success: SeriesNotice,
             block: suspend (Server, libraryId: Int) -> AppResult<Unit>,
         ) {
             val libraryId =
                 state.value.detail
                     ?.series
                     ?.libraryId ?: return
-            status.update { it.copy(sheet = null, adminNotice = null) }
+            status.update { it.copy(sheet = null, notice = null) }
             viewModelScope.launch {
                 val s = session.activeServer.first() ?: return@launch
-                val notice = if (block(s, libraryId) is AppResult.Success) success else AdminNotice.Failed
-                status.update { it.copy(adminNotice = notice) }
+                val notice = if (block(s, libraryId) is AppResult.Success) success else SeriesNotice.Failed
+                status.update { it.copy(notice = notice) }
             }
         }
 

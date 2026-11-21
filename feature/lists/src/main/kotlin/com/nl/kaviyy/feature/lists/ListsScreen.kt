@@ -167,6 +167,7 @@ fun ReadingListRoute(
             viewModel::move,
             viewModel::remove,
             viewModel::startEdit,
+            viewModel::download,
         ),
     )
     if (state.editing) {

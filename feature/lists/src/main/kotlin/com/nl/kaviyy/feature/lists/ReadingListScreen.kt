@@ -43,6 +43,7 @@ import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaShapes
 import com.nl.kaviyy.core.designsystem.theme.KavitaSpacing
+import com.nl.kaviyy.core.download.EnqueueResult
 
 /**
  * [derived] A reading list: "Reading list" overline + title, "14 of 24 read" with a 6dp bar, Continue (first
@@ -97,6 +98,18 @@ fun ReadingListScreen(
         }
     } else {
         continueButton(state.items, read, actions.onRead)
+        if (state.items.isNotEmpty()) {
+            item {
+                SecondaryButton(
+                    stringResource(R.string.lists_download),
+                    actions.onDownload,
+                    Modifier.fillMaxWidth(),
+                    size = ButtonSize.Medium,
+                    leadingIcon = KavitaIcons.Download,
+                )
+            }
+        }
+        state.download?.let { item { Message(stringResource(downloadText(it))) } }
     }
     if (state.error != null && state.items.isNotEmpty()) item { Message(stringResource(R.string.lists_change_failed)) }
     when {
@@ -129,6 +142,14 @@ private fun LazyListScope.continueButton(
 }
 
 private const val SUMMARY_MAX_LINES = 6
+
+private fun downloadText(result: EnqueueResult): Int =
+    when (result) {
+        EnqueueResult.Queued -> R.string.lists_download_queued
+        EnqueueResult.NothingNew -> R.string.lists_download_nothing_new
+        EnqueueResult.NoPermission -> R.string.lists_download_no_role
+        EnqueueResult.OverLimit -> R.string.lists_download_over_limit
+    }
 
 @Composable
 private fun Message(text: String) =

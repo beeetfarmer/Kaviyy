@@ -54,9 +54,17 @@ internal fun EditSummaryContent(
     PrimaryButton(stringResource(R.string.series_save), onSave, Modifier.fillMaxWidth())
 }
 
-internal fun adminNoticeText(notice: AdminNotice): Int =
+internal fun noticeText(notice: SeriesNotice): Int =
     when (notice) {
-        AdminNotice.Started -> R.string.series_admin_started
-        AdminNotice.Saved -> R.string.series_admin_saved
-        AdminNotice.Failed -> R.string.series_admin_failed
+        SeriesNotice.Started -> R.string.series_admin_started
+        SeriesNotice.Saved -> R.string.series_admin_saved
+        SeriesNotice.Failed -> R.string.series_admin_failed
+        SeriesNotice.DownloadQueued -> R.string.series_download_queued
+        SeriesNotice.AlreadyDownloaded -> R.string.series_download_nothing_new
+        SeriesNotice.NoDownloadRole -> R.string.series_download_no_role
+        SeriesNotice.StorageLimit -> R.string.series_download_over_limit
     }
+
+/** Notices that report a problem (shown in the destructive colour). */
+internal val SeriesNotice.isProblem: Boolean
+    get() = this == SeriesNotice.Failed || this == SeriesNotice.NoDownloadRole || this == SeriesNotice.StorageLimit

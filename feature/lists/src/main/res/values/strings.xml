@@ -65,4 +65,9 @@
     <string name="lists_cbl_too_big">That file is too large to be a CBL reading list.</string>
     <string name="lists_cbl_unreadable">Couldn\'t read that file.</string>
     <string name="lists_cbl_failed">Kavita couldn\'t import that file. Check it\'s a CBL reading list and that you\'re online.</string>
+    <string name="lists_download">Download list</string>
+    <string name="lists_download_queued">Added to Downloads.</string>
+    <string name="lists_download_nothing_new">Already downloaded or in the queue.</string>
+    <string name="lists_download_no_role">Your account can\'t download. Ask your server admin for the Download role.</string>
+    <string name="lists_download_over_limit">Not enough room under your download storage limit.</string>
 </resources>

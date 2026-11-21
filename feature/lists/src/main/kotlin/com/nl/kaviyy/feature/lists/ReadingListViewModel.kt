@@ -10,6 +10,9 @@ import com.nl.kaviyy.core.data.ReadingListRepository
 import com.nl.kaviyy.core.data.editableBy
 import com.nl.kaviyy.core.database.ReadingListItemEntity
 import com.nl.kaviyy.core.database.ReadingListRow
+import com.nl.kaviyy.core.download.DownloadQueue
+import com.nl.kaviyy.core.download.EnqueueResult
+import com.nl.kaviyy.core.download.toDownload
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
@@ -39,6 +42,7 @@ data class ReadingListActions(
     val onMove: (index: Int, by: Int) -> Unit = { _, _ -> },
     val onRemove: (ReadingListItemEntity) -> Unit = {},
     val onEdit: () -> Unit = {},
+    val onDownload: () -> Unit = {},
 )
 
 data class ReadingListUiState(
@@ -56,6 +60,8 @@ data class ReadingListUiState(
     val confirmDelete: Boolean = false,
     val busy: Boolean = false,
     val deleted: Boolean = false,
+    /** Outcome of the last "Download list". */
+    val download: EnqueueResult? = null,
 )
 
 private data class Local(
@@ -65,6 +71,7 @@ private data class Local(
     val confirmDelete: Boolean = false,
     val busy: Boolean = false,
     val deleted: Boolean = false,
+    val download: EnqueueResult? = null,
 )
 
 /** [derived] One reading list: items in order with progress; Continue opens the first unfinished one; owners edit. */
@@ -75,6 +82,7 @@ class ReadingListViewModel
     constructor(
         private val session: AuthSession,
         private val lists: ReadingListRepository,
+        private val downloads: DownloadQueue,
         saved: SavedStateHandle,
     ) : ViewModel() {
         private val id: Int = checkNotNull(saved.get<Int>(READING_LIST_ID_ARG)) { "missing $READING_LIST_ID_ARG" }
@@ -101,6 +109,7 @@ class ReadingListViewModel
                                 confirmDelete = x.confirmDelete,
                                 busy = x.busy,
                                 deleted = x.deleted,
+                                download = x.download,
                             )
                         }
                     }
@@ -155,6 +164,17 @@ class ReadingListViewModel
             }
             change { s ->
                 lists.delete(s, id).also { r -> if (r is AppResult.Success) local.update { it.copy(deleted = true) } }
+            }
+        }
+
+        /** Queues every item of the list for offline reading. */
+        fun download() {
+            val items = state.value.items
+            if (items.isEmpty()) return
+            viewModelScope.launch {
+                val s = session.activeServer.first() ?: return@launch
+                val result = downloads.enqueue(s, items.map { it.toDownload() })
+                local.update { it.copy(download = result) }
             }
         }
 
