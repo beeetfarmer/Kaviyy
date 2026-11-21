@@ -37,6 +37,7 @@ import com.nl.kaviyy.core.designsystem.component.SectionHeader
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaShapes
+import com.nl.kaviyy.core.model.webUrl
 import kotlin.math.roundToInt
 
 private const val STARS = 5
@@ -196,13 +197,6 @@ private fun reviewScore(r: Review): String? =
         r.score > 0 -> stringResource(R.string.series_state_percent, r.score)
         else -> null
     }
-
-/** Only http(s) links leave the app (no intent:, javascript:, file: …). */
-internal fun webUrl(raw: String?): String? {
-    val url = raw?.trim().orEmpty()
-    val scheme = url.substringBefore(':', "").lowercase()
-    return url.takeIf { scheme == "https" || scheme == "http" }
-}
 
 private fun open(
     context: Context,

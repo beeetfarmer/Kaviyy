@@ -182,6 +182,27 @@ class EpubReaderScreenTest {
     fun screenshotNote() = shot("epub_note") { BookPreview(previewBook.copy(noteEditor = NoteEditor("Mara again."))) }
 
     @Test
+    fun linkSheetShowsWhereTheLinkGoes() {
+        var closed = false
+        compose.setContent {
+            BookPreview(
+                previewBook.copy(externalLink = "https://example.org/notes/7"),
+                EpubReaderActions(onCloseLink = {
+                    closed =
+                        true
+                }),
+            )
+        }
+        compose.onNodeWithText("example.org").assertExists()
+        compose.onNodeWithText("Cancel").performClick()
+        assertEquals(true, closed)
+    }
+
+    @Test
+    fun screenshotLink() =
+        shot("epub_link") { BookPreview(previewBook.copy(externalLink = "https://example.org/notes/7")) }
+
+    @Test
     fun screenshotToc() =
         shot("epub_toc") {
             BookPreview(

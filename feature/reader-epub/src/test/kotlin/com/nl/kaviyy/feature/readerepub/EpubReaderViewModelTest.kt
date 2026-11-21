@@ -313,6 +313,23 @@ class EpubReaderViewModelTest {
         }
 
     @Test
+    fun onlyWebLinksFromTheBookAreOffered() =
+        runTest {
+            val vm = vm()
+            vm.state.test {
+                runCurrent()
+                vm.onExternalLink("intent://evil#Intent;end")
+                vm.onExternalLink("javascript:alert(1)")
+                assertEquals(null, expectMostRecentItem().externalLink)
+                vm.onExternalLink("https://example.org/notes")
+                assertEquals("https://example.org/notes", expectMostRecentItem().externalLink)
+                vm.closeLink()
+                assertEquals(null, expectMostRecentItem().externalLink)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
     fun missingDownloadRoleIsReportedAndRetryRecovers() =
         runTest {
             fileResult = AppResult.Failure(AppError.Forbidden)

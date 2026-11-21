@@ -17,6 +17,7 @@ import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.result.flatMap
 import com.nl.kaviyy.core.model.result.map
 import com.nl.kaviyy.core.model.server.Server
+import com.nl.kaviyy.core.model.webUrl
 import com.nl.kaviyy.core.network.ReadingProfileDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -66,6 +67,8 @@ data class EpubReaderUiState(
     /** Selection or highlight the toolbar is shown for. */
     val highlightTarget: HighlightTarget? = null,
     val noteEditor: NoteEditor? = null,
+    /** An http(s) link from the book waiting for the user to confirm opening it. */
+    val externalLink: String? = null,
 )
 
 private data class Session(
@@ -81,6 +84,7 @@ private data class Session(
     val toc: List<TocEntry> = emptyList(),
     val highlightTarget: HighlightTarget? = null,
     val noteEditor: NoteEditor? = null,
+    val externalLink: String? = null,
 )
 
 /** Screen 07. The original EPUB is fetched into the book cache (Download role) and opened with Readium. */
@@ -148,6 +152,7 @@ class EpubReaderViewModel
                     highlights = marks,
                     highlightTarget = st.highlightTarget,
                     noteEditor = st.noteEditor,
+                    externalLink = st.externalLink,
                 )
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), EpubReaderUiState())
 
@@ -251,6 +256,13 @@ class EpubReaderViewModel
                 }
             }
         }
+
+        /** Only http(s) links are offered; anything else (intent:, javascript:, file:) is dropped. */
+        fun onExternalLink(url: String) {
+            webUrl(url)?.let { link -> session.update { it.copy(externalLink = link) } }
+        }
+
+        fun closeLink() = session.update { it.copy(externalLink = null) }
 
         fun closeNote() = session.update { it.copy(noteEditor = null) }
 

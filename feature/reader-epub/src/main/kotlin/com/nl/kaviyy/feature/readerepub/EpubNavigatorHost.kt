@@ -156,12 +156,14 @@ internal fun EpubNavigator(
     onTap: () -> Unit,
     onLocator: (Locator) -> Unit,
     highlights: HighlightCallbacks,
+    onExternalLink: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val activity = LocalContext.current.fragmentActivity() ?: return
     val tap by rememberUpdatedState(onTap)
     val locate by rememberUpdatedState(onLocator)
     val marks by rememberUpdatedState(highlights)
+    val external by rememberUpdatedState(onExternalLink)
     val scope = rememberCoroutineScope()
     val factory =
         remember(publication) {
@@ -171,8 +173,8 @@ internal fun EpubNavigator(
                     initialPreferences = settings.toPreferences(),
                     listener =
                         object : EpubNavigatorFragment.Listener {
-                            // Links leaving the book are ignored (no browser hand-off from book content).
-                            override fun onExternalLinkActivated(url: AbsoluteUrl) = Unit
+                            // Links leaving the book go through a confirmation (P6), never straight to a browser.
+                            override fun onExternalLinkActivated(url: AbsoluteUrl) = external(url.toString())
                         },
                     configuration =
                         EpubNavigatorFragment.Configuration {
@@ -215,6 +217,7 @@ internal fun EpubNavigator(
     val current = fragment ?: return
     LaunchedEffect(current) {
         handle.fragment = current
+        current.childFragmentManager.registerFragmentLifecycleCallbacks(WebViewHardening, true)
         // Edge taps turn pages; any other tap toggles the chrome.
         current.addInputListener(DirectionalNavigationAdapter(current))
         current.addInputListener(

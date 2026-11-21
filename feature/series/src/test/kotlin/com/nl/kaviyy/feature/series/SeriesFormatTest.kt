@@ -2,6 +2,7 @@ package com.nl.kaviyy.feature.series
 
 import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.database.SeriesEntity
+import com.nl.kaviyy.core.model.webUrl
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner

@@ -64,6 +64,7 @@ data class EpubReaderActions(
     val onDismissHighlight: () -> Unit = {},
     val onSaveNote: (String) -> Unit = {},
     val onCloseNote: () -> Unit = {},
+    val onCloseLink: () -> Unit = {},
 )
 
 @Composable
@@ -106,6 +107,7 @@ fun EpubReaderRoute(
             },
             onSaveNote = viewModel::saveNote,
             onCloseNote = viewModel::closeNote,
+            onCloseLink = viewModel::closeLink,
         ),
     ) {
         state.publication?.let { book ->
@@ -121,6 +123,7 @@ fun EpubReaderRoute(
                 },
                 viewModel::onLocator,
                 HighlightCallbacks(decorations, viewModel::onSelection, viewModel::onHighlightTapped),
+                viewModel::onExternalLink,
                 Modifier.fillMaxSize(),
             )
         }
@@ -170,6 +173,7 @@ fun EpubReaderScreen(
             if (state.settingsOpen) BookSettingsSheet(state.settings, actions)
             if (state.tocOpen) TocSheet(state, actions)
             state.noteEditor?.let { NoteSheet(it, actions) }
+            state.externalLink?.let { LinkSheet(it, actions.onCloseLink) }
         }
     }
 }
