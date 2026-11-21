@@ -23,6 +23,8 @@ class ReadiumPublicationLoader
         @ApplicationContext context: Context,
     ) : PublicationLoader {
         // Only local files are opened; the HTTP client is required by the API but never used for them.
+        // Readium's own client, not Apache's deprecated DefaultHttpClient the Semgrep rule means.
+        // nosemgrep: kotlin.lang.security.defaulthttpclient-is-deprecated.defaulthttpclient-is-deprecated
         private val http = DefaultHttpClient()
         private val assets = AssetRetriever(context.contentResolver, http)
         private val opener = PublicationOpener(DefaultPublicationParser(context, http, assets, pdfFactory = null))

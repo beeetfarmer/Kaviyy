@@ -16,6 +16,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Kaviyy">
+        <!-- nosemgrep: java.android.security.exported_activity.exported_activity (launcher activity) -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
