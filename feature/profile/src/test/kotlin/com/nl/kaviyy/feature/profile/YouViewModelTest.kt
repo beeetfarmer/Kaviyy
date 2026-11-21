@@ -5,6 +5,7 @@ import com.nl.kaviyy.core.data.AllStats
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.ProfileRepository
 import com.nl.kaviyy.core.data.WeekStats
+import com.nl.kaviyy.core.database.DownloadDao
 import com.nl.kaviyy.core.datastore.AppSettings
 import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.model.result.AppError
@@ -17,11 +18,13 @@ import com.nl.kaviyy.core.network.LoginMethod
 import com.nl.kaviyy.core.testing.InMemoryDataStore
 import com.nl.kaviyy.core.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
+import java.lang.reflect.Proxy
 import java.time.Clock
 import java.time.DayOfWeek
 import java.time.Instant
@@ -94,7 +97,8 @@ class YouViewModelTest {
     @Test
     fun loadsTheAccountThenThisWeekForThatUser() =
         runTest {
-            val vm = YouViewModel(session, profile, clock, AppSettingsStore(InMemoryDataStore(AppSettings())))
+            val vm =
+                YouViewModel(session, profile, clock, AppSettingsStore(InMemoryDataStore(AppSettings())), noDownloads)
             runCurrent()
             val st = vm.state.value
             assertEquals("neo" to 3, st.account?.username to st.week?.chapters)
@@ -106,7 +110,8 @@ class YouViewModelTest {
     fun failedStatsAreFlagged() =
         runTest {
             weekResult = AppResult.Failure(AppError.Network)
-            val vm = YouViewModel(session, profile, clock, AppSettingsStore(InMemoryDataStore(AppSettings())))
+            val vm =
+                YouViewModel(session, profile, clock, AppSettingsStore(InMemoryDataStore(AppSettings())), noDownloads)
             runCurrent()
             assertEquals(true to null, vm.state.value.statsFailed to vm.state.value.week)
         }
@@ -120,3 +125,9 @@ class YouViewModelTest {
             assertEquals(listOf("all 42"), asked)
         }
 }
+
+/** Only the used-space total is read. */
+private val noDownloads: DownloadDao =
+    Proxy.newProxyInstance(DownloadDao::class.java.classLoader, arrayOf(DownloadDao::class.java)) { _, m, _ ->
+        if (m.name == "observeTotalBytes") flowOf(0L) else error("unused: ${m.name}")
+    } as DownloadDao

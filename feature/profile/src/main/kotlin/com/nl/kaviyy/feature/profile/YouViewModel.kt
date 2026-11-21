@@ -7,6 +7,7 @@ import com.nl.kaviyy.core.data.AllStats
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.ProfileRepository
 import com.nl.kaviyy.core.data.WeekStats
+import com.nl.kaviyy.core.database.DownloadDao
 import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.datastore.ThemeMode
 import com.nl.kaviyy.core.model.result.AppResult
@@ -39,6 +40,7 @@ data class YouActions(
     val onAccount: () -> Unit = {},
     val onPrivacy: () -> Unit = {},
     val onAbout: () -> Unit = {},
+    val onDownloads: () -> Unit = {},
 )
 
 data class YouUiState(
@@ -48,6 +50,8 @@ data class YouUiState(
     /** Stats couldn't be loaded (offline, or an older server). */
     val statsFailed: Boolean = false,
     val theme: ThemeMode = ThemeMode.System,
+    /** Space used by downloads on every server. */
+    val downloadBytes: Long = 0,
 )
 
 /** Screen 10: profile card and This Week from the server. */
@@ -59,11 +63,13 @@ class YouViewModel
         private val profile: ProfileRepository,
         private val clock: Clock,
         settings: AppSettingsStore,
+        downloads: DownloadDao,
     ) : ViewModel() {
         private val mutable = MutableStateFlow(YouUiState())
         val state: StateFlow<YouUiState> =
-            combine(mutable, settings.settings) { s, a -> s.copy(theme = a.theme) }
-                .stateIn(viewModelScope, SharingStarted.Eagerly, YouUiState())
+            combine(mutable, settings.settings, downloads.observeTotalBytes()) { s, a, bytes ->
+                s.copy(theme = a.theme, downloadBytes = bytes)
+            }.stateIn(viewModelScope, SharingStarted.Eagerly, YouUiState())
 
         init {
             viewModelScope.launch {

@@ -46,7 +46,7 @@ internal fun QueueList(
     }
 }
 
-/** Header "more": Pause all / Resume all (Remove read downloads and Settings join with their features). */
+/** Header "more": Pause all / Resume all / Settings (Remove read downloads joins with auto-delete). */
 @Composable
 internal fun MoreMenu(
     state: DownloadsUiState,
@@ -62,6 +62,10 @@ internal fun MoreMenu(
         MenuItem(R.string.downloads_resume_all, state.queue.any { it.state == DownloadState.PAUSED }) {
             open = false
             actions.onResumeAll()
+        }
+        MenuItem(R.string.downloads_settings, enabled = true) {
+            open = false
+            actions.onSettings()
         }
     }
 }

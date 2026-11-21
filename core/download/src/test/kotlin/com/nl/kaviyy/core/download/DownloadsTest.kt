@@ -178,4 +178,27 @@ class DownloadsTest {
             assertEquals("Ember Road" to "49", items[1]?.let { it.seriesName to it.chapter?.range })
             assertNull(items[5]?.chapter) // not cached yet
         }
+
+    @Test
+    fun turningWifiOnlyOffRequeuesWaitingDownloadsOnAnyNetwork() =
+        runTest {
+            downloads.enqueue(downloader, listOf(chapter(1)))
+            assertEquals(NetworkType.UNMETERED, job(1)?.constraints?.requiredNetworkType)
+            downloads.setWifiOnly(false)
+            assertFalse(prefs.data.first().downloadWifiOnly)
+            val jobs = WorkManager.getInstance(app).getWorkInfosForUniqueWork(Downloads.name(serverId, 1)).get()
+            assertEquals(NetworkType.CONNECTED, jobs.last().constraints.requiredNetworkType)
+        }
+
+    @Test
+    fun clearAllRemovesEveryRowAndFile() =
+        runTest {
+            downloads.enqueue(downloader, listOf(chapter(1), chapter(2)))
+            val dir = files.dir(serverId, 2, 1).apply { mkdirs() }
+            File(dir, "0").writeText("x")
+            downloads.clearAll()
+            assertEquals(0L, db.downloadDao().totalBytes())
+            assertNull(store.get(serverId, 2))
+            assertFalse(dir.exists())
+        }
 }

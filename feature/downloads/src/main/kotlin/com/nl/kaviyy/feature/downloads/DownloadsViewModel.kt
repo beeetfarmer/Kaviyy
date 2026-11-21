@@ -53,6 +53,7 @@ data class DownloadsActions(
     val onCancel: (chapterId: Int) -> Unit = {},
     val onPauseAll: () -> Unit = {},
     val onResumeAll: () -> Unit = {},
+    val onSettings: () -> Unit = {},
 )
 
 /** Running or waiting: can be paused. */

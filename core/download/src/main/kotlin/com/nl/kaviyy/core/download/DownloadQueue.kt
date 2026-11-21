@@ -69,6 +69,12 @@ data class DownloadItem(
 
 /** The Downloads tab's view of downloads and its controls; [Downloads] implements it. */
 interface DownloadControls {
+    /** Saves Wi-Fi only and re-queues waiting downloads under the new network rule. */
+    suspend fun setWifiOnly(on: Boolean) = Unit
+
+    /** Every download on every server: rows, work and files. */
+    suspend fun clearAll() = Unit
+
     fun downloads(server: Server): Flow<List<DownloadItem>>
 
     suspend fun pause(

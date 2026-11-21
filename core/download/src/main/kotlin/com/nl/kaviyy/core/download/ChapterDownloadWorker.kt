@@ -7,6 +7,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.nl.kaviyy.core.data.AuthSession
+import com.nl.kaviyy.core.datastore.AppSettingsStore
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -31,6 +32,8 @@ class ChapterDownloadWorker(
         fun session(): AuthSession
 
         fun notifications(): DownloadNotifications
+
+        fun settings(): AppSettingsStore
     }
 
     override suspend fun doWork(): Result {
@@ -46,10 +49,20 @@ class ChapterDownloadWorker(
                 .firstOrNull { it.id.value == serverId } ?: return Result.failure()
         val notifications = deps.notifications()
         return try {
+            val limit =
+                suspend {
+                    deps
+                        .settings()
+                        .settings
+                        .first()
+                        .concurrentDownloads
+                }
             val result =
-                runDownload(deps.store(), deps.downloader(), server, chapterId) { row ->
-                    // Android 12+ may refuse a foreground start from the background; the download still runs.
-                    runCatching { setForeground(foregroundInfo(notifications, row)) }
+                DownloadSlots.shared.withSlot(limit) {
+                    runDownload(deps.store(), deps.downloader(), server, chapterId) { row ->
+                        // Android 12+ may refuse a foreground start from the background; the download still runs.
+                        runCatching { setForeground(foregroundInfo(notifications, row)) }
+                    }
                 }
             when (result) {
                 RunResult.Success -> Result.success()

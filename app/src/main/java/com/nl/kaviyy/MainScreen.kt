@@ -32,6 +32,7 @@ import com.nl.kaviyy.core.designsystem.component.TabItem
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaSpacing
+import com.nl.kaviyy.feature.downloads.DownloadSettingsRoute
 import com.nl.kaviyy.feature.downloads.DownloadedSeriesRoute
 import com.nl.kaviyy.feature.downloads.DownloadsRoute
 import com.nl.kaviyy.feature.filter.FilterSheet
@@ -149,6 +150,9 @@ private data class CollectionDestination(
     val collectionId: Int,
 )
 
+@Serializable
+private data object DownloadSettingsDestination
+
 /** Field name = `DOWNLOADED_SERIES_ARG`. */
 @Serializable
 private data class DownloadedSeriesDestination(
@@ -207,6 +211,7 @@ internal fun MainScreen(
                         onPrivacy = { nav.navigate(PrivacyDestination) },
                         onAbout = { nav.navigate(AboutDestination) },
                         onOpenDownloadedSeries = { nav.navigate(DownloadedSeriesDestination(it)) },
+                        onDownloadSettings = { nav.navigate(DownloadSettingsDestination) },
                     ),
                 ) { filterFor = it }
             }
@@ -254,6 +259,7 @@ internal fun MainScreen(
                     onSignOut = onSignOut,
                 )
             }
+            composable<DownloadSettingsDestination> { DownloadSettingsRoute(onBack = { nav.popBackStack() }) }
             composable<DownloadedSeriesDestination> { DownloadedSeriesRoute(onBack = { nav.popBackStack() }) }
             composable<AboutDestination> { AboutRoute(onBack = { nav.popBackStack() }) }
             composable<PrivacyDestination> {
@@ -348,6 +354,7 @@ private data class TabNav(
     val onPrivacy: () -> Unit,
     val onAbout: () -> Unit,
     val onOpenDownloadedSeries: (Int) -> Unit,
+    val onDownloadSettings: () -> Unit,
 )
 
 @Suppress("LongParameterList")
@@ -399,12 +406,15 @@ private fun TabContent(
                     onAccount = lists.onAccount,
                     onPrivacy = lists.onPrivacy,
                     onAbout = lists.onAbout,
+                    onDownloads = lists.onDownloadSettings,
                 ),
             )
         }
 
         Tab.Downloads -> {
-            DownloadsRoute(onOpenSeries = lists.onOpenDownloadedSeries, onBrowse = { onSelect(Tab.Library) })
+            DownloadsRoute(onOpenSeries = lists.onOpenDownloadedSeries, onBrowse = {
+                onSelect(Tab.Library)
+            }, onSettings = lists.onDownloadSettings)
         }
     }
 }

@@ -59,6 +59,12 @@ interface DownloadDao {
     @Query("SELECT COALESCE(SUM(bytesDone), 0) FROM downloads")
     suspend fun totalBytes(): Long
 
+    @Query("SELECT COALESCE(SUM(bytesDone), 0) FROM downloads")
+    fun observeTotalBytes(): Flow<Long>
+
+    @Query("DELETE FROM downloads")
+    suspend fun deleteAll()
+
     /**
      * Finished downloads whose cached chapter changed on the server since (newer `lastModified`). Rows with no recorded
      * version (0) are skipped: nothing to compare against.

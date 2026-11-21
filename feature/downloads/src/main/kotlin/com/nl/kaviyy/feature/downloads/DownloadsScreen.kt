@@ -52,6 +52,7 @@ import com.nl.kaviyy.core.network.seriesCoverUrl
 fun DownloadsRoute(
     onOpenSeries: (Int) -> Unit,
     onBrowse: () -> Unit,
+    onSettings: () -> Unit,
     viewModel: DownloadsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -69,6 +70,7 @@ fun DownloadsRoute(
             viewModel::cancel,
             viewModel::pauseAll,
             viewModel::resumeAll,
+            onSettings,
         )
     DownloadsScreen(state, actions, freeBytes = free)
 }

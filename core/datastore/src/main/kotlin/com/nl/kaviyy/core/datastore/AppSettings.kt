@@ -38,6 +38,16 @@ data class AppSettings(
     @ProtoNumber(7) val downloadWifiOnly: Boolean = true,
     /** Total downloads cap in MB; 0 = no limit. */
     @ProtoNumber(8) val storageLimitMb: Int = 0,
+    /** Next unread chapters of On Deck series to fetch in the background; 0 = off. */
+    @ProtoNumber(9) val autoDownloadCount: Int = 0,
+    /** Background auto-downloads also wait for the charger. */
+    @ProtoNumber(10) val autoDownloadChargingOnly: Boolean = true,
+    /** Days after reading before a downloaded chapter is removed; -1 = never, 0 = immediately. */
+    @ProtoNumber(11) val autoDeleteAfterDays: Int = -1,
+    /** Auto-delete keeps at least this many of the most recently read chapters per series. */
+    @ProtoNumber(12) val keepReadCount: Int = 0,
+    /** Chapters downloading at once (1–4). */
+    @ProtoNumber(13) val concurrentDownloads: Int = 2,
 ) {
     companion object {
         const val DEFAULT_ACCENT = "KavitaGreen"

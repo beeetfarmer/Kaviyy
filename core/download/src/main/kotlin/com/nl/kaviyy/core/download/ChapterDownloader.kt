@@ -82,6 +82,9 @@ class ChapterDownloader
                 partDir(row).deleteRecursively()
             }
 
+        /** Everything under the downloads root (all servers). */
+        suspend fun deleteAll() = withContext(io) { root.deleteRecursively() }
+
         suspend fun download(
             server: Server,
             row: DownloadEntity,

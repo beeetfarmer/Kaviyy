@@ -23,6 +23,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /** Queues, pauses, resumes, retries and cancels chapter downloads (one unique WorkManager job per chapter). */
+@Suppress("TooManyFunctions") // one facade for DownloadQueue + DownloadControls, each method a thin call
 @Singleton
 class Downloads
     @Inject
@@ -76,7 +77,7 @@ class Downloads
         ) {
             chapters.forEach { c ->
                 store.apply(server.id.value, c.chapterId, DownloadEvent.Update(c.lastModified))?.let {
-                    reschedule(server.id.value, c.chapterId)
+                    schedule(server.id.value, c.chapterId)
                 }
             }
         }
@@ -93,14 +94,14 @@ class Downloads
             serverId: Long,
             chapterId: Int,
         ) {
-            store.apply(serverId, chapterId, DownloadEvent.Resume)?.let { reschedule(serverId, chapterId) }
+            store.apply(serverId, chapterId, DownloadEvent.Resume)?.let { schedule(serverId, chapterId) }
         }
 
         override suspend fun retry(
             serverId: Long,
             chapterId: Int,
         ) {
-            store.apply(serverId, chapterId, DownloadEvent.Retry)?.let { reschedule(serverId, chapterId) }
+            store.apply(serverId, chapterId, DownloadEvent.Retry)?.let { schedule(serverId, chapterId) }
         }
 
         /** Stops it and deletes its row and files (finished or partial). */
@@ -114,21 +115,32 @@ class Downloads
             downloader.delete(row)
         }
 
-        private suspend fun reschedule(
-            serverId: Long,
-            chapterId: Int,
-        ) = schedule(serverId, chapterId, settings.settings.first().downloadWifiOnly)
+        override suspend fun setWifiOnly(on: Boolean) {
+            settings.update { it.copy(downloadWifiOnly = on) }
+            // Constraints are fixed per job, so swap the pending ones.
+            // Running ones restart; pages already fetched are kept.
+            (dao.inState(DownloadState.QUEUED.name) + dao.inState(DownloadState.RUNNING.name)).forEach {
+                schedule(it.serverId, it.chapterId, on, ExistingWorkPolicy.REPLACE)
+            }
+        }
 
-        // ponytail: constraints are fixed when a job is queued; changing Wi-Fi only later applies to new downloads.
-        private fun schedule(
+        override suspend fun clearAll() {
+            work.cancelAllWorkByTag(TAG)
+            dao.deleteAll()
+            downloader.deleteAll()
+        }
+
+        private suspend fun schedule(
             serverId: Long,
             chapterId: Int,
-            wifiOnly: Boolean,
+            wifiOnly: Boolean? = null,
+            policy: ExistingWorkPolicy = ExistingWorkPolicy.KEEP,
         ) {
+            val unmetered = wifiOnly ?: settings.settings.first().downloadWifiOnly
             val constraints =
                 Constraints
                     .Builder()
-                    .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
+                    .setRequiredNetworkType(if (unmetered) NetworkType.UNMETERED else NetworkType.CONNECTED)
                     .setRequiresStorageNotLow(true)
                     .build()
             val request =
@@ -142,7 +154,7 @@ class Downloads
                     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)
                     .addTag(TAG)
                     .build()
-            work.enqueueUniqueWork(name(serverId, chapterId), ExistingWorkPolicy.KEEP, request)
+            work.enqueueUniqueWork(name(serverId, chapterId), policy, request)
         }
 
         internal companion object {
