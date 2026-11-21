@@ -36,6 +36,7 @@ dependencies {
     implementation(projects.core.designsystem)
     implementation(projects.core.data)
     implementation(projects.core.download)
+    implementation(projects.core.sync)
     implementation(projects.core.model)
     listOf(
         projects.feature.auth,

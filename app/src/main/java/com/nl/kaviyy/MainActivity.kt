@@ -38,6 +38,7 @@ import com.nl.kaviyy.core.designsystem.theme.Appearance
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
 import com.nl.kaviyy.core.model.server.Server
+import com.nl.kaviyy.core.sync.Sync
 import com.nl.kaviyy.feature.auth.ConnectRoute
 import com.nl.kaviyy.feature.readerepub.installBookReaderRestoreFactory
 import dagger.hilt.android.AndroidEntryPoint
@@ -48,11 +49,19 @@ class MainActivity : FragmentActivity() {
     @Inject
     lateinit var images: ServerImages
 
+    @Inject
+    lateinit var sync: Sync
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         installBookReaderRestoreFactory() // before super: the FragmentManager restores fragments there
         super.onCreate(savedInstanceState)
         setContent { KaviyyApp(images) }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        sync.requestNow() // app foreground: push anything queued while away
     }
 }
 
