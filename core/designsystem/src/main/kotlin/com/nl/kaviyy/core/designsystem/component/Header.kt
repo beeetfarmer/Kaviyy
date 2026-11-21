@@ -140,7 +140,7 @@ fun Avatar(
     }
 }
 
-/** 13sp uppercase secondary label above a [GroupedList]. */
+/** 15sp semibold uppercase secondary label above a [GroupedList] (owner: larger than the 13sp field labels). */
 @Composable
 fun SectionHeader(
     text: String,

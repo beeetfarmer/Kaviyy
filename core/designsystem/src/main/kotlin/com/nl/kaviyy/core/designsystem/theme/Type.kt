@@ -48,7 +48,7 @@ data class KavitaTypography(
     val callout: TextStyle = inter(15, FontWeight.Normal).copy(lineHeight = 21.75.sp),
     val subhead: TextStyle = inter(14, FontWeight.Medium),
     val footnote: TextStyle = inter(13, FontWeight.Normal),
-    val sectionHeader: TextStyle = inter(13, FontWeight.Medium, letterSpacingEm = 0.03),
+    val sectionHeader: TextStyle = inter(15, FontWeight.SemiBold, letterSpacingEm = 0.03),
     val dateOverline: TextStyle = inter(13, FontWeight.SemiBold, letterSpacingEm = 0.04),
     val caption: TextStyle = inter(12, FontWeight.Normal),
     val overline: TextStyle = inter(11, FontWeight.Bold, letterSpacingEm = 0.06),
