@@ -62,4 +62,29 @@ Screens shown with sample data.
 * Notifications for downloads and new chapters on your Want to Read list
 * Tablet and foldable layouts
 
+## Credits
+
+**Kavita**
+Kaviyy only exists because of [Kavita](https://github.com/Kareadita/Kavita) and its contributors. Every library, reader and sync feature talks to a Kavita server through its API.
+
+**Open source libraries**
+* [AndroidX and Jetpack Compose](https://developer.android.com/jetpack), including Room, WorkManager, Paging, Navigation and DataStore: Apache 2.0
+* [Kotlin](https://kotlinlang.org), Coroutines and Serialization: Apache 2.0
+* [Dagger and Hilt](https://dagger.dev): Apache 2.0
+* [OkHttp](https://square.github.io/okhttp) and [Retrofit](https://square.github.io/retrofit): Apache 2.0
+* [Coil](https://coil-kt.github.io/coil): Apache 2.0
+* [Google Tink](https://developers.google.com/tink): Apache 2.0
+* [Readium Kotlin Toolkit](https://readium.org): BSD 3 Clause
+* JDK desugaring: GPL 2.0 with Classpath Exception
+
+**Fonts**
+* [Inter](https://rsms.me/inter) by Rasmus Andersson, SIL Open Font License 1.1
+* [Literata](https://github.com/googlefonts/literata) by TypeTogether, SIL Open Font License 1.1
+
+**Testing**
+* [Robolectric](https://robolectric.org), [Roborazzi](https://github.com/takahirom/roborazzi) and [Turbine](https://github.com/cashapp/turbine), which power the unit and screenshot tests
+
+**Scrobbling services**
+* [AniList](https://anilist.co), [MyAnimeList](https://myanimelist.net) and [Kitsu](https://kitsu.app), whose public APIs make scrobbling from your phone possible
+
 > Not affiliated with the Kavita project.
