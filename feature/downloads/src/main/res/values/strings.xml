@@ -25,6 +25,9 @@
     <string name="downloads_kind_other">Other</string>
     <string name="downloads_back">Back</string>
     <string name="downloads_select">Select</string>
+    <string name="downloads_continue">Continue Reading</string>
+    <!-- TalkBack: what tapping a downloaded chapter row does. -->
+    <string name="downloads_read_action">read</string>
     <string name="downloads_done">Done</string>
     <string name="downloads_series_empty">No downloads left for this series.</string>
     <string name="downloads_delete_all">Delete All Downloads</string>

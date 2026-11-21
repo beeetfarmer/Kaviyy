@@ -4,8 +4,12 @@
     <string name="download_notification_title">Downloading</string>
     <string name="download_pause">Pause</string>
     <string name="download_cancel">Cancel</string>
-    <string name="download_done">Downloaded</string>
+    <!-- %1$s: "Chapter 49", "Volume 3" or a chapter title. -->
+    <string name="download_done">%1$s downloaded</string>
+    <string name="download_chapter">Chapter %1$s</string>
+    <string name="download_volume">Volume %1$s</string>
+    <string name="download_chapter_unknown">Chapter</string>
     <string name="new_chapters_channel">New chapters</string>
     <string name="new_chapters_title">New chapters in Want to Read</string>
-    <string name="download_failed">Download failed</string>
+    <string name="download_failed">%1$s failed to download</string>
 </resources>

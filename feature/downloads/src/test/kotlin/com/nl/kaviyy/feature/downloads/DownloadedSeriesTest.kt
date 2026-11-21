@@ -154,6 +154,17 @@ class DownloadedSeriesTest {
         }
 
     @Test
+    fun continueResumesTheFirstUnfinishedChapterAndRowsOpenTheirChapter() {
+        val opened = mutableListOf<Int>()
+        compose.setContent {
+            DownloadedSeriesPreview(Appearance.Light, actions = DownloadedSeriesActions(onRead = { opened += it }))
+        }
+        compose.onNodeWithText("Continue Reading").performClick() // ch 48 is read, so ch 49 (unread) is next
+        compose.onNodeWithText("Chapter 48").performClick()
+        assertEquals(listOf(2, 1), opened)
+    }
+
+    @Test
     fun rowsShowSizeAndReadState() {
         compose.setContent { DownloadedSeriesPreview(Appearance.Light) }
         compose.onNodeWithText("Chapter 48").assertExists()

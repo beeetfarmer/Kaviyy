@@ -43,6 +43,7 @@ import com.nl.kaviyy.core.designsystem.component.CircleIconButton
 import com.nl.kaviyy.core.designsystem.component.GroupedList
 import com.nl.kaviyy.core.designsystem.component.GroupedRow
 import com.nl.kaviyy.core.designsystem.component.LargeTitleHeader
+import com.nl.kaviyy.core.designsystem.component.PrimaryButton
 import com.nl.kaviyy.core.designsystem.component.SecondaryButton
 import com.nl.kaviyy.core.designsystem.component.rowDivider
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
@@ -53,6 +54,7 @@ import com.nl.kaviyy.core.download.DownloadItem
 @Composable
 fun DownloadedSeriesRoute(
     onBack: () -> Unit,
+    onRead: (seriesId: Int, chapterId: Int) -> Unit,
     viewModel: DownloadedSeriesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -65,6 +67,7 @@ fun DownloadedSeriesRoute(
             viewModel::delete,
             viewModel::markRead,
             viewModel::deleteAll,
+            onRead = { onRead(viewModel.seriesId, it) },
         ),
     )
 }
@@ -108,7 +111,20 @@ fun DownloadedSeriesScreen(
         }
 
         else -> {
-            if (state.selecting) item { SelectionBar(state.selected, actions) }
+            if (state.selecting) {
+                item { SelectionBar(state.selected, actions) }
+            } else {
+                state.continueChapterId?.let { id ->
+                    item {
+                        PrimaryButton(
+                            stringResource(R.string.downloads_continue),
+                            { actions.onRead(id) },
+                            Modifier.fillMaxWidth(),
+                            leadingIcon = KavitaIcons.Play,
+                        )
+                    }
+                }
+            }
             item { ChapterList(state, actions) }
             if (!state.selecting) {
                 item {
@@ -159,7 +175,9 @@ private fun ChapterList(
         if (state.selecting) {
             ChapterRow(item, divider, selected = id in state.selected, onClick = { actions.onToggle(id) })
         } else {
-            SwipeToDelete({ actions.onDelete(setOf(id)) }) { ChapterRow(item, divider) }
+            SwipeToDelete(
+                { actions.onDelete(setOf(id)) },
+            ) { ChapterRow(item, divider, onClick = { actions.onRead(id) }) }
         }
     }
 }
@@ -205,6 +223,7 @@ private fun ChapterRow(
     onClick: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    val readLabel = stringResource(R.string.downloads_read_action)
     val chapter = item.chapter
     val title =
         chapter?.number()?.let { stringResource(R.string.downloads_chapter_full, it) }
@@ -221,10 +240,22 @@ private fun ChapterRow(
             .fillMaxWidth()
             .rowDivider(divider, if (selected != null) 52.dp else 16.dp)
             .then(
-                if (onClick != null && selected != null) {
-                    Modifier.clickable(role = Role.Checkbox, onClick = onClick).semantics { this.selected = selected }
-                } else {
-                    Modifier
+                when {
+                    onClick == null -> {
+                        Modifier
+                    }
+
+                    selected != null -> {
+                        Modifier
+                            .clickable(
+                                role = Role.Checkbox,
+                                onClick = onClick,
+                            ).semantics { this.selected = selected }
+                    }
+
+                    else -> {
+                        Modifier.clickable(onClickLabel = readLabel, role = Role.Button, onClick = onClick)
+                    }
                 },
             ).padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),

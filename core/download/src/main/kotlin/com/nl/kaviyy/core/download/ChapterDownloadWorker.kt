@@ -72,6 +72,7 @@ class ChapterDownloadWorker(
                     notifications.finished(
                         row,
                         deps.dao().seriesName(serverId, row.seriesId),
+                        deps.dao().chapter(serverId, chapterId),
                         result == RunResult.Success,
                     )
                 }

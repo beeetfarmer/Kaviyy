@@ -8,6 +8,10 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.nl.kaviyy.core.data.displayTitle
+import com.nl.kaviyy.core.data.number
+import com.nl.kaviyy.core.data.volumeNumber
+import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.database.DownloadEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -97,18 +101,21 @@ class DownloadNotifications
         fun finished(
             row: DownloadEntity,
             seriesName: String?,
+            chapter: ChapterEntity?,
             ok: Boolean,
         ) {
             if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
             ensureChannel()
+            val what = chapterLabel(chapter)
             val notification =
                 NotificationCompat
                     .Builder(context, CHANNEL)
                     .setSmallIcon(R.drawable.ic_download_notification)
-                    .setContentTitle(
-                        context.getString(if (ok) R.string.download_done else R.string.download_failed),
-                    ).setContentText(seriesName)
-                    .setContentIntent(openApp())
+                    // "Ember Road" / "Chapter 49 downloaded": which chapter, not just which series.
+                    .setContentTitle(seriesName ?: what)
+                    .setContentText(
+                        context.getString(if (ok) R.string.download_done else R.string.download_failed, what),
+                    ).setContentIntent(openApp())
                     .setAutoCancel(true)
                     .setGroup(CHANNEL)
                     .build()
@@ -120,6 +127,13 @@ class DownloadNotifications
                     ).notify(notificationId(row.serverId, row.chapterId) + 1, notification)
             }
         }
+
+        /** "Chapter 49", "Volume 3", the chapter's own title, or "Chapter" when nothing is cached. */
+        internal fun chapterLabel(chapter: ChapterEntity?): String =
+            chapter?.number()?.let { context.getString(R.string.download_chapter, it) }
+                ?: chapter?.volumeNumber()?.let { context.getString(R.string.download_volume, it) }
+                ?: chapter?.displayTitle()
+                ?: context.getString(R.string.download_chapter_unknown)
 
         private fun action(
             row: DownloadEntity,

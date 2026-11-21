@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
 import androidx.core.app.NotificationCompat
+import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.database.DownloadEntity
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,14 +35,14 @@ class DownloadNotificationsTest {
 
     @Test
     fun finishedAndFailedAreSeparateFromProgressAndUseImmutableIntents() {
-        notifications.finished(row, "Ember Road", ok = true)
-        notifications.finished(row.copy(chapterId = 11), "Ember Road", ok = false)
+        notifications.finished(row, "Ember Road", chapter(range = "49"), ok = true)
+        notifications.finished(row.copy(chapterId = 11), "Ember Road", chapter(range = "50"), ok = false)
         val posted = shadowOf(manager).allNotifications
         assertEquals(
-            setOf<String?>("Downloaded", "Download failed"),
-            posted.mapTo(HashSet<String?>()) { it.extras.getString(NotificationCompat.EXTRA_TITLE) },
+            setOf<String?>("Chapter 49 downloaded", "Chapter 50 failed to download"),
+            posted.mapTo(HashSet<String?>()) { it.extras.getString(NotificationCompat.EXTRA_TEXT) },
         )
-        assertTrue(posted.all { it.extras.getString(NotificationCompat.EXTRA_TEXT) == "Ember Road" })
+        assertTrue(posted.all { it.extras.getString(NotificationCompat.EXTRA_TITLE) == "Ember Road" })
         val progressId = notifications.progress(row).first
         assertTrue(shadowOf(manager).getNotification(progressId) == null) // the done notice outlives the worker's
         posted.forEach { n ->
@@ -49,6 +50,31 @@ class DownloadNotificationsTest {
             assertTrue(intent != null && shadowOf(intent).flags and PendingIntent.FLAG_IMMUTABLE != 0)
         }
     }
+
+    @Test
+    fun chapterLabelFallsBackFromNumberToVolumeToTitle() {
+        assertEquals("Chapter 49", notifications.chapterLabel(chapter(range = "49")))
+        assertEquals("Volume 3", notifications.chapterLabel(chapter(range = "-100000", volumeTitle = "3")))
+        assertEquals("Prologue", notifications.chapterLabel(chapter(range = "-100000", titleName = "Prologue")))
+        assertEquals("Chapter", notifications.chapterLabel(null))
+    }
+
+    private fun chapter(
+        range: String,
+        volumeTitle: String? = null,
+        titleName: String? = null,
+    ) = ChapterEntity(
+        1,
+        10,
+        1,
+        7,
+        range = range,
+        titleName = titleName,
+        pages = 20,
+        pagesRead = 0,
+        format = 0,
+        volumeTitle = volumeTitle,
+    )
 
     @Test
     fun newChaptersListsTheSeriesAndReplacesItselfPerServer() {
@@ -62,7 +88,7 @@ class DownloadNotificationsTest {
     @Test
     fun nothingIsPostedWhenNotificationsAreOff() {
         shadowOf(manager).setNotificationsEnabled(false)
-        notifications.finished(row, "Ember Road", ok = true)
+        notifications.finished(row, "Ember Road", null, ok = true)
         assertEquals(0, shadowOf(manager).allNotifications.size)
     }
 }

@@ -57,6 +57,12 @@ interface DownloadDao {
         chapterId: Int,
     ): DownloadEntity?
 
+    @Query("SELECT * FROM chapters WHERE serverId = :serverId AND id = :chapterId")
+    suspend fun chapter(
+        serverId: Long,
+        chapterId: Int,
+    ): ChapterEntity?
+
     @Query("SELECT name FROM series WHERE serverId = :serverId AND id = :seriesId")
     suspend fun seriesName(
         serverId: Long,

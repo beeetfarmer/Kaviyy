@@ -10,6 +10,7 @@ import com.nl.kaviyy.core.download.DownloadState
 internal fun DownloadedSeriesPreview(
     appearance: Appearance,
     selecting: Boolean = false,
+    actions: DownloadedSeriesActions = DownloadedSeriesActions(),
 ) = KavitaTheme(appearance = appearance) {
     val chapters = previewItems.filter { it.row.seriesId == 11 && it.state == DownloadState.COMPLETED }
     DownloadedSeriesScreen(
@@ -21,7 +22,7 @@ internal fun DownloadedSeriesPreview(
             selected = if (selecting) setOf(1) else emptySet(),
             loading = false,
         ),
-        DownloadedSeriesActions(),
+        actions,
     )
 }
 

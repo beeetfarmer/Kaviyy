@@ -37,7 +37,15 @@ data class DownloadedSeriesUiState(
     /** "Delete all" asks first. */
     val confirmDeleteAll: Boolean = false,
     val loading: Boolean = true,
-)
+) {
+    /** Where "Continue" resumes: the first downloaded chapter not finished yet, else the first one. */
+    val continueChapterId: Int?
+        get() =
+            (
+                chapters.firstOrNull { c -> c.chapter.let { it == null || it.pages == 0 || it.pagesRead < it.pages } }
+                    ?: chapters.firstOrNull()
+            )?.row?.chapterId
+}
 
 data class DownloadedSeriesActions(
     val onBack: () -> Unit = {},
@@ -46,6 +54,8 @@ data class DownloadedSeriesActions(
     val onDelete: (chapterIds: Set<Int>) -> Unit = {},
     val onMarkRead: (chapterIds: Set<Int>) -> Unit = {},
     val onDeleteAll: () -> Unit = {},
+    /** Opens a downloaded chapter in its reader (works offline: readers prefer the local copy). */
+    val onRead: (chapterId: Int) -> Unit = {},
 )
 
 private data class Selection(
@@ -65,7 +75,7 @@ class DownloadedSeriesViewModel
         private val readState: ReadStateRepository,
         saved: SavedStateHandle,
     ) : ViewModel() {
-        private val seriesId: Int =
+        val seriesId: Int =
             checkNotNull(saved.get<Int>(DOWNLOADED_SERIES_ARG)) { "missing $DOWNLOADED_SERIES_ARG" }
         private val selection = MutableStateFlow(Selection())
 

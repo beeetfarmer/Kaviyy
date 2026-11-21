@@ -281,7 +281,12 @@ internal fun MainScreen(
                 )
             }
             composable<DownloadSettingsDestination> { DownloadSettingsRoute(onBack = { nav.popBackStack() }) }
-            composable<DownloadedSeriesDestination> { DownloadedSeriesRoute(onBack = { nav.popBackStack() }) }
+            composable<DownloadedSeriesDestination> {
+                DownloadedSeriesRoute(
+                    onBack = { nav.popBackStack() },
+                    onRead = { seriesId, chapterId -> nav.navigate(ReaderDestination(seriesId, chapterId)) },
+                )
+            }
             composable<AboutDestination> { AboutRoute(onBack = { nav.popBackStack() }) }
             composable<AdminDestination> { AdminRoute(onBack = { nav.popBackStack() }) }
             composable<PrivacyDestination> {
