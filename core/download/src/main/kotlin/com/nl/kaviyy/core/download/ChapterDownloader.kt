@@ -1,7 +1,12 @@
 package com.nl.kaviyy.core.download
 
-import android.content.Context
+import com.nl.kaviyy.core.data.DownloadManifest
+import com.nl.kaviyy.core.data.DownloadedContent
+import com.nl.kaviyy.core.data.DownloadedContent.Companion.MANIFEST
+import com.nl.kaviyy.core.data.DownloadedContent.Companion.json
+import com.nl.kaviyy.core.data.ManifestPage
 import com.nl.kaviyy.core.data.ServerApis
+import com.nl.kaviyy.core.data.guardedUnder
 import com.nl.kaviyy.core.database.DownloadEntity
 import com.nl.kaviyy.core.model.dispatch.Dispatcher
 import com.nl.kaviyy.core.model.dispatch.KaviyyDispatchers
@@ -10,12 +15,9 @@ import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.network.KavitaApi
 import com.nl.kaviyy.core.network.apiCall
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import retrofit2.HttpException
 import java.io.File
 import java.io.FileOutputStream
@@ -26,24 +28,6 @@ import java.net.HttpURLConnection.HTTP_PARTIAL
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.coroutineContext
-
-/** Written last into a finished chapter folder; readers use it to open local content. */
-@Serializable
-data class DownloadManifest(
-    val chapterId: Int,
-    val pages: List<ManifestPage> = emptyList(),
-    /** File name of the original book (EPUB), when not downloaded as pages. */
-    val book: String? = null,
-)
-
-@Serializable
-data class ManifestPage(
-    val page: Int,
-    val file: String,
-    val mime: String? = null,
-    val width: Int = 0,
-    val height: Int = 0,
-)
 
 /** Progress so far; return false to stop (the download was paused or removed). */
 fun interface ProgressSink {
@@ -68,18 +52,18 @@ sealed interface DownloadOutcome {
 class ChapterDownloader
     @Inject
     constructor(
-        @ApplicationContext context: Context,
+        private val content: DownloadedContent,
         private val apis: ServerApis,
         @param:Dispatcher(KaviyyDispatchers.IO) private val io: CoroutineDispatcher,
     ) {
-        private val root = File(context.filesDir, "downloads")
+        private val root = content.root
 
         /** The finished folder for a chapter. Built from ids only, and checked to stay under the downloads root. */
         fun dir(
             serverId: Long,
             seriesId: Int,
             chapterId: Int,
-        ): File = guardedUnder(root, File(root, "$serverId/$seriesId/$chapterId"))
+        ): File = content.dir(serverId, seriesId, chapterId)
 
         private fun partDir(row: DownloadEntity) =
             guardedUnder(root, File(root, "${row.serverId}/${row.seriesId}/${row.chapterId}.part"))
@@ -142,7 +126,7 @@ class ChapterDownloader
                     if (file.length() == 0L) fail(AppError.InvalidData) // verify every page
                     ManifestPage(page, file.name, sniffMime(file), dims[page]?.width ?: 0, dims[page]?.height ?: 0)
                 }
-            File(part, MANIFEST).writeText(json.encodeToString(DownloadManifest(row.chapterId, pages)))
+            File(part, MANIFEST).writeText(json.encodeToString(DownloadManifest(row.chapterId, pages, info = info)))
         }
 
         private suspend fun book(
@@ -184,10 +168,8 @@ class ChapterDownloader
         }
 
         internal companion object {
-            const val MANIFEST = "manifest.json"
             const val BOOK = "book.epub"
             private const val REPORT_BYTES = 512L * 1024
-            private val json = Json { ignoreUnknownKeys = true }
         }
     }
 
@@ -239,15 +221,6 @@ private suspend fun stream(
 
 private fun File.isZip(): Boolean =
     length() > ZIP_MAGIC.size && inputStream().use { s -> ZIP_MAGIC.all { it.toInt() == s.read() } }
-
-/** [file] if it is inside [root] (after resolving `..` and links), else throws. */
-internal fun guardedUnder(
-    root: File,
-    file: File,
-): File {
-    require(file.canonicalPath.startsWith(root.canonicalPath + File.separator)) { "path escapes downloads" }
-    return file
-}
 
 /** Image type from the first bytes (the page endpoint's Content-Type isn't kept across resumes). */
 @Suppress("MagicNumber")

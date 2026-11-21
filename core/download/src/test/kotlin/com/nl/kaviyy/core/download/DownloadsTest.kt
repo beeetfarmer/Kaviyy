@@ -4,6 +4,7 @@ import androidx.room.Room
 import androidx.work.Configuration
 import androidx.work.NetworkType
 import androidx.work.WorkManager
+import com.nl.kaviyy.core.data.DownloadedContent
 import com.nl.kaviyy.core.data.ServerApis
 import com.nl.kaviyy.core.database.KaviyyDatabase
 import com.nl.kaviyy.core.database.ServerEntity
@@ -44,7 +45,14 @@ class DownloadsTest {
     private val downloader = reader.copy(roles = setOf("Download"))
     private val prefs = InMemoryDataStore(AppSettings())
     private val store = DownloadStore(db.downloadDao(), Clock.systemUTC())
-    private val files = ChapterDownloader(app, ServerApis { FakeKavitaApi() }, Dispatchers.Unconfined)
+    private val files =
+        ChapterDownloader(
+            DownloadedContent(app, db.downloadDao(), Dispatchers.Unconfined),
+            ServerApis {
+                FakeKavitaApi()
+            },
+            Dispatchers.Unconfined,
+        )
     private val downloads = Downloads(app, store, files, db.downloadDao(), AppSettingsStore(prefs))
 
     init {

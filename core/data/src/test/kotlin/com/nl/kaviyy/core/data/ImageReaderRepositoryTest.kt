@@ -11,11 +11,14 @@ import com.nl.kaviyy.core.network.pageUrl
 import com.nl.kaviyy.core.testing.FakeKavitaApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+@RunWith(RobolectricTestRunner::class)
 class ImageReaderRepositoryTest {
     private val server = Server(ServerId(1), "s", (ServerUrl.parse("https://s.lan") as ServerUrlResult.Valid).url)
     private val api =
@@ -46,7 +49,7 @@ class ImageReaderRepositoryTest {
                 chapterId: Int,
             ) = 48
         }
-    private val repo = KavitaImageReaderRepository { api }
+    private val repo = KavitaImageReaderRepository({ api }, noDownloads())
 
     @Test
     fun sentinelsBecomeNullAndMinusOneMeansNoNeighbour() =

@@ -1,6 +1,7 @@
 package com.nl.kaviyy.core.download
 
 import androidx.room.Room
+import com.nl.kaviyy.core.data.DownloadedContent
 import com.nl.kaviyy.core.data.ServerApis
 import com.nl.kaviyy.core.database.DownloadEntity
 import com.nl.kaviyy.core.database.KaviyyDatabase
@@ -82,7 +83,14 @@ class ChapterDownloaderTest {
                 return bookResponse(range)
             }
         }
-    private val downloader = ChapterDownloader(app, ServerApis { api }, Dispatchers.Unconfined)
+    private val downloader =
+        ChapterDownloader(
+            DownloadedContent(app, db.downloadDao(), Dispatchers.Unconfined),
+            ServerApis {
+                api
+            },
+            Dispatchers.Unconfined,
+        )
 
     @After
     fun tearDown() {
@@ -193,7 +201,13 @@ class ChapterDownloaderTest {
     fun pathsStayUnderTheDownloadsFolder() {
         assertTrue(downloader.dir(1, 2, 3).path.endsWith("downloads/1/2/3"))
         val root = File(app.filesDir, "downloads")
-        assertFailsWith<IllegalArgumentException> { guardedUnder(root, File(root, "1/../../shared_prefs")) }
-        assertFailsWith<IllegalArgumentException> { guardedUnder(root, root) }
+        assertFailsWith<IllegalArgumentException> {
+            com.nl.kaviyy.core.data
+                .guardedUnder(root, File(root, "1/../../shared_prefs"))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            com.nl.kaviyy.core.data
+                .guardedUnder(root, root)
+        }
     }
 }

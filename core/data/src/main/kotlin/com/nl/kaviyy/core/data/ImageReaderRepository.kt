@@ -5,6 +5,7 @@ import com.nl.kaviyy.core.model.result.map
 import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.network.ChapterInfoDto
 import com.nl.kaviyy.core.network.apiCall
+import java.io.File
 import javax.inject.Inject
 
 /** What the reader needs to show one chapter. Null numbers = none (loose leaf volume, default chapter). */
@@ -23,6 +24,8 @@ data class ReaderChapter(
     val format: Int,
     /** Per page (index = page); null when the server sent none for it. */
     val pageSizes: List<PageSize?> = emptyList(),
+    /** Downloaded page files (index = page); null when the chapter isn't downloaded. */
+    val localPages: List<File>? = null,
 ) {
     /** Shown in the image reader: archives, images, and PDFs (as server-rendered pages). */
     val isImage: Boolean get() = format != FORMAT_EPUB
@@ -43,7 +46,7 @@ private const val FORMAT_PDF = 4
 /** Kavita's "no number" sentinels (loose leaf volume / default chapter / special volume). */
 private val NO_NUMBER = setOf("-100000", "100000", "0", "")
 
-/** Chapter metadata and neighbours for the image reader (network only for now; offline pages: M15). */
+/** Chapter metadata and neighbours for the image reader; a downloaded chapter opens from its files. */
 interface ImageReaderRepository {
     suspend fun chapter(
         server: Server,
@@ -67,12 +70,20 @@ class KavitaImageReaderRepository
     @Inject
     constructor(
         private val apis: ServerApis,
+        private val local: DownloadedContent,
     ) : ImageReaderRepository {
         override suspend fun chapter(
             server: Server,
             chapterId: Int,
-        ): AppResult<ReaderChapter> =
-            apiCall { apis.api(server).chapterInfo(chapterId) }.map { it.toReaderChapter(chapterId) }
+        ): AppResult<ReaderChapter> {
+            val downloaded = local.chapter(server, chapterId)
+            val info = downloaded?.manifest?.info
+            return if (downloaded != null && info != null && downloaded.pageFiles.size == info.pages) {
+                AppResult.Success(info.toReaderChapter(chapterId).copy(localPages = downloaded.pageFiles))
+            } else {
+                apiCall { apis.api(server).chapterInfo(chapterId) }.map { it.toReaderChapter(chapterId) }
+            }
+        }
 
         override suspend fun next(
             server: Server,

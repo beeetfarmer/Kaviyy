@@ -21,7 +21,7 @@ const val ROLE_DOWNLOAD = "Download"
 /** Kavita only hands out original files (needed by the EPUB/PDF readers) to users with the Download role. */
 val Server.canDownload: Boolean get() = ROLE_DOWNLOAD in roles || ROLE_ADMIN in roles
 
-/** Original book files for the EPUB/PDF readers, fetched once into an app-private cache. */
+/** Original book files for the EPUB reader: the download if there is one, else fetched once into a private cache. */
 interface BookFileRepository {
     suspend fun file(
         server: Server,
@@ -36,6 +36,7 @@ class CachedBookFileRepository
     constructor(
         @ApplicationContext context: Context,
         private val apis: ServerApis,
+        private val local: DownloadedContent,
         @param:Dispatcher(KaviyyDispatchers.IO) private val io: CoroutineDispatcher,
     ) : BookFileRepository {
         // Ids only in paths; cacheDir is app-private and never backed up.
@@ -47,7 +48,19 @@ class CachedBookFileRepository
             chapterId: Int,
             extension: String,
         ): AppResult<File> {
-            if (!server.canDownload) return AppResult.Failure(AppError.Forbidden)
+            val downloaded = local.chapter(server, chapterId)?.bookFile?.takeIf { it.isFile }
+            return when {
+                downloaded != null -> AppResult.Success(downloaded)
+                !server.canDownload -> AppResult.Failure(AppError.Forbidden)
+                else -> fetch(server, chapterId, extension)
+            }
+        }
+
+        private suspend fun fetch(
+            server: Server,
+            chapterId: Int,
+            extension: String,
+        ): AppResult<File> {
             val dir = File(root, "${server.id.value}")
             val target = File(dir, "$chapterId.${extension.filter(Char::isLetter).take(MAX_EXT)}")
             return lock.withLock {

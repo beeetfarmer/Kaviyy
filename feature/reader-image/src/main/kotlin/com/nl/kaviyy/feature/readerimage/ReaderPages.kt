@@ -198,7 +198,7 @@ private fun PageImage(
     alignment: Alignment,
     scale: ContentScale = ContentScale.Fit,
 ) = Box(modifier) {
-    val url = state.server?.pageUrl(chapter.id, page)
+    val url = chapter.localPages?.getOrNull(page) ?: state.server?.pageUrl(chapter.id, page)
     val loader = LocalCoverImageLoader.current
     if (url != null && loader != null) {
         AsyncImage(

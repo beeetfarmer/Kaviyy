@@ -32,7 +32,12 @@ class BookFileRepositoryTest {
         }
 
     private fun repo() =
-        CachedBookFileRepository(RuntimeEnvironment.getApplication(), { api }, UnconfinedTestDispatcher())
+        CachedBookFileRepository(
+            RuntimeEnvironment.getApplication(),
+            { api },
+            noDownloads(),
+            UnconfinedTestDispatcher(),
+        )
 
     @Test
     fun withoutTheDownloadRoleNothingIsFetched() =
