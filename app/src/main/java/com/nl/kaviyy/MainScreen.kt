@@ -44,6 +44,7 @@ import com.nl.kaviyy.feature.lists.ReadingListRoute
 import com.nl.kaviyy.feature.lists.WantToReadActions
 import com.nl.kaviyy.feature.lists.WantToReadRoute
 import com.nl.kaviyy.feature.profile.AllStatsRoute
+import com.nl.kaviyy.feature.profile.ReaderPrefsRoute
 import com.nl.kaviyy.feature.profile.ThemeRoute
 import com.nl.kaviyy.feature.profile.YouActions
 import com.nl.kaviyy.feature.profile.YouRoute
@@ -110,6 +111,9 @@ private data object AllStatsDestination
 private data object ThemeDestination
 
 @Serializable
+private data object ReaderPrefsDestination
+
+@Serializable
 private data class ReadingListDestination(
     val readingListId: Int,
 )
@@ -167,6 +171,7 @@ internal fun MainScreen(
                         onSeeAllReadingLists = { nav.navigate(ReadingListsDestination) },
                         onAllStats = { nav.navigate(AllStatsDestination) },
                         onTheme = { nav.navigate(ThemeDestination) },
+                        onReaderPrefs = { nav.navigate(ReaderPrefsDestination) },
                     ),
                 ) { filterFor = it }
             }
@@ -205,6 +210,7 @@ internal fun MainScreen(
             composable<BrowseDestination> { BrowseRoute(onBack = { nav.popBackStack() }, onOpenSeries = openSeries) }
             composable<AllStatsDestination> { AllStatsRoute(onBack = { nav.popBackStack() }) }
             composable<ThemeDestination> { ThemeRoute(onBack = { nav.popBackStack() }) }
+            composable<ReaderPrefsDestination> { ReaderPrefsRoute(onBack = { nav.popBackStack() }) }
             composable<ReadingListsDestination> {
                 AllReadingListsRoute(
                     onBack = { nav.popBackStack() },
@@ -278,6 +284,7 @@ private data class TabNav(
     val onSeeAllReadingLists: () -> Unit,
     val onAllStats: () -> Unit,
     val onTheme: () -> Unit,
+    val onReaderPrefs: () -> Unit,
 )
 
 @Suppress("LongParameterList")
@@ -325,6 +332,7 @@ private fun TabContent(
                 YouActions(
                     onAllStats = lists.onAllStats,
                     onTheme = lists.onTheme,
+                    onReaderPrefs = lists.onReaderPrefs,
                     onSignOut = onSignOut,
                     onDeleteLocalData = onDeleteLocalData,
                 ),

@@ -294,6 +294,13 @@ open class FakeKavitaApi : KavitaApi {
         pageSize: Int,
     ): List<SeriesDto> = error("unused")
 
+    var profiles = listOf<JsonObject>()
+    val savedProfiles = mutableListOf<JsonObject>()
+
+    override suspend fun readingProfiles() = profiles
+
+    override suspend fun updateReadingProfile(profile: JsonObject) = profile.also { savedProfiles += it }
+
     override suspend fun readingProfile(
         libraryId: Int,
         seriesId: Int,

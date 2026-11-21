@@ -128,4 +128,28 @@ class ReaderSettingsRepositoryTest {
             repo.update(server, 1, 7, repo.settings(server, 7).first())
             assertTrue(db.outboxDao().pending(serverId).isEmpty())
         }
+
+    @Test
+    fun defaultProfileIsEditedInPlaceAndFollowersSeeIt() =
+        runTest {
+            api.profiles = listOf(json("""{"id":5,"kind":1}"""), json("""{"id":1,"kind":0,"futureField":"keep me"}"""))
+            val raw = (repo.defaultProfile(server) as AppResult.Success).value
+            assertEquals(1, raw["id"]?.jsonPrimitive?.int)
+            repo.refresh(server, 1, 7) // series 7 follows the default (id 1)
+            repo.saveDefault(server, raw, ReadingProfileDto.parse(raw.toString()).copy(readingDirection = 1))
+            val body = api.savedProfiles.single()
+            assertEquals("keep me", body["futureField"]?.jsonPrimitive?.content)
+            assertEquals(1, body["id"]?.jsonPrimitive?.int)
+            assertEquals(1, repo.settings(server, 7).first().readingDirection)
+        }
+
+    @Test
+    fun noDefaultProfileIsNotFound() =
+        runTest {
+            api.profiles = listOf(json("""{"id":5,"kind":1}"""))
+            assertEquals(
+                AppResult.Failure(com.nl.kaviyy.core.model.result.AppError.NotFound),
+                repo.defaultProfile(server),
+            )
+        }
 }

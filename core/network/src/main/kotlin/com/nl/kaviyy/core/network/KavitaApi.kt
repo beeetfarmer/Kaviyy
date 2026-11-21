@@ -541,6 +541,16 @@ interface KavitaApi {
         @Path("seriesId") seriesId: Int,
     ): JsonObject
 
+    /** The user's non-implicit profiles (kind 0 = Default, 1 = User), as raw JSON. */
+    @GET("api/reading-profile/all")
+    suspend fun readingProfiles(): List<JsonObject>
+
+    /** Updates one of the user's profiles; returns the saved profile. */
+    @POST("api/reading-profile")
+    suspend fun updateReadingProfile(
+        @Body profile: JsonObject,
+    ): JsonObject
+
     /** Creates/updates the series' implicit profile. */
     @POST("api/reading-profile/series")
     suspend fun saveSeriesReadingProfile(

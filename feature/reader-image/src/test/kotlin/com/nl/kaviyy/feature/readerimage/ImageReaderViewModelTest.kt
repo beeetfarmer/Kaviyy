@@ -93,6 +93,14 @@ class ImageReaderViewModelTest {
 
     private val settings =
         object : ReaderSettingsRepository {
+            override suspend fun defaultProfile(server: Server) = error("unused")
+
+            override suspend fun saveDefault(
+                server: Server,
+                raw: kotlinx.serialization.json.JsonObject,
+                settings: ReadingProfileDto,
+            ) = error("unused")
+
             override fun settings(
                 server: Server,
                 seriesId: Int,

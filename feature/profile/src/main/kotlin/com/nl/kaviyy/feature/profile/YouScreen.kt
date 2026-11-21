@@ -75,6 +75,13 @@ fun YouScreen(
     WeekCard(state.week, state.statsFailed, actions.onAllStats)
     GroupedList {
         SettingsRow(
+            KavitaIcons.Sliders,
+            SettingsTileColors.reader,
+            stringResource(R.string.you_settings_reader),
+            actions.onReaderPrefs,
+            divider = true,
+        )
+        SettingsRow(
             KavitaIcons.Moon,
             SettingsTileColors.theme,
             stringResource(R.string.you_settings_theme),

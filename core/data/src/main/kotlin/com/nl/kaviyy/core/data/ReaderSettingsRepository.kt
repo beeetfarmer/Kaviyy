@@ -4,7 +4,10 @@ import com.nl.kaviyy.core.database.OutboxDao
 import com.nl.kaviyy.core.database.OutboxEntity
 import com.nl.kaviyy.core.database.ReadingProfileDao
 import com.nl.kaviyy.core.database.ReadingProfileEntity
+import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
+import com.nl.kaviyy.core.model.result.flatMap
+import com.nl.kaviyy.core.model.result.onSuccess
 import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.network.ReadingProfileDto
 import com.nl.kaviyy.core.network.apiCall
@@ -20,6 +23,7 @@ import javax.inject.Inject
 
 internal const val OUTBOX_READING_PROFILE = "readingProfile"
 private const val KIND_IMPLICIT = 2
+private const val KIND_DEFAULT = 0
 
 /**
  * Reader settings ⇄ Kavita reading profiles (M4.3). Reads come from Room (series profile, else the default profile,
@@ -49,6 +53,16 @@ interface ReaderSettingsRepository {
         seriesId: Int,
         settings: ReadingProfileDto,
     ): AppResult<Unit>
+
+    /** The user's Default profile (You › Reader Preferences), as the server's raw JSON. Online only. */
+    suspend fun defaultProfile(server: Server): AppResult<JsonObject>
+
+    /** Writes [settings] over [raw] and saves it; returns the saved profile. Online only. */
+    suspend fun saveDefault(
+        server: Server,
+        raw: JsonObject,
+        settings: ReadingProfileDto,
+    ): AppResult<JsonObject>
 }
 
 class OfflineFirstReaderSettingsRepository
@@ -140,6 +154,24 @@ class OfflineFirstReaderSettingsRepository
                 }
             }
         }
+
+        override suspend fun defaultProfile(server: Server): AppResult<JsonObject> =
+            apiCall { apis.api(server).readingProfiles() }.flatMap { all ->
+                all
+                    .firstOrNull { ReadingProfileDto.parse(it.toString()).kind == KIND_DEFAULT }
+                    ?.let { AppResult.Success(it) } ?: AppResult.Failure(AppError.NotFound)
+            }
+
+        override suspend fun saveDefault(
+            server: Server,
+            raw: JsonObject,
+            settings: ReadingProfileDto,
+        ): AppResult<JsonObject> =
+            apiCall { apis.api(server).updateReadingProfile(settings.mergeInto(raw)) }.onSuccess { saved ->
+                // Series that follow the default read it from Room: keep that copy current.
+                val dto = ReadingProfileDto.parse(saved.toString())
+                profiles.upsertProfile(ReadingProfileEntity(server.id.value, dto.id, dto.kind, saved.toString()))
+            }
 
         private suspend fun store(
             server: Server,
