@@ -17,19 +17,18 @@ import com.nl.kaviyy.core.data.Home
 import com.nl.kaviyy.core.data.HomeItem
 import com.nl.kaviyy.core.data.HomeRail
 import com.nl.kaviyy.core.data.HomeSection
+import com.nl.kaviyy.core.data.HomeSectionPref
 import com.nl.kaviyy.core.data.StreamType
 import com.nl.kaviyy.core.designsystem.component.CoverCard
 import com.nl.kaviyy.core.designsystem.component.RailHeader
 import com.nl.kaviyy.core.designsystem.component.coverColorFor
 import com.nl.kaviyy.core.designsystem.theme.KavitaSpacing
-import com.nl.kaviyy.core.network.collectionCoverUrl
-import com.nl.kaviyy.core.network.libraryCoverUrl
 import com.nl.kaviyy.core.network.readingListCoverUrl
 
 /** Local rail ids for sections that aren't server streams (server ids are positive, built-ins -1…-3). */
 internal const val WANT_TO_READ_RAIL = Int.MIN_VALUE + 1
 
-/** A collection, reading list or library on a Home rail. */
+/** A reading list on its Home rail. */
 internal data class Shelf(
     val id: Int,
     val title: String,
@@ -39,32 +38,24 @@ internal data class Shelf(
 
 /** [derived] One user-chosen Home section (You → Home Screen); empty sections take no space. */
 internal fun LazyListScope.homeSection(
-    section: HomeSection,
+    pref: HomeSectionPref,
     state: HomeUiState,
     actions: HomeActions,
     coverUrl: (Int) -> String?,
     isDownloaded: (Int) -> Boolean,
 ) {
     val home = state.home ?: return
-    when (section) {
+    when (pref.section) {
         HomeSection.ContinueReading -> {
             continueCard(home.continueReading, state, actions, coverUrl)
-        }
-
-        HomeSection.Collections -> {
-            collections(state, actions)
         }
 
         HomeSection.ReadingLists -> {
             readingLists(state, actions)
         }
 
-        HomeSection.Libraries -> {
-            libraries(state, actions)
-        }
-
         else -> {
-            seriesRails(section, home, actions).filter { it.first.items.isNotEmpty() }.forEach { (rail, a) ->
+            seriesRails(pref, home, actions).filter { it.first.items.isNotEmpty() }.forEach { (rail, a) ->
                 item(key = "rail-${rail.streamId}") { Rail(rail, coverUrl, a, state::isDimmed, isDownloaded) }
             }
         }
@@ -73,18 +64,26 @@ internal fun LazyListScope.homeSection(
 
 /** The series rails of [section], each with the actions its "See All" uses. */
 private fun seriesRails(
-    section: HomeSection,
+    pref: HomeSectionPref,
     home: Home,
     actions: HomeActions,
 ): List<Pair<HomeRail, HomeActions>> =
-    when (section) {
+    when (pref.section) {
         HomeSection.OnDeck -> listOfNotNull(home.rail(StreamType.ON_DECK))
         HomeSection.RecentlyUpdated -> listOfNotNull(home.rail(StreamType.RECENTLY_UPDATED))
         HomeSection.RecentlyAdded -> listOfNotNull(home.rail(StreamType.NEWLY_ADDED))
         HomeSection.SmartFilters -> home.rails.filter { it.type == StreamType.SMART_FILTER }
         else -> emptyList()
     }.map { it to actions } +
-        when (section) {
+        when (pref.section) {
+            HomeSection.Collection -> {
+                listOfNotNull(home.itemRail(pref)?.to(actions.copy(onSeeAll = { actions.onOpenCollection(pref.id) })))
+            }
+
+            HomeSection.Library -> {
+                listOfNotNull(home.itemRail(pref)?.to(actions.copy(onSeeAll = { actions.onOpenLibrary(pref.id) })))
+            }
+
             HomeSection.WantToRead -> {
                 listOf(
                     HomeRail(WANT_TO_READ_RAIL, 0, "", home.wantToRead) to
@@ -120,29 +119,6 @@ private fun LazyListScope.continueCard(
     }
 }
 
-private fun LazyListScope.collections(
-    state: HomeUiState,
-    actions: HomeActions,
-) {
-    val list = state.collections
-    if (list.isEmpty()) return
-    item(key = "collections") {
-        ShelfRail(
-            stringResource(R.string.home_collections),
-            list.map {
-                Shelf(
-                    it.id,
-                    it.title,
-                    pluralStringResource(R.plurals.home_series_count, it.itemCount, it.itemCount),
-                    state.server?.collectionCoverUrl(it.id),
-                )
-            },
-            actions.onOpenCollection,
-            actions.onSeeAllCollections,
-        )
-    }
-}
-
 private fun LazyListScope.readingLists(
     state: HomeUiState,
     actions: HomeActions,
@@ -166,41 +142,6 @@ private fun LazyListScope.readingLists(
         )
     }
 }
-
-private fun LazyListScope.libraries(
-    state: HomeUiState,
-    actions: HomeActions,
-) {
-    val list = state.libraries
-    if (list.isEmpty()) return
-    item(key = "libraries") {
-        ShelfRail(
-            stringResource(R.string.home_libraries),
-            list.map {
-                Shelf(
-                    it.id,
-                    it.name,
-                    stringResource(libraryType(it.type)),
-                    state.server?.libraryCoverUrl(it.id),
-                )
-            },
-            actions.onOpenLibrary,
-            onSeeAll = null,
-        )
-    }
-}
-
-/** Kavita `LibraryType` (0 Manga, 1 Comic, 2 Book, 3 Image, 4 LightNovel, 5 ComicVine). */
-@Suppress("MagicNumber")
-internal fun libraryType(type: Int) =
-    when (type) {
-        0 -> R.string.home_library_manga
-        1, 5 -> R.string.home_library_comic
-        2 -> R.string.home_library_book
-        3 -> R.string.home_library_image
-        4 -> R.string.home_library_light_novel
-        else -> R.string.home_library_other
-    }
 
 @Composable
 private fun ShelfRail(

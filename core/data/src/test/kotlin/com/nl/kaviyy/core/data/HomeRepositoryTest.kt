@@ -3,6 +3,8 @@ package com.nl.kaviyy.core.data
 import androidx.room.Room
 import com.nl.kaviyy.core.database.KaviyyDatabase
 import com.nl.kaviyy.core.database.ServerEntity
+import com.nl.kaviyy.core.datastore.AppSettings
+import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.model.result.AppError
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.server.Server
@@ -19,6 +21,7 @@ import com.nl.kaviyy.core.network.ReadingListDto
 import com.nl.kaviyy.core.network.SeriesDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
 import com.nl.kaviyy.core.testing.FakeKavitaApi
+import com.nl.kaviyy.core.testing.InMemoryDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -58,6 +61,8 @@ class HomeRepositoryTest {
         )
     private var sentFilter: JsonObject? = null
     private var onDeckFilter: SeriesFilterV2Dto? = null
+    private val itemFilters = mutableListOf<SeriesFilterV2Dto>()
+    private val settings = AppSettingsStore(InMemoryDataStore(AppSettings()))
 
     private val api =
         object : FakeKavitaApi() {
@@ -84,8 +89,22 @@ class HomeRepositoryTest {
                 pageSize: Int,
             ): List<SeriesDto> {
                 if (offline) throw IOException("offline")
-                onDeckFilter = filter
-                return onDeck
+                return when (filter.statements.firstOrNull()?.field) {
+                    FilterField.CollectionTags.api -> {
+                        listOf(SeriesDto(31, name = "In Zeta")).also {
+                            itemFilters +=
+                                filter
+                        }
+                    }
+
+                    FilterField.LIBRARIES_API -> {
+                        listOf(SeriesDto(32, name = "In Manga")).also { itemFilters += filter }
+                    }
+
+                    else -> {
+                        onDeck.also { onDeckFilter = filter }
+                    }
+                }
             }
 
             override suspend fun wantToRead(
@@ -131,6 +150,7 @@ class HomeRepositoryTest {
             OfflineFirstListsRepository({ api }, db.seriesDao(), db.collectionDao()),
             OfflineFirstReadingListRepository({ api }, db.readingListDao()),
             OfflineFirstCatalogRepository(db.libraryDao(), db.seriesDao(), { api }),
+            settings,
         )
 
     @After
@@ -168,8 +188,30 @@ class HomeRepositoryTest {
             assertEquals(false, filter.sortOptions?.isAscending)
             val home = repo.home(server).first()
             assertEquals(listOf("Wanted"), home.wantToRead.map { it.title })
-            assertEquals(listOf("Zeta", "Alpha"), home.collections.map { it.title })
-            assertEquals(listOf("Manga"), home.libraries.map { it.name })
+            assertEquals(emptyList(), itemFilters) // no collection / library rails switched on
+        }
+
+    @Test
+    fun switchedOnCollectionsAndLibrariesGetTheirOwnRailsThatStayOffline() =
+        runTest {
+            settings.update { it.copy(homeLayout = "Library:2,!Collection:4,Collection:3,Collection:99") }
+            repo.refresh(server)
+            assertEquals(
+                listOf(FilterField.LIBRARIES_API to "2", FilterField.CollectionTags.api to "3"),
+                itemFilters.map { f -> f.statements.single().let { it.field to it.value } },
+            )
+            assertEquals(SeriesSort.Title.field, itemFilters[1].sortOptions?.sortField)
+
+            fun rails(home: Home) =
+                listOf(HomeSectionPref(HomeSection.Library, true, 2), HomeSectionPref(HomeSection.Collection, true, 3))
+                    .map { pref -> home.itemRail(pref)?.let { it.name to it.items.map { i -> i.title } } }
+            val expected = listOf("Manga" to listOf("In Manga"), "Zeta" to listOf("In Zeta"))
+            assertEquals(expected, rails(repo.home(server).first()))
+            // Hidden (4) and deleted (99) collections get no rail.
+            assertEquals(null, repo.home(server).first().itemRail(HomeSectionPref(HomeSection.Collection, true, 4)))
+            offline = true
+            repo.refresh(server)
+            assertEquals(expected, rails(repo.home(server).first()))
         }
 
     @Test

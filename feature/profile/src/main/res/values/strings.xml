@@ -245,7 +245,7 @@
     <string name="you_settings_home">Home Screen</string>
     <string name="home_layout_title">Home Screen</string>
     <string name="home_layout_sections">Sections</string>
-    <string name="home_layout_footnote">Turn sections on or off and move them up or down. Empty sections are hidden on Home. Offline, downloads always come first.</string>
+    <string name="home_layout_footnote">Turn sections on or off and move them up or down. Each collection or library you turn on gets its own row of series. Empty sections are hidden on Home. Offline, downloads always come first.</string>
     <string name="home_layout_up">Move %1$s up</string>
     <string name="home_layout_down">Move %1$s down</string>
     <string name="home_layout_sort">%1$s order</string>
@@ -255,12 +255,9 @@
     <string name="home_section_added">Recently Added</string>
     <string name="home_section_smart_filters">Smart Filters</string>
     <string name="home_section_want_to_read">Want to Read</string>
-    <string name="home_section_collections">Collections</string>
     <string name="home_section_reading_lists">Reading Lists</string>
-    <string name="home_section_libraries">Libraries</string>
     <string name="home_section_downloaded">Downloaded</string>
     <string name="home_sort_recent">Recent</string>
-    <string name="home_sort_scanned">Scanned</string>
     <string name="home_sort_az">A–Z</string>
     <string name="home_sort_za">Z–A</string>
     <string name="home_sort_largest">Largest</string>
@@ -271,4 +268,6 @@
     <string name="prefs_web_only">Kavita web reader only</string>
     <string name="prefs_web_only_note">Also saved to your account, but only Kavita\'s web reader uses these.</string>
     <string name="prefs_book_direction">Book reading direction</string>
+    <string name="home_row_collection">Collection</string>
+    <string name="home_row_library">Library</string>
 </resources>

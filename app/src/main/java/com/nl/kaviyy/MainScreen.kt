@@ -417,7 +417,6 @@ private fun TabContent(
                     onOpenSeries = onOpenSeries,
                     onSeeWantToRead = lists.onOpenWantToRead,
                     onOpenCollection = lists.onOpenCollection,
-                    onSeeAllCollections = lists.onSeeAllCollections,
                     onOpenReadingList = lists.onOpenReadingList,
                     onSeeAllReadingLists = lists.onSeeAllReadingLists,
                     onOpenLibrary = lists.onOpenLibrary,

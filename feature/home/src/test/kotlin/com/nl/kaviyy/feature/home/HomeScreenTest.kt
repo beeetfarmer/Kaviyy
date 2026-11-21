@@ -5,11 +5,11 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.nl.kaviyy.core.data.Home
-import com.nl.kaviyy.core.data.ListSort
 import com.nl.kaviyy.core.data.parseHomeLayout
 import com.nl.kaviyy.core.designsystem.theme.Appearance
 import com.nl.kaviyy.core.designsystem.theme.KavitaTheme
@@ -69,50 +69,33 @@ class HomeScreenTest {
     }
 
     @Test
-    fun followsTheUsersSectionOrderAndOpensShelves() {
+    fun followsTheUsersSectionOrderAndCollectionRailsOpenTheirCollection() {
         var collection = 0
-        var library = 0
-        val layout =
-            parseHomeLayout("Libraries,Collections,!OnDeck,!RecentlyUpdated,!ContinueReading")
+        var opened = 0
+        val layout = parseHomeLayout("Collection:1,RecentlyUpdated,!OnDeck,!ContinueReading,!Collection:2")
         compose.setContent {
             KavitaTheme(appearance = Appearance.Light) {
                 HomeScreen(
-                    previewState().copy(layout = layout, collectionSort = ListSort.NameAsc),
+                    previewState().copy(layout = layout),
                     "Friday",
-                    HomeActions(onOpenCollection = { collection = it }, onOpenLibrary = { library = it }),
+                    HomeActions(onOpenCollection = { collection = it }, onOpenSeries = { opened = it }),
                     {},
                 )
             }
         }
         compose.onNodeWithText("On Deck").assertDoesNotExist()
         compose.onNodeWithText("Resume").assertDoesNotExist()
-        val libraries =
+
+        fun top(text: String) =
             compose
-                .onNodeWithText("Libraries")
+                .onNodeWithText(text)
                 .fetchSemanticsNode()
                 .boundsInRoot.top
-        val collections =
-            compose
-                .onNodeWithText("Collections")
-                .fetchSemanticsNode()
-                .boundsInRoot.top
-        assertTrue(libraries < collections)
-        compose.onNodeWithText("Books").performClick()
-        assertEquals(2, library)
-        // A–Z: "Award Winners" before "Weekend Reads".
-        val award =
-            compose
-                .onNodeWithText("Award Winners")
-                .fetchSemanticsNode()
-                .boundsInRoot.left
-        val weekend =
-            compose
-                .onNodeWithText("Weekend Reads")
-                .fetchSemanticsNode()
-                .boundsInRoot.left
-        assertTrue(award < weekend)
-        compose.onNodeWithText("Award Winners").performClick()
-        assertEquals(2, collection)
+        assertTrue(top("Weekend Reads") < top("Recently Updated")) // the collection's rail, titled with its name
+        compose.onNodeWithText("Tidewater").performClick()
+        assertEquals(9, opened)
+        compose.onAllNodesWithText("See All")[0].performClick()
+        assertEquals(1, collection)
     }
 
     @Test

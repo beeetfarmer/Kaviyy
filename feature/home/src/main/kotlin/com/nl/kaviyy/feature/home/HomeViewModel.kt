@@ -11,11 +11,7 @@ import com.nl.kaviyy.core.data.HomeSectionPref
 import com.nl.kaviyy.core.data.ListSort
 import com.nl.kaviyy.core.data.NetworkMonitor
 import com.nl.kaviyy.core.data.parseHomeLayout
-import com.nl.kaviyy.core.data.sortedCollections
-import com.nl.kaviyy.core.data.sortedLibraries
 import com.nl.kaviyy.core.data.sortedReadingLists
-import com.nl.kaviyy.core.database.CollectionEntity
-import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.database.ReadingListRow
 import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.model.result.AppError
@@ -28,6 +24,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
@@ -50,20 +47,16 @@ data class HomeUiState(
     val offline: Boolean = false,
     /** The user's sections, in order (hidden ones included, flagged). */
     val layout: List<HomeSectionPref> = parseHomeLayout(""),
-    val collectionSort: ListSort = ListSort.Recent,
     val readingListSort: ListSort = ListSort.Recent,
-    val librarySort: ListSort = ListSort.NameAsc,
 ) {
     /** Offline, downloads always come first, whatever the layout says. */
     val downloadedRail: List<HomeItem> get() = if (offline) home?.downloaded.orEmpty() else emptyList()
 
     /** Visible sections in order; Downloaded is skipped offline (it's already first). */
-    val sections: List<HomeSection>
-        get() = layout.filter { it.visible && !(offline && it.section == HomeSection.Downloaded) }.map { it.section }
+    val sections: List<HomeSectionPref>
+        get() = layout.filter { it.visible && !(offline && it.section == HomeSection.Downloaded) }
 
-    val collections: List<CollectionEntity> get() = home?.collections.orEmpty().sortedCollections(collectionSort)
     val readingLists: List<ReadingListRow> get() = home?.readingLists.orEmpty().sortedReadingLists(readingListSort)
-    val libraries: List<LibraryEntity> get() = home?.libraries.orEmpty().sortedLibraries(librarySort)
 
     /** Offline already explains itself via the pill. */
     val showStaleNotice: Boolean get() = error != null && !offline && home?.isEmpty == false
@@ -84,7 +77,6 @@ data class HomeActions(
     val onResume: (com.nl.kaviyy.core.data.HomeItem) -> Unit = {},
     val onSeeWantToRead: () -> Unit = {},
     val onOpenCollection: (Int) -> Unit = {},
-    val onSeeAllCollections: () -> Unit = {},
     val onOpenReadingList: (Int) -> Unit = {},
     val onSeeAllReadingLists: () -> Unit = {},
     val onOpenLibrary: (Int) -> Unit = {},
@@ -105,7 +97,7 @@ class HomeViewModel
         session: AuthSession,
         private val repository: HomeRepository,
         network: NetworkMonitor,
-        settings: AppSettingsStore,
+        private val settings: AppSettingsStore,
     ) : ViewModel() {
         private val online = network.isOnline().stateIn(viewModelScope, SharingStarted.Eagerly, true)
         private val server = session.activeServer.stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -118,12 +110,7 @@ class HomeViewModel
                 }.combine(status) { ui, st -> ui.copy(refreshing = st.running, error = st.error) }
                 .combine(online) { ui, on -> ui.copy(offline = !on) }
                 .combine(settings.settings) { ui, a ->
-                    ui.copy(
-                        layout = parseHomeLayout(a.homeLayout),
-                        collectionSort = ListSort.of(a.collectionSort),
-                        readingListSort = ListSort.of(a.readingListSort),
-                        librarySort = ListSort.of(a.librarySort, ListSort.NameAsc),
-                    )
+                    ui.copy(layout = parseHomeLayout(a.homeLayout), readingListSort = ListSort.of(a.readingListSort))
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeUiState())
 
         init {
@@ -131,6 +118,14 @@ class HomeViewModel
             viewModelScope.launch { server.filterNotNull().distinctUntilChangedBy { it.id }.collectLatest(::refresh) }
             // Back online: catch up.
             viewModelScope.launch { online.drop(1).filter { it }.collect { refresh() } }
+            // A collection or library rail switched on in You → Home Screen: fetch its series.
+            viewModelScope.launch {
+                settings.settings
+                    .map { a -> parseHomeLayout(a.homeLayout).filter { it.visible && it.section.perItem }.toSet() }
+                    .distinctUntilChanged()
+                    .drop(1)
+                    .collect { refresh() }
+            }
         }
 
         fun refresh() {

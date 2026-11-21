@@ -1,14 +1,13 @@
 package com.nl.kaviyy.core.data
 
 import com.nl.kaviyy.core.database.ChapterEntity
-import com.nl.kaviyy.core.database.CollectionEntity
 import com.nl.kaviyy.core.database.DashboardDao
 import com.nl.kaviyy.core.database.DashboardItemEntity
 import com.nl.kaviyy.core.database.DashboardStreamEntity
-import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.database.ReadingListRow
 import com.nl.kaviyy.core.database.SeriesDao
 import com.nl.kaviyy.core.database.SeriesEntity
+import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.result.getOrNull
 import com.nl.kaviyy.core.model.result.map
@@ -25,6 +24,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.intOrNull
 import javax.inject.Inject
@@ -35,7 +35,20 @@ object StreamType {
     const val RECENTLY_UPDATED = 2
     const val NEWLY_ADDED = 3
     const val SMART_FILTER = 4
+
+    /** Local only: the series of one collection / library the user put on Home. */
+    const val COLLECTION = 101
+    const val LIBRARY = 102
 }
+
+private const val COLLECTION_RAIL_BASE = 1_000_000
+private const val LIBRARY_RAIL_BASE = 2_000_000
+
+/** Local stream id of a collection or library rail (server stream ids are positive, built-ins -1…-3). */
+fun itemRailId(
+    section: HomeSection,
+    id: Int,
+): Int = -(if (section == HomeSection.Collection) COLLECTION_RAIL_BASE else LIBRARY_RAIL_BASE) - id
 
 data class HomeItem(
     val seriesId: Int,
@@ -66,10 +79,8 @@ data class Home(
     val downloaded: List<HomeItem> = emptyList(),
     /** The cached first page of Want to Read. */
     val wantToRead: List<HomeItem> = emptyList(),
-    /** Cached shelves for the Collections / Reading Lists / Libraries rails (server order; sorted in the UI). */
-    val collections: List<CollectionEntity> = emptyList(),
+    /** Cached reading lists for their rail (server order; sorted in the UI). */
     val readingLists: List<ReadingListRow> = emptyList(),
-    val libraries: List<LibraryEntity> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() =
@@ -77,6 +88,13 @@ data class Home(
                 wantToRead.isEmpty()
 
     fun rail(type: Int): HomeRail? = rails.firstOrNull { it.type == type }
+
+    /** The rail of one collection / library on Home, once fetched. */
+    fun itemRail(pref: HomeSectionPref): HomeRail? =
+        rails.firstOrNull {
+            it.streamId ==
+                itemRailId(pref.section, pref.id)
+        }
 
     val downloadedIds: Set<Int> by lazy { downloaded.mapTo(HashSet()) { it.seriesId } }
 }
@@ -128,6 +146,7 @@ class OfflineFirstHomeRepository
         private val lists: ListsRepository,
         private val readingLists: ReadingListRepository,
         private val catalog: CatalogRepository,
+        private val settings: AppSettingsStore,
     ) : HomeRepository {
         override fun home(server: Server): Flow<Home> {
             val id = server.id.value
@@ -142,16 +161,9 @@ class OfflineFirstHomeRepository
                 combine(
                     streams,
                     series.observeQuery(id, wantToReadQuery().key),
-                    lists.collections(server),
                     readingLists.lists(server),
-                    catalog.libraries(server),
-                ) { home, wanted, collections, lists, libraries ->
-                    home.copy(
-                        wantToRead = wanted.take(RAIL_SIZE).map { it.toHomeItem() },
-                        collections = collections,
-                        readingLists = lists,
-                        libraries = libraries,
-                    )
+                ) { home, wanted, lists ->
+                    home.copy(wantToRead = wanted.take(RAIL_SIZE).map { it.toHomeItem() }, readingLists = lists)
                 }
             }
         }
@@ -167,10 +179,7 @@ class OfflineFirstHomeRepository
                     // Offline / failed: keep the cached smart filters.
                     is AppResult.Failure -> dashboard.streams(id).filter { it.streamType == StreamType.SMART_FILTER }
                 }.sortedBy { it.position }
-            val streams =
-                (builtInStreams(id) + smartFilters)
-                    .mapIndexed { i, stream -> stream.copy(position = i) }
-                    .also { dashboard.replaceStreams(id, it) }
+            // Lists first: the collection / library rails take their names from them.
             val shelves =
                 coroutineScope {
                     listOf(
@@ -180,6 +189,10 @@ class OfflineFirstHomeRepository
                         async { catalog.refreshLibraries(server) },
                     ).awaitAll()
                 }
+            val streams =
+                (builtInStreams(id) + smartFilters + itemStreams(server))
+                    .mapIndexed { i, stream -> stream.copy(position = i) }
+                    .also { dashboard.replaceStreams(id, it) }
             val results = listOf(layout.map {}) + streams.map { refreshStream(id, api, it) } + shelves
             return results.firstOrNull { it is AppResult.Failure } ?: AppResult.Success(Unit)
         }
@@ -227,6 +240,13 @@ class OfflineFirstHomeRepository
 
                 StreamType.NEWLY_ADDED -> {
                     apiCall { api.recentlyAdded(SeriesFilterV2Dto(), 1, RAIL_SIZE) }.map { list ->
+                        series.upsertSeries(list.map { it.toEntity(serverId) })
+                        dashboard.replaceItems(serverId, stream.id, list.mapIndexed { i, s -> item(i, s.id) })
+                    }
+                }
+
+                StreamType.COLLECTION, StreamType.LIBRARY -> {
+                    apiCall { api.series(itemFilter(stream), 1, RAIL_SIZE) }.map { list ->
                         series.upsertSeries(list.map { it.toEntity(serverId) })
                         dashboard.replaceItems(serverId, stream.id, list.mapIndexed { i, s -> item(i, s.id) })
                     }
@@ -284,11 +304,45 @@ class OfflineFirstHomeRepository
                     }.awaitAll()
             }
 
+        /** A stream per collection / library switched on in the Home layout that still exists. */
+        private suspend fun itemStreams(server: Server): List<DashboardStreamEntity> {
+            val id = server.id.value
+            val collections = lists.collections(server).first().associate { it.id to it.title }
+            val libraries = catalog.libraries(server).first().associate { it.id to it.name }
+            return parseHomeLayout(settings.settings.first().homeLayout)
+                .filter { it.visible && it.section.perItem }
+                .mapNotNull { pref ->
+                    val collection = pref.section == HomeSection.Collection
+                    val name = (if (collection) collections else libraries)[pref.id] ?: return@mapNotNull null
+                    val type = if (collection) StreamType.COLLECTION else StreamType.LIBRARY
+                    DashboardStreamEntity(id, itemRailId(pref.section, pref.id), name, 0, type, visible = true)
+                }
+        }
+
         /** On Deck, Recently Updated and Recently Added, with fixed local ids (server stream ids are positive). */
         private fun builtInStreams(serverId: Long) =
             listOf(StreamType.ON_DECK, StreamType.RECENTLY_UPDATED, StreamType.NEWLY_ADDED).mapIndexed { i, type ->
                 DashboardStreamEntity(serverId, id = -type, name = "", position = i, streamType = type, visible = true)
             }
+    }
+
+/** A collection's series by title (as the collection opens); a library's newest first. */
+internal fun itemFilter(stream: DashboardStreamEntity): SeriesFilterV2Dto =
+    if (stream.streamType == StreamType.COLLECTION) {
+        val id = -stream.id - COLLECTION_RAIL_BASE
+        SeriesFilterV2Dto(
+            statements =
+                listOf(
+                    SeriesFilterStatementDto(Comparison.Contains.api, FilterField.CollectionTags.api, "$id"),
+                ),
+            sortOptions = SeriesSortOptionDto(SeriesSort.Title.field, SeriesSort.Title.ascending),
+        )
+    } else {
+        val id = -stream.id - LIBRARY_RAIL_BASE
+        SeriesFilterV2Dto(
+            statements = listOf(SeriesFilterStatementDto(Comparison.Contains.api, FilterField.LIBRARIES_API, "$id")),
+            sortOptions = SeriesSortOptionDto(SeriesSort.RecentlyAdded.field, SeriesSort.RecentlyAdded.ascending),
+        )
     }
 
 private fun assemble(

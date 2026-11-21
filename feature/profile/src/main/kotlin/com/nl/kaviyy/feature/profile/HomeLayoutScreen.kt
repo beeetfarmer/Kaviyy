@@ -27,13 +27,17 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.nl.kaviyy.core.data.AuthSession
+import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.HomeSection
 import com.nl.kaviyy.core.data.HomeSectionPref
 import com.nl.kaviyy.core.data.ListSort
+import com.nl.kaviyy.core.data.ListsRepository
 import com.nl.kaviyy.core.data.encodeHomeLayout
 import com.nl.kaviyy.core.data.move
 import com.nl.kaviyy.core.data.parseHomeLayout
 import com.nl.kaviyy.core.data.toggle
+import com.nl.kaviyy.core.data.withItems
 import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.designsystem.component.CircleIconButton
 import com.nl.kaviyy.core.designsystem.component.GroupedList
@@ -46,79 +50,84 @@ import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
 import com.nl.kaviyy.core.designsystem.theme.Kavita
 import com.nl.kaviyy.core.designsystem.theme.KavitaSpacing
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** The rails with a choosable order. */
-enum class ShelfKind { Collections, ReadingLists, Libraries }
-
 data class HomeLayoutUiState(
+    /** Every section, with a row for each collection and library (new ones hidden at the end). */
     val layout: List<HomeSectionPref> = parseHomeLayout(""),
-    val sorts: Map<ShelfKind, ListSort> = emptyMap(),
-) {
-    fun sort(kind: ShelfKind): ListSort =
-        sorts[kind] ?: if (kind == ShelfKind.Libraries) ListSort.NameAsc else ListSort.Recent
-}
+    val readingListSort: ListSort = ListSort.Recent,
+    /** Names of the collection / library rows. */
+    val collectionNames: Map<Int, String> = emptyMap(),
+    val libraryNames: Map<Int, String> = emptyMap(),
+)
 
 data class HomeLayoutActions(
     val onBack: () -> Unit = {},
-    val onToggle: (HomeSection, Boolean) -> Unit = { _, _ -> },
-    val onMove: (HomeSection, Int) -> Unit = { _, _ -> },
-    val onSort: (ShelfKind, ListSort) -> Unit = { _, _ -> },
+    val onToggle: (HomeSectionPref, Boolean) -> Unit = { _, _ -> },
+    val onMove: (HomeSectionPref, Int) -> Unit = { _, _ -> },
+    val onReadingListSort: (ListSort) -> Unit = {},
 )
 
 private const val STOP_TIMEOUT_MS = 5_000L
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeLayoutViewModel
     @Inject
     constructor(
         private val settings: AppSettingsStore,
+        session: AuthSession,
+        lists: ListsRepository,
+        catalog: CatalogRepository,
     ) : ViewModel() {
-        val state: StateFlow<HomeLayoutUiState> =
-            settings.settings
-                .map { a ->
-                    HomeLayoutUiState(
-                        parseHomeLayout(a.homeLayout),
-                        mapOf(
-                            ShelfKind.Collections to ListSort.of(a.collectionSort),
-                            ShelfKind.ReadingLists to ListSort.of(a.readingListSort),
-                            ShelfKind.Libraries to ListSort.of(a.librarySort, ListSort.NameAsc),
-                        ),
-                    )
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeLayoutUiState())
-
-        fun toggle(
-            section: HomeSection,
-            visible: Boolean,
-        ) = edit { it.toggle(section, visible) }
-
-        fun move(
-            section: HomeSection,
-            by: Int,
-        ) = edit { it.move(section, by) }
-
-        fun sort(
-            kind: ShelfKind,
-            sort: ListSort,
-        ) = viewModelScope.launch {
-            settings.update {
-                when (kind) {
-                    ShelfKind.Collections -> it.copy(collectionSort = sort.name)
-                    ShelfKind.ReadingLists -> it.copy(readingListSort = sort.name)
-                    ShelfKind.Libraries -> it.copy(librarySort = sort.name)
+        private val names: Flow<Pair<Map<Int, String>, Map<Int, String>>> =
+            session.activeServer.flatMapLatest { s ->
+                if (s == null) {
+                    flowOf(emptyMap<Int, String>() to emptyMap())
+                } else {
+                    combine(lists.collections(s), catalog.libraries(s)) { c, l ->
+                        c.associate { it.id to it.title } to l.associate { it.id to it.name }
+                    }
                 }
             }
-        }
 
-        private fun edit(change: (List<HomeSectionPref>) -> List<HomeSectionPref>) =
-            viewModelScope.launch {
-                settings.update { it.copy(homeLayout = encodeHomeLayout(change(parseHomeLayout(it.homeLayout)))) }
-            }
+        val state: StateFlow<HomeLayoutUiState> =
+            combine(settings.settings, names) { a, (collections, libraries) ->
+                HomeLayoutUiState(
+                    parseHomeLayout(a.homeLayout).withItems(collections.keys.toList(), libraries.keys.toList()),
+                    ListSort.of(a.readingListSort),
+                    collections,
+                    libraries,
+                )
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeLayoutUiState())
+
+        fun toggle(
+            row: HomeSectionPref,
+            visible: Boolean,
+        ) = edit { it.toggle(row, visible) }
+
+        fun move(
+            row: HomeSectionPref,
+            by: Int,
+        ) = edit { it.move(row, by) }
+
+        fun sortReadingLists(sort: ListSort) =
+            viewModelScope.launch { settings.update { it.copy(readingListSort = sort.name) } }
+
+        /** Edits what's on screen (rows for every collection / library included) and saves it. */
+        private fun edit(change: (List<HomeSectionPref>) -> List<HomeSectionPref>) {
+            val layout = change(state.value.layout)
+            viewModelScope.launch { settings.update { it.copy(homeLayout = encodeHomeLayout(layout)) } }
+        }
     }
 
 @Composable
@@ -127,10 +136,13 @@ fun HomeLayoutRoute(
     viewModel: HomeLayoutViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    HomeLayoutScreen(state, HomeLayoutActions(onBack, viewModel::toggle, viewModel::move, viewModel::sort))
+    HomeLayoutScreen(
+        state,
+        HomeLayoutActions(onBack, viewModel::toggle, viewModel::move, viewModel::sortReadingLists),
+    )
 }
 
-/** [derived] You → Home Screen: show/hide and reorder Home sections, and how the shelf rails are sorted. */
+/** [derived] You → Home Screen: show/hide and reorder Home sections and collection / library rails. */
 @Composable
 fun HomeLayoutScreen(
     state: HomeLayoutUiState,
@@ -157,22 +169,36 @@ fun HomeLayoutScreen(
         SectionHeader(stringResource(R.string.home_layout_sections))
         GroupedList {
             state.layout.forEachIndexed { i, pref ->
-                SectionRow(pref, first = i == 0, last = i == state.layout.lastIndex, actions)
+                SectionRow(pref, state, first = i == 0, last = i == state.layout.lastIndex, actions)
             }
         }
         LayoutFootnote(stringResource(R.string.home_layout_footnote))
     }
-    ShelfKind.entries.forEach { kind -> SortGroup(kind, state.sort(kind), actions) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader(stringResource(R.string.home_layout_sort, stringResource(R.string.home_section_reading_lists)))
+        val options = ListSort.entries
+        SegmentedControl(
+            options.map { stringResource(sortName(it)) },
+            options.indexOf(state.readingListSort).coerceAtLeast(0),
+            { actions.onReadingListSort(options[it]) },
+        )
+    }
 }
 
 @Composable
 private fun SectionRow(
     pref: HomeSectionPref,
+    state: HomeLayoutUiState,
     first: Boolean,
     last: Boolean,
     actions: HomeLayoutActions,
 ) {
-    val label = stringResource(homeSectionName(pref.section))
+    val label =
+        when (pref.section) {
+            HomeSection.Collection -> state.collectionNames[pref.id].orEmpty()
+            HomeSection.Library -> state.libraryNames[pref.id].orEmpty()
+            else -> stringResource(homeSectionName(pref.section))
+        }
     Row(
         Modifier
             .fillMaxWidth()
@@ -181,19 +207,35 @@ private fun SectionRow(
             .padding(start = 16.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            label,
-            style = Kavita.type.body,
-            color = if (pref.visible) Kavita.colors.label else Kavita.colors.labelSecondary,
-            modifier = Modifier.weight(1f),
-        )
+        Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
+            Text(
+                label,
+                style = Kavita.type.body,
+                color = if (pref.visible) Kavita.colors.label else Kavita.colors.labelSecondary,
+            )
+            if (pref.section.perItem) {
+                Text(
+                    stringResource(
+                        if (pref.section ==
+                            HomeSection.Collection
+                        ) {
+                            R.string.home_row_collection
+                        } else {
+                            R.string.home_row_library
+                        },
+                    ),
+                    style = Kavita.type.footnote,
+                    color = Kavita.colors.labelSecondary,
+                )
+            }
+        }
         MoveButton(KavitaIcons.ChevronUp, stringResource(R.string.home_layout_up, label), !first) {
-            actions.onMove(pref.section, -1)
+            actions.onMove(pref, -1)
         }
         MoveButton(KavitaIcons.ChevronDown, stringResource(R.string.home_layout_down, label), !last) {
-            actions.onMove(pref.section, 1)
+            actions.onMove(pref, 1)
         }
-        KavitaSwitch(pref.visible, { actions.onToggle(pref.section, it) }, contentDescription = label)
+        KavitaSwitch(pref.visible, { actions.onToggle(pref, it) }, contentDescription = label)
     }
 }
 
@@ -210,24 +252,6 @@ private fun MoveButton(
         Modifier.size(18.dp),
         tint = if (enabled) Kavita.colors.accent else Kavita.colors.labelTertiary,
     )
-}
-
-@Composable
-private fun SortGroup(
-    kind: ShelfKind,
-    sort: ListSort,
-    actions: HomeLayoutActions,
-) {
-    // Libraries carry no size, so they don't offer "Largest".
-    val options = if (kind == ShelfKind.Libraries) ListSort.entries - ListSort.Largest else ListSort.entries
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionHeader(stringResource(R.string.home_layout_sort, stringResource(shelfName(kind))))
-        SegmentedControl(
-            options.map { stringResource(sortName(it, kind)) },
-            options.indexOf(sort).coerceAtLeast(0),
-            { actions.onSort(kind, options[it]) },
-        )
-    }
 }
 
 @Composable
@@ -248,27 +272,17 @@ internal fun homeSectionName(section: HomeSection) =
         HomeSection.RecentlyAdded -> R.string.home_section_added
         HomeSection.SmartFilters -> R.string.home_section_smart_filters
         HomeSection.WantToRead -> R.string.home_section_want_to_read
-        HomeSection.Collections -> R.string.home_section_collections
         HomeSection.ReadingLists -> R.string.home_section_reading_lists
-        HomeSection.Libraries -> R.string.home_section_libraries
         HomeSection.Downloaded -> R.string.home_section_downloaded
+        HomeSection.Collection -> R.string.home_row_collection
+        HomeSection.Library -> R.string.home_row_library
     }
 
 @StringRes
-private fun shelfName(kind: ShelfKind) =
-    when (kind) {
-        ShelfKind.Collections -> R.string.home_section_collections
-        ShelfKind.ReadingLists -> R.string.home_section_reading_lists
-        ShelfKind.Libraries -> R.string.home_section_libraries
+private fun sortName(sort: ListSort) =
+    when (sort) {
+        ListSort.Recent -> R.string.home_sort_recent
+        ListSort.NameAsc -> R.string.home_sort_az
+        ListSort.NameDesc -> R.string.home_sort_za
+        ListSort.Largest -> R.string.home_sort_largest
     }
-
-@StringRes
-private fun sortName(
-    sort: ListSort,
-    kind: ShelfKind,
-) = when (sort) {
-    ListSort.Recent -> if (kind == ShelfKind.Libraries) R.string.home_sort_scanned else R.string.home_sort_recent
-    ListSort.NameAsc -> R.string.home_sort_az
-    ListSort.NameDesc -> R.string.home_sort_za
-    ListSort.Largest -> R.string.home_sort_largest
-}

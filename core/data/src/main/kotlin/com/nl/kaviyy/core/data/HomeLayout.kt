@@ -1,12 +1,12 @@
 package com.nl.kaviyy.core.data
 
-import com.nl.kaviyy.core.database.CollectionEntity
-import com.nl.kaviyy.core.database.LibraryEntity
 import com.nl.kaviyy.core.database.ReadingListRow
 
 /** Home sections the user can show, hide and reorder (You → Home Screen). Declaration order = default order. */
 enum class HomeSection(
     val defaultVisible: Boolean = true,
+    /** One rail per chosen item ([HomeSectionPref.id]); never added by default. */
+    val perItem: Boolean = false,
 ) {
     ContinueReading,
     OnDeck,
@@ -14,38 +14,39 @@ enum class HomeSection(
     RecentlyAdded,
     SmartFilters,
     WantToRead,
-    Collections,
     ReadingLists,
-    Libraries,
 
     /** Offline, downloads always come first; this shows them online too. */
     Downloaded(defaultVisible = false),
+
+    /** The series of one collection. */
+    Collection(defaultVisible = false, perItem = true),
+
+    /** The series of one library. */
+    Library(defaultVisible = false, perItem = true),
 }
 
 data class HomeSectionPref(
     val section: HomeSection,
     val visible: Boolean,
-)
+    /** Collection or library id for a [HomeSection.perItem] section, else 0. */
+    val id: Int = 0,
+) {
+    fun sameRow(other: HomeSectionPref) = section == other.section && id == other.id
+}
 
 /**
- * Reads `AppSettings.homeLayout` ("OnDeck,!Collections,…"). Unknown names are dropped; sections the string doesn't
- * mention (new in a later version) keep their default visibility and are inserted after their default predecessor.
+ * Reads `AppSettings.homeLayout` ("OnDeck,!WantToRead,Collection:12,…"). Unknown names are dropped; fixed sections
+ * the string doesn't mention (new in a later version) keep their default visibility after their default predecessor.
  */
 fun parseHomeLayout(encoded: String): List<HomeSectionPref> {
     val saved =
         encoded
             .split(',')
-            .mapNotNull { part ->
-                val name = part.trim().removePrefix("!")
-                HomeSection.entries.firstOrNull { it.name == name }?.let {
-                    HomeSectionPref(
-                        it,
-                        !part.trim().startsWith("!"),
-                    )
-                }
-            }.distinctBy { it.section }
+            .mapNotNull { part -> parsePref(part.trim()) }
+            .distinctBy { it.section to it.id }
             .toMutableList()
-    HomeSection.entries.forEach { section ->
+    HomeSection.entries.filterNot { it.perItem }.forEach { section ->
         if (saved.none { it.section == section }) {
             val before = HomeSection.entries.getOrNull(section.ordinal - 1)
             val at = saved.indexOfFirst { it.section == before } + 1
@@ -55,33 +56,63 @@ fun parseHomeLayout(encoded: String): List<HomeSectionPref> {
     return saved
 }
 
-fun encodeHomeLayout(layout: List<HomeSectionPref>): String =
-    layout.joinToString(",") { (if (it.visible) "" else "!") + it.section.name }
+private fun parsePref(part: String): HomeSectionPref? {
+    val name = part.removePrefix("!").substringBefore(':')
+    val section = HomeSection.entries.firstOrNull { it.name == name }
+    val id = part.substringAfter(':', "").toIntOrNull()
+    return when {
+        section == null -> null
+        section.perItem && id == null -> null
+        else -> HomeSectionPref(section, !part.startsWith("!"), id ?: 0)
+    }
+}
 
-/** Moves [section] one place up ([by] = -1) or down (+1); no-op at the ends. */
+fun encodeHomeLayout(layout: List<HomeSectionPref>): String =
+    layout.joinToString(",") {
+        (if (it.visible) "" else "!") + it.section.name + (if (it.section.perItem) ":${it.id}" else "")
+    }
+
+/**
+ * The layout with a row for every [collections] and [libraries] id: new ones are added hidden at the end, and rows
+ * for ones that no longer exist are dropped.
+ */
+fun List<HomeSectionPref>.withItems(
+    collections: List<Int>,
+    libraries: List<Int>,
+): List<HomeSectionPref> {
+    val exists = collections.map { HomeSection.Collection to it } + libraries.map { HomeSection.Library to it }
+    val kept = filter { !it.section.perItem || (it.section to it.id) in exists }
+    val added =
+        exists
+            .filter { (section, id) -> kept.none { it.section == section && it.id == id } }
+            .map { (section, id) -> HomeSectionPref(section, visible = false, id = id) }
+    return kept + added
+}
+
+/** Moves [row] one place up ([by] = -1) or down (+1); no-op at the ends. */
 fun List<HomeSectionPref>.move(
-    section: HomeSection,
+    row: HomeSectionPref,
     by: Int,
 ): List<HomeSectionPref> {
-    val from = indexOfFirst { it.section == section }
+    val from = indexOfFirst { it.sameRow(row) }
     val to = from + by
     if (from < 0 || to !in indices) return this
     return toMutableList().apply { add(to, removeAt(from)) }
 }
 
 fun List<HomeSectionPref>.toggle(
-    section: HomeSection,
+    row: HomeSectionPref,
     visible: Boolean,
-) = map { if (it.section == section) it.copy(visible = visible) else it }
+) = map { if (it.sameRow(row)) it.copy(visible = visible) else it }
 
-/** Order of the Collections / Reading Lists / Libraries rails. */
+/** Order of the Reading Lists rail. */
 enum class ListSort {
-    /** Server order: most recently changed first (libraries: most recently scanned). */
+    /** Server order: most recently changed first. */
     Recent,
     NameAsc,
     NameDesc,
 
-    /** Most series / items first (libraries: same as [NameAsc], they carry no count). */
+    /** Most items first. */
     Largest,
     ;
 
@@ -106,16 +137,5 @@ private fun <T> List<T>.sorted(
         ListSort.Largest -> sortedWith(size.then(compareBy(String.CASE_INSENSITIVE_ORDER, name)))
     }
 
-fun List<CollectionEntity>.sortedCollections(sort: ListSort) =
-    sorted(sort, { it.title }, compareBy { it.position }, compareByDescending { it.itemCount })
-
 fun List<ReadingListRow>.sortedReadingLists(sort: ListSort) =
     sorted(sort, { it.list.title }, compareBy { it.list.position }, compareByDescending { it.list.itemCount })
-
-fun List<LibraryEntity>.sortedLibraries(sort: ListSort) =
-    sorted(
-        sort,
-        { it.name },
-        compareByDescending { it.lastScanned },
-        compareBy(String.CASE_INSENSITIVE_ORDER) { it.name },
-    )

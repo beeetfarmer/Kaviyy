@@ -125,20 +125,39 @@ class HomeViewModelTest {
         }
 
     @Test
-    fun layoutAndSortsComeFromSettingsAndDownloadedJumpsFirstOffline() =
+    fun layoutComesFromSettingsAndDownloadedJumpsFirstOffline() =
         runTest {
-            settings.update { it.copy(homeLayout = "Downloaded,Collections,!OnDeck", librarySort = "NameDesc") }
+            settings.update { it.copy(homeLayout = "Downloaded,Collection:3,!OnDeck", readingListSort = "NameDesc") }
             val vm = HomeViewModel(session, repo, { online }, settings)
             vm.state.test {
                 runCurrent()
                 val on = expectMostRecentItem()
-                assertTrue(on.sections.indexOf(HomeSection.Downloaded) < on.sections.indexOf(HomeSection.Collections))
-                assertTrue(HomeSection.OnDeck !in on.sections)
-                assertEquals(ListSort.NameDesc, on.librarySort)
+                val sections = on.sections.map { it.section }
+                assertTrue(sections.indexOf(HomeSection.Downloaded) < sections.indexOf(HomeSection.Collection))
+                assertEquals(3, on.sections.single { it.section == HomeSection.Collection }.id)
+                assertTrue(HomeSection.OnDeck !in sections)
+                assertEquals(ListSort.NameDesc, on.readingListSort)
                 online.value = false
                 runCurrent()
                 // Offline, downloads are shown first by the screen itself, so the section isn't repeated.
-                assertTrue(HomeSection.Downloaded !in expectMostRecentItem().sections)
+                assertTrue(expectMostRecentItem().sections.none { it.section == HomeSection.Downloaded })
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun switchingOnACollectionRailFetchesIt() =
+        runTest {
+            val vm = HomeViewModel(session, repo, { online }, settings)
+            vm.state.test {
+                runCurrent()
+                assertEquals(listOf(1L), refreshed)
+                settings.update { it.copy(homeLayout = "!Collection:3") } // hidden: nothing to fetch
+                runCurrent()
+                assertEquals(listOf(1L), refreshed)
+                settings.update { it.copy(homeLayout = "Collection:3") }
+                runCurrent()
+                assertEquals(listOf(1L, 1L), refreshed)
                 cancelAndIgnoreRemainingEvents()
             }
         }
