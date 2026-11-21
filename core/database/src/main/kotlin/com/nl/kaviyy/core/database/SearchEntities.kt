@@ -43,13 +43,17 @@ interface RecentSearchDao {
     @Query("DELETE FROM recent_searches WHERE serverId = :serverId")
     suspend fun clear(serverId: Long)
 
+    @Query("SELECT MAX(usedAt) FROM recent_searches WHERE serverId = :serverId")
+    suspend fun latest(serverId: Long): Long?
+
     /** Records [row] and keeps only the newest [keep]. */
     @Transaction
     suspend fun add(
         row: RecentSearchEntity,
         keep: Int,
     ) {
-        upsert(row)
+        // Strictly newer than the last one, so two searches in the same millisecond still order correctly.
+        upsert(row.copy(usedAt = maxOf(row.usedAt, (latest(row.serverId) ?: 0L) + 1)))
         trim(row.serverId, keep)
     }
 }
