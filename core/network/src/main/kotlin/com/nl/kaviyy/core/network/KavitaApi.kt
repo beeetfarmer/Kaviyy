@@ -90,6 +90,18 @@ interface KavitaApi {
         @Query("role") role: Int,
     ): List<PersonDto>
 
+    /** Changes the signed-in user's password (oldPassword required for non-admins). */
+    @POST("api/Account/reset-password")
+    suspend fun changePassword(
+        @Body body: ResetPasswordDto,
+    )
+
+    /** Starts an e-mail change; the server mails a confirmation link. */
+    @POST("api/Account/update/email")
+    suspend fun changeEmail(
+        @Body body: UpdateEmailDto,
+    ): EmailChangeDto
+
     /** Kavita+ is active on the server (scrobbling needs it). */
     @GET("api/License/valid-license")
     suspend fun validLicense(): Boolean

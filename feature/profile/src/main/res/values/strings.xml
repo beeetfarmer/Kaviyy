@@ -101,4 +101,24 @@
     <string name="scrobbling_not_connected">Not connected</string>
     <string name="scrobbling_web_hint">Connect or renew accounts in Kavita\'s web settings.</string>
     <string name="scrobbling_holds">Paused series</string>
+    <string name="you_settings_account">Account</string>
+    <string name="account_title">Account</string>
+    <string name="account_username">Username</string>
+    <string name="account_email">E-mail</string>
+    <string name="account_email_none">None</string>
+    <string name="account_change_password">Change Password</string>
+    <string name="account_change_email">Change E-mail</string>
+    <string name="account_auth_keys">Auth Keys</string>
+    <string name="account_current_password">Current</string>
+    <string name="account_new_password">New</string>
+    <string name="account_confirm_password">Confirm</string>
+    <string name="account_new_email">New e-mail</string>
+    <string name="account_email_hint">Your server sends a confirmation link to the new address.</string>
+    <string name="account_password_length">Passwords need 6 to 256 characters.</string>
+    <string name="account_password_mismatch">The new passwords don\'t match.</string>
+    <string name="account_invalid_email">Enter a valid e-mail address.</string>
+    <string name="account_failed">That didn\'t work. Check your current password and connection.</string>
+    <string name="account_password_changed">Password changed.</string>
+    <string name="account_email_sent">Check the new address for a confirmation link.</string>
+    <string name="account_email_not_sent">Your server couldn\'t send the confirmation e-mail. Ask your server admin.</string>
 </resources>

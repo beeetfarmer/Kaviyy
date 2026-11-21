@@ -238,12 +238,7 @@ private fun androidx.compose.foundation.layout.RowScope.Stat(
 private fun AccountGroup(actions: YouActions) {
     var confirmWipe by rememberSaveable { mutableStateOf(false) }
     GroupedList {
-        GroupedRow(
-            stringResource(R.string.you_sign_out),
-            onClick = actions.onSignOut,
-            showChevron = false,
-            divider = true,
-        )
+        GroupedRow(stringResource(R.string.you_settings_account), onClick = actions.onAccount, divider = true)
         GroupedRow(
             stringResource(if (confirmWipe) R.string.you_delete_local_data_confirm else R.string.you_delete_local_data),
             onClick = { if (confirmWipe) actions.onDeleteLocalData() else confirmWipe = true },

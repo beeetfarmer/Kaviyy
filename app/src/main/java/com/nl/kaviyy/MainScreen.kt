@@ -43,6 +43,7 @@ import com.nl.kaviyy.feature.lists.ListsRoute
 import com.nl.kaviyy.feature.lists.ReadingListRoute
 import com.nl.kaviyy.feature.lists.WantToReadActions
 import com.nl.kaviyy.feature.lists.WantToReadRoute
+import com.nl.kaviyy.feature.profile.AccountRoute
 import com.nl.kaviyy.feature.profile.AllStatsRoute
 import com.nl.kaviyy.feature.profile.DevicesRoute
 import com.nl.kaviyy.feature.profile.ReaderPrefsRoute
@@ -122,6 +123,9 @@ private data object DevicesDestination
 private data object ScrobblingDestination
 
 @Serializable
+private data object AccountDestination
+
+@Serializable
 private data class ReadingListDestination(
     val readingListId: Int,
 )
@@ -169,7 +173,6 @@ internal fun MainScreen(
                             it.ordinal
                     },
                     onServerPill,
-                    onSignOut,
                     onDeleteLocalData,
                     TabNav(
                         onOpenWantToRead = { nav.navigate(WantToReadDestination) },
@@ -182,6 +185,7 @@ internal fun MainScreen(
                         onReaderPrefs = { nav.navigate(ReaderPrefsDestination) },
                         onDevices = { nav.navigate(DevicesDestination) },
                         onScrobbling = { nav.navigate(ScrobblingDestination) },
+                        onAccount = { nav.navigate(AccountDestination) },
                     ),
                 ) { filterFor = it }
             }
@@ -222,6 +226,9 @@ internal fun MainScreen(
             composable<ThemeDestination> { ThemeRoute(onBack = { nav.popBackStack() }) }
             composable<ReaderPrefsDestination> { ReaderPrefsRoute(onBack = { nav.popBackStack() }) }
             composable<DevicesDestination> { DevicesRoute(onBack = { nav.popBackStack() }) }
+            composable<AccountDestination> {
+                AccountRoute(onBack = { nav.popBackStack() }, onAuthKeys = {}, onSignOut = onSignOut)
+            }
             composable<ScrobblingDestination> {
                 ScrobblingRoute(
                     onBack = { nav.popBackStack() },
@@ -304,6 +311,7 @@ private data class TabNav(
     val onReaderPrefs: () -> Unit,
     val onDevices: () -> Unit,
     val onScrobbling: () -> Unit,
+    val onAccount: () -> Unit,
 )
 
 @Suppress("LongParameterList")
@@ -314,7 +322,6 @@ private fun TabContent(
     onOpenSeries: (Int) -> Unit,
     onSelect: (Tab) -> Unit,
     onServerPill: () -> Unit,
-    onSignOut: () -> Unit,
     onDeleteLocalData: () -> Unit,
     lists: TabNav,
     onOpenFilter: (Int) -> Unit,
@@ -355,7 +362,7 @@ private fun TabContent(
                     onServers = onServerPill,
                     onDevices = lists.onDevices,
                     onScrobbling = lists.onScrobbling,
-                    onSignOut = onSignOut,
+                    onAccount = lists.onAccount,
                     onDeleteLocalData = onDeleteLocalData,
                 ),
             )

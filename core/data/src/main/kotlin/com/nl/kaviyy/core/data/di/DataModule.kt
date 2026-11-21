@@ -1,5 +1,6 @@
 package com.nl.kaviyy.core.data.di
 
+import com.nl.kaviyy.core.data.AccountRepository
 import com.nl.kaviyy.core.data.AdminRepository
 import com.nl.kaviyy.core.data.AnnotationRepository
 import com.nl.kaviyy.core.data.AuthSession
@@ -11,6 +12,7 @@ import com.nl.kaviyy.core.data.ConnectivityNetworkMonitor
 import com.nl.kaviyy.core.data.DeviceRepository
 import com.nl.kaviyy.core.data.HomeRepository
 import com.nl.kaviyy.core.data.ImageReaderRepository
+import com.nl.kaviyy.core.data.KavitaAccountRepository
 import com.nl.kaviyy.core.data.KavitaAdminRepository
 import com.nl.kaviyy.core.data.KavitaDeviceRepository
 import com.nl.kaviyy.core.data.KavitaImageReaderRepository
@@ -88,6 +90,9 @@ internal interface DataModule {
 
     @Binds
     fun scrobbling(repository: KavitaScrobblingRepository): ScrobblingRepository
+
+    @Binds
+    fun account(repository: KavitaAccountRepository): AccountRepository
 
     @Binds
     fun profile(repository: KavitaProfileRepository): ProfileRepository

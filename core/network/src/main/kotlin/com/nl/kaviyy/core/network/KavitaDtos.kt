@@ -702,3 +702,27 @@ data class ScrobbleHoldDto(
     val seriesId: Int,
     val seriesName: String? = null,
 )
+
+@Serializable
+data class ResetPasswordDto(
+    val userName: String,
+    val password: String,
+    val oldPassword: String,
+) {
+    override fun toString() = "ResetPasswordDto(userName=$userName, <redacted>)"
+}
+
+@Serializable
+data class UpdateEmailDto(
+    val email: String,
+    val password: String,
+) {
+    override fun toString() = "UpdateEmailDto(<redacted>)"
+}
+
+/** Kavita `InviteUserResponse`; `emailLink` (holds a token) is deliberately not decoded. */
+@Serializable
+data class EmailChangeDto(
+    val emailSent: Boolean = false,
+    val invalidEmail: Boolean = false,
+)

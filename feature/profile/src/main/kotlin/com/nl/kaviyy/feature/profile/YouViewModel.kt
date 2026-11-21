@@ -36,7 +36,7 @@ data class YouActions(
     val onServers: () -> Unit = {},
     val onDevices: () -> Unit = {},
     val onScrobbling: () -> Unit = {},
-    val onSignOut: () -> Unit = {},
+    val onAccount: () -> Unit = {},
     val onDeleteLocalData: () -> Unit = {},
 )
 

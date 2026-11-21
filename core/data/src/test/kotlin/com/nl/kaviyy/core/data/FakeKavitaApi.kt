@@ -17,6 +17,7 @@ import com.nl.kaviyy.core.network.CreateReadingListDto
 import com.nl.kaviyy.core.network.DashboardStreamDto
 import com.nl.kaviyy.core.network.DateStatCountDto
 import com.nl.kaviyy.core.network.DecodeFilterDto
+import com.nl.kaviyy.core.network.EmailChangeDto
 import com.nl.kaviyy.core.network.EmailDeviceDto
 import com.nl.kaviyy.core.network.GenreTagDto
 import com.nl.kaviyy.core.network.GroupedSeriesDto
@@ -39,6 +40,7 @@ import com.nl.kaviyy.core.network.ReadingListSeriesDto
 import com.nl.kaviyy.core.network.ReadingPaceDto
 import com.nl.kaviyy.core.network.RefreshSeriesDto
 import com.nl.kaviyy.core.network.RelatedSeriesDto
+import com.nl.kaviyy.core.network.ResetPasswordDto
 import com.nl.kaviyy.core.network.ScrobbleHoldDto
 import com.nl.kaviyy.core.network.SearchResultGroupDto
 import com.nl.kaviyy.core.network.SendSeriesToEmailDeviceDto
@@ -51,6 +53,7 @@ import com.nl.kaviyy.core.network.SeriesMetadataDto
 import com.nl.kaviyy.core.network.SideNavStreamDto
 import com.nl.kaviyy.core.network.SmartFilterDto
 import com.nl.kaviyy.core.network.StringBreakdownDto
+import com.nl.kaviyy.core.network.UpdateEmailDto
 import com.nl.kaviyy.core.network.UpdateRatingDto
 import com.nl.kaviyy.core.network.UpdateReadingListDto
 import com.nl.kaviyy.core.network.UpdateUserReviewDto
@@ -176,6 +179,15 @@ open class FakeKavitaApi : KavitaApi {
     override suspend fun readingList(readingListId: Int): ReadingListDto = error("unused")
 
     override suspend fun account(): AccountDto = error("unused")
+
+    val accountCalls = mutableListOf<String>()
+    var emailResult = EmailChangeDto(emailSent = true)
+
+    override suspend fun changePassword(body: ResetPasswordDto) {
+        accountCalls += "password ${body.userName} ${body.oldPassword}->${body.password}"
+    }
+
+    override suspend fun changeEmail(body: UpdateEmailDto) = emailResult.also { accountCalls += "email ${body.email}" }
 
     var licensed = true
     var aniList = ""
