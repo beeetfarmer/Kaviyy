@@ -19,8 +19,8 @@ android {
 
     defaultConfig {
         applicationId = "com.nl.kaviyy"
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.1.1"
     }
 
     // Release signing only from the environment (CI secrets or a local shell), never from files in the repo.
