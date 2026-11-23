@@ -68,20 +68,33 @@ data class AppSettings(
     @ProtoNumber(21) val hideTags: List<String> = emptyList(),
     /** Series shown on Home despite [hideTags], as "serverId:seriesId". */
     @ProtoNumber(22) val unhidden: List<String> = emptyList(),
+    /** Blur on or off; [blurTags] and [blurRadius] are kept either way. */
+    @ProtoNumber(23) val blurEnabled: Boolean = true,
+    /** Library leaves out series with any of these genres / tags. */
+    @ProtoNumber(24) val libraryHideTags: List<String> = emptyList(),
+    /** Series shown in Library despite [libraryHideTags], as "serverId:seriesId". */
+    @ProtoNumber(25) val libraryUnhidden: List<String> = emptyList(),
 ) {
+    /** Blur strength in effect: 0 while blur is switched off. */
+    val activeBlurRadius: Int get() = if (blurEnabled) blurRadius else 0
+
     fun isUnhidden(
         serverId: Long,
         seriesId: Int,
-    ): Boolean = "$serverId:$seriesId" in unhidden
+        library: Boolean = false,
+    ): Boolean = "$serverId:$seriesId" in (if (library) libraryUnhidden else unhidden)
 
-    /** [unhidden] with ([show] = true) or without the series. */
+    /** Home's (or Library's) exceptions with ([show] = true) or without the series. */
     fun withUnhidden(
         serverId: Long,
         seriesId: Int,
         show: Boolean,
+        library: Boolean = false,
     ): AppSettings {
         val key = "$serverId:$seriesId"
-        return copy(unhidden = if (show) (unhidden + key).distinct() else unhidden - key)
+        val list = if (library) libraryUnhidden else unhidden
+        val updated = if (show) (list + key).distinct() else list - key
+        return if (library) copy(libraryUnhidden = updated) else copy(unhidden = updated)
     }
 
     companion object {

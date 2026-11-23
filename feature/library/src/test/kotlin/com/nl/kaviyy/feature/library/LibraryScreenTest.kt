@@ -153,4 +153,22 @@ class LibraryScreenTest {
         compose.setContent(content)
         compose.onRoot().captureRoboImage("src/test/screenshots/$name.png")
     }
+
+    @Test
+    fun seriesHiddenByTagAreLeftOut() {
+        val hidden = previewSeries.first()
+        compose.setContent {
+            KavitaTheme(appearance = Appearance.Light) {
+                val items =
+                    flowOf(
+                        PagingData
+                            .from(previewSeries, LoadStates(done, done, done))
+                            .withoutHidden(setOf(hidden.id)),
+                    ).collectAsLazyPagingItems()
+                LibraryScreen(LibraryUiState(null, previewLibraries, 1), items, LibraryActions(), blurOf = { 12 })
+            }
+        }
+        compose.onAllNodesWithText(hidden.name).assertCountEquals(0)
+        compose.onAllNodesWithText(previewSeries[1].name).onFirst().assertExists()
+    }
 }

@@ -223,4 +223,23 @@ class HomeViewModelTest {
                 cancelAndIgnoreRemainingEvents()
             }
         }
+
+    @Test
+    fun blurSwitchedOffBlursNothingAndLibraryTagsRefetch() =
+        runTest {
+            homes.value = Home(null, emptyList(), blurIds = setOf(3))
+            settings.update { it.copy(blurRadius = 25, blurEnabled = false) }
+            val vm = HomeViewModel(session, repo, { online }, settings)
+            vm.state.test {
+                runCurrent()
+                assertEquals(0, expectMostRecentItem().blurOf(3))
+                settings.update { it.copy(blurEnabled = true) }
+                runCurrent()
+                assertEquals(25, expectMostRecentItem().blurOf(3))
+                settings.update { it.copy(libraryHideTags = listOf("Gore")) }
+                runCurrent()
+                assertEquals(listOf(1L, 1L), refreshed)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
 }

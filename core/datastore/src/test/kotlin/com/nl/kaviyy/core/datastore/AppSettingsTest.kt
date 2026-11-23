@@ -50,4 +50,13 @@ class AppSettingsTest {
             AppSettingsSerializer.writeTo(settings, out)
             assertEquals(settings, AppSettingsSerializer.readFrom(ByteArrayInputStream(out.toByteArray())))
         }
+
+    @Test
+    fun libraryExceptionsAreSeparateAndBlurSwitchZeroesTheStrength() {
+        val s = AppSettings(blurRadius = 12).withUnhidden(1, 7, show = true, library = true)
+        assertTrue(s.isUnhidden(1, 7, library = true))
+        assertFalse(s.isUnhidden(1, 7))
+        assertEquals(12, s.activeBlurRadius)
+        assertEquals(0, s.copy(blurEnabled = false).activeBlurRadius)
+    }
 }

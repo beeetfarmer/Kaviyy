@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import androidx.paging.filter
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.CatalogRepository
 import com.nl.kaviyy.core.data.Comparison
@@ -16,6 +17,8 @@ import com.nl.kaviyy.core.data.NetworkMonitor
 import com.nl.kaviyy.core.data.OptionSource
 import com.nl.kaviyy.core.data.RuleValue
 import com.nl.kaviyy.core.data.SavedFilter
+import com.nl.kaviyy.core.data.Sensitive
+import com.nl.kaviyy.core.data.SensitiveSource
 import com.nl.kaviyy.core.data.SeriesFilter
 import com.nl.kaviyy.core.data.SeriesSort
 import com.nl.kaviyy.core.data.SmartFilterRepository
@@ -129,6 +132,7 @@ class LibraryViewModel
         private val smartFilters: SmartFilterRepository,
         private val saved: SavedStateHandle,
         network: NetworkMonitor = NetworkMonitor { flowOf(true) },
+        sensitiveSource: SensitiveSource = SensitiveSource { flowOf(Sensitive()) },
     ) : ViewModel() {
         /** Offline, covers without downloads are dimmed (DESIGN.md §8); Series still opens from the cache. */
         val offline: StateFlow<Boolean> =
@@ -144,6 +148,12 @@ class LibraryViewModel
             server
                 .flatMapLatest { s -> s?.let { repository.downloadedSeries(it) } ?: flowOf(emptySet()) }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptySet())
+
+        /** Covers to blur and series hidden by tag (Sensitive Content). */
+        val sensitive: StateFlow<Sensitive> =
+            server
+                .flatMapLatest { s -> s?.let(sensitiveSource::library) ?: flowOf(Sensitive()) }
+                .stateIn(viewModelScope, SharingStarted.Eagerly, Sensitive())
         private val error = MutableStateFlow<AppError?>(null)
         private val local = MutableStateFlow(saved.restore())
 
@@ -167,6 +177,9 @@ class LibraryViewModel
                 .distinctUntilChanged()
                 .flatMapLatest { (s, q) -> if (s == null || q == null) emptyFlow() else repository.librarySeries(s, q) }
                 .cachedIn(viewModelScope)
+                .combine(sensitive.map { it.hiddenIds }.distinctUntilChanged()) { page, hidden ->
+                    page.withoutHidden(hidden)
+                }
 
         init {
             viewModelScope.launch {
@@ -271,3 +284,7 @@ private fun SavedStateHandle.save(local: Local) {
 }
 
 private fun SavedStateHandle.restore(): Local = Local(picked = get(KEY_LIBRARY), grid = get(KEY_GRID) ?: true)
+
+/** Library without the series hidden by tag. */
+internal fun PagingData<SeriesEntity>.withoutHidden(hidden: Set<Int>): PagingData<SeriesEntity> =
+    if (hidden.isEmpty()) this else filter { it.id !in hidden }

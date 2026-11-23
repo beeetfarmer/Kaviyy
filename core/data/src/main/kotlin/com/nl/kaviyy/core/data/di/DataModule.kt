@@ -43,10 +43,12 @@ import com.nl.kaviyy.core.data.ReadingListRepository
 import com.nl.kaviyy.core.data.ReviewRepository
 import com.nl.kaviyy.core.data.ScrobblingRepository
 import com.nl.kaviyy.core.data.SearchRepository
+import com.nl.kaviyy.core.data.SensitiveSource
 import com.nl.kaviyy.core.data.ServerApis
 import com.nl.kaviyy.core.data.SessionRepository
 import com.nl.kaviyy.core.data.SharedPrefsReaderDisplayRepository
 import com.nl.kaviyy.core.data.SmartFilterRepository
+import com.nl.kaviyy.core.data.TaggedSensitiveSource
 import com.nl.kaviyy.core.network.KavitaApis
 import dagger.Binds
 import dagger.Module
@@ -63,6 +65,9 @@ internal interface DataModule {
 
     @Binds
     fun home(repository: OfflineFirstHomeRepository): HomeRepository
+
+    @Binds
+    fun sensitive(source: TaggedSensitiveSource): SensitiveSource
 
     @Binds
     fun catalog(repository: OfflineFirstCatalogRepository): CatalogRepository

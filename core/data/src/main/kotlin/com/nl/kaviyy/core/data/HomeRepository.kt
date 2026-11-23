@@ -8,6 +8,7 @@ import com.nl.kaviyy.core.database.OutboxDao
 import com.nl.kaviyy.core.database.ReadingListRow
 import com.nl.kaviyy.core.database.SeriesDao
 import com.nl.kaviyy.core.database.SeriesEntity
+import com.nl.kaviyy.core.datastore.AppSettings
 import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.model.result.AppResult
 import com.nl.kaviyy.core.model.result.getOrNull
@@ -50,6 +51,7 @@ object StreamType {
     /** Local only, never shown as rails: the series whose genres / tags match the blur / hide settings. */
     const val BLUR = 104
     const val HIDE = 105
+    const val LIBRARY_HIDE = 106
 }
 
 /** Kavita `SeriesSortField.Random`. */
@@ -99,7 +101,20 @@ data class Home(
     val blurIds: Set<Int> = emptySet(),
     /** Series matching the hide tags (before the user's exceptions), A–Z. */
     val tagHidden: List<HomeItem> = emptyList(),
+    /** Series matching the Library hide tags (before the user's exceptions), A–Z. */
+    val libraryHidden: List<HomeItem> = emptyList(),
 ) {
+    /** Series hidden by tag on Home (or in Library), minus the user's exceptions. */
+    fun hiddenIds(
+        settings: AppSettings,
+        serverId: Long,
+        library: Boolean = false,
+    ): Set<Int> =
+        (if (library) libraryHidden else tagHidden)
+            .map { it.seriesId }
+            .filterNot { settings.isUnhidden(serverId, it, library) }
+            .toSet()
+
     val isEmpty: Boolean
         get() =
             continueReading == null && rails.all { it.items.isEmpty() } && downloaded.isEmpty() &&
@@ -241,7 +256,11 @@ class OfflineFirstHomeRepository
             val app = settings.settings.first()
             val orders = homeOrders(app)
             val tagged =
-                listOf(StreamType.BLUR to app.blurTags, StreamType.HIDE to app.hideTags).map { (type, names) ->
+                listOf(
+                    StreamType.BLUR to app.blurTags,
+                    StreamType.HIDE to app.hideTags,
+                    StreamType.LIBRARY_HIDE to app.libraryHideTags,
+                ).map { (type, names) ->
                     refreshTagged(id, api, -type, names)
                 }
             val results =
@@ -442,7 +461,7 @@ class OfflineFirstHomeRepository
         private fun builtInStreams(serverId: Long) =
             listOf(StreamType.ON_DECK, StreamType.RECENTLY_UPDATED, StreamType.NEWLY_ADDED, StreamType.WANT_TO_READ)
                 .mapIndexed { i, type -> DashboardStreamEntity(serverId, -type, "", i, type, visible = true) } +
-                listOf(StreamType.BLUR, StreamType.HIDE).map {
+                listOf(StreamType.BLUR, StreamType.HIDE, StreamType.LIBRARY_HIDE).map {
                     DashboardStreamEntity(serverId, -it, "", 0, it, visible = false)
                 }
     }
@@ -533,6 +552,7 @@ private fun assemble(
         wantToRead,
         blurIds = tagged(StreamType.BLUR).mapTo(HashSet()) { it.seriesId },
         tagHidden = tagged(StreamType.HIDE),
+        libraryHidden = tagged(StreamType.LIBRARY_HIDE),
     )
 }
 

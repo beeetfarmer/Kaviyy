@@ -389,15 +389,29 @@ class HomeRepositoryTest {
     @Test
     fun blurAndHideTagsFetchMatchingSeriesIntoHiddenStreams() =
         runTest {
-            settings.update { it.copy(blurTags = listOf("ecchi"), hideTags = listOf("MATURE", "Gone")) }
+            settings.update {
+                it.copy(
+                    blurTags = listOf("ecchi"),
+                    hideTags = listOf("MATURE", "Gone"),
+                    libraryHideTags = listOf("Ecchi"),
+                )
+            }
             assertEquals(AppResult.Success(Unit), repo.refresh(server))
-            val (blur, hide) = taggedFilters
+            val (blur, hide, library) = taggedFilters
+            assertEquals(blur.statements, library.statements)
             assertEquals(listOf(FilterField.Genres.api to "5"), blur.statements.map { it.field to it.value })
             assertEquals(listOf(FilterField.Tags.api to "6"), hide.statements.map { it.field to it.value })
             assertEquals(0, hide.combination) // Or
             val home = repo.home(server).first()
             assertEquals(setOf(41, 1), home.blurIds)
             assertEquals(listOf("Spicy", "Ember Road"), home.tagHidden.map { it.title })
+            assertEquals(listOf("Spicy", "Ember Road"), home.libraryHidden.map { it.title })
+            val unhid = settings.settings.first().withUnhidden(serverId, 1, show = true, library = true)
+            assertEquals(setOf(41), home.hiddenIds(unhid, serverId, library = true))
+            assertEquals(setOf(41, 1), home.hiddenIds(unhid, serverId))
+            settings.update { unhid.copy(blurRadius = 9) }
+            val sensitive = TaggedSensitiveSource(repo, settings).library(server).first()
+            assertEquals(Sensitive(setOf(41, 1), 9, setOf(41)), sensitive)
             // Never shown as rails.
             assertEquals(4, home.rails.size)
             // Tags cleared: the lists empty on the next refresh.

@@ -132,19 +132,12 @@ class HomeViewModel
                 ) { ui, st -> ui.copy(refreshing = st.running, error = st.error, shuffleSeed = st.seed) }
                 .combine(online) { ui, on -> ui.copy(offline = !on) }
                 .combine(settings.settings) { ui, a ->
-                    val serverId = ui.server?.id?.value ?: 0L
-                    val hidden =
-                        ui.home
-                            ?.tagHidden
-                            ?.map { it.seriesId }
-                            ?.filterNot { a.isUnhidden(serverId, it) }
-                            .orEmpty()
-                            .toSet()
+                    val hidden = ui.home?.hiddenIds(a, ui.server?.id?.value ?: 0L).orEmpty()
                     ui.copy(
                         home = ui.home?.without(hidden),
                         layout = parseHomeLayout(a.homeLayout),
                         orders = homeOrders(a),
-                        blurRadius = a.blurRadius,
+                        blurRadius = a.activeBlurRadius,
                     )
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeUiState())
 
@@ -167,6 +160,7 @@ class HomeViewModel
                             },
                             a.blurTags.toSet(),
                             a.hideTags.toSet(),
+                            a.libraryHideTags.toSet(),
                         )
                     }.distinctUntilChanged()
                     .drop(1)

@@ -31,9 +31,11 @@ class SensitiveContentTest {
 
     private val state =
         SensitiveContentUiState(
-            AppSettings(blurTags = listOf("Ecchi"), hideTags = listOf("Mature")).withUnhidden(1, 2, show = true),
+            AppSettings(blurTags = listOf("Ecchi"), hideTags = listOf("Mature"), libraryHideTags = listOf("Gore"))
+                .withUnhidden(1, 2, show = true),
             serverId = 1,
             hidden = listOf(HomeItem(1, 0, "Crimson Night", 1, 0), HomeItem(2, 0, "Ember Road", 1, 0)),
+            libraryHidden = listOf(HomeItem(5, 0, "Red Harvest", 1, 0)),
             tagNames = listOf("Action", "Ecchi", "Mature"),
         )
 
@@ -61,25 +63,29 @@ class SensitiveContentTest {
 
     @Test
     fun hiddenSeriesSwitchAndTagPicker() {
-        val hidden = mutableListOf<Pair<Int, Boolean>>()
+        val hidden = mutableListOf<Triple<Int, Boolean, Boolean>>()
         val toggled = mutableListOf<Pair<TagKind, String>>()
+        var blur: Boolean? = null
         compose.setContent {
             KavitaTheme {
                 SensitiveContentScreen(
                     state,
-                    onBack = {},
-                    onOpenPicker = {},
-                    onToggleTag = { k, n -> toggled += k to n },
-                    onBlurRadius = {},
-                    onHidden = { id, h -> hidden += id to h },
+                    SensitiveContentActions(
+                        onToggleTag = { k, n -> toggled += k to n },
+                        onBlurEnabled = { blur = it },
+                        onHidden = { id, h, lib -> hidden += Triple(id, h, lib) },
+                    ),
                 )
             }
         }
+        compose.onNodeWithContentDescription("Blur covers").performClick()
+        assertEquals(false, blur)
         compose.onNodeWithContentDescription("Crimson Night").performClick()
-        assertEquals(listOf(1 to false), hidden)
-        compose.onNodeWithText("Hide from Home").performClick()
+        compose.onNodeWithContentDescription("Red Harvest").performClick()
+        assertEquals(listOf(Triple(1, false, false), Triple(5, false, true)), hidden)
+        compose.onNodeWithText("Hide from Library").performClick()
         compose.onNodeWithText("Action").performClick()
-        assertEquals(listOf(TagKind.Hide to "Action"), toggled)
+        assertEquals(listOf(TagKind.LibraryHide to "Action"), toggled)
     }
 
     @Test
@@ -94,7 +100,7 @@ class SensitiveContentTest {
     ) {
         compose.setContent {
             KavitaTheme(appearance = appearance) {
-                SensitiveContentScreen(state, {}, {}, { _, _ -> }, {}, { _, _ -> })
+                SensitiveContentScreen(state, SensitiveContentActions())
             }
         }
         compose.onRoot().captureRoboImage("src/test/screenshots/$name.png")

@@ -75,19 +75,35 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /** Which tag list a picker edits. */
-enum class TagKind { Blur, Hide }
+enum class TagKind(
+    @StringRes val label: Int,
+) {
+    Blur(R.string.sensitive_blur_tags),
+    Hide(R.string.sensitive_hide_tags),
+    LibraryHide(R.string.sensitive_library_hide_tags),
+}
 
 data class SensitiveContentUiState(
     val settings: AppSettings = AppSettings(),
     val serverId: Long = 0,
-    /** Series matching the hide tags (from the last Home refresh), A–Z. */
+    /** Series matching the Home hide tags (from the last Home refresh), A–Z. */
     val hidden: List<HomeItem> = emptyList(),
+    /** Series matching the Library hide tags, A–Z. */
+    val libraryHidden: List<HomeItem> = emptyList(),
     /** Genre and tag names on the server; null until loaded (or when it couldn't be reached). */
     val tagNames: List<String>? = null,
 ) {
-    fun tags(kind: TagKind): List<String> = if (kind == TagKind.Blur) settings.blurTags else settings.hideTags
+    fun tags(kind: TagKind): List<String> =
+        when (kind) {
+            TagKind.Blur -> settings.blurTags
+            TagKind.Hide -> settings.hideTags
+            TagKind.LibraryHide -> settings.libraryHideTags
+        }
 
-    fun isHidden(seriesId: Int): Boolean = !settings.isUnhidden(serverId, seriesId)
+    fun isHidden(
+        seriesId: Int,
+        library: Boolean = false,
+    ): Boolean = !settings.isUnhidden(serverId, seriesId, library)
 }
 
 /** [tags] with [name] switched on or off (matched ignoring case). */
@@ -119,10 +135,16 @@ class SensitiveContentViewModel
             combine(
                 store.settings,
                 server,
-                server.flatMapLatest { s -> if (s == null) flowOf(emptyList()) else home.home(s).map { it.tagHidden } },
+                server.flatMapLatest { s -> if (s == null) flowOf(null) else home.home(s) },
                 tagNames,
-            ) { settings, s, hidden, names ->
-                SensitiveContentUiState(settings, s?.id?.value ?: 0, hidden, names)
+            ) { settings, s, h, names ->
+                SensitiveContentUiState(
+                    settings,
+                    s?.id?.value ?: 0,
+                    h?.tagHidden.orEmpty(),
+                    h?.libraryHidden.orEmpty(),
+                    names,
+                )
             }.stateIn(viewModelScope, SharingStarted.Eagerly, SensitiveContentUiState())
 
         /** Fetches the server's genres and tags for the picker (once). */
@@ -146,15 +168,19 @@ class SensitiveContentViewModel
             when (kind) {
                 TagKind.Blur -> it.copy(blurTags = it.blurTags.toggled(name))
                 TagKind.Hide -> it.copy(hideTags = it.hideTags.toggled(name))
+                TagKind.LibraryHide -> it.copy(libraryHideTags = it.libraryHideTags.toggled(name))
             }
         }
+
+        fun setBlurEnabled(on: Boolean) = update { it.copy(blurEnabled = on) }
 
         fun setBlurRadius(radius: Int) = update { it.copy(blurRadius = radius) }
 
         fun setHidden(
             seriesId: Int,
             hidden: Boolean,
-        ) = update { it.withUnhidden(state.value.serverId, seriesId, show = !hidden) }
+            library: Boolean,
+        ) = update { it.withUnhidden(state.value.serverId, seriesId, show = !hidden, library = library) }
 
         private fun update(transform: (AppSettings) -> AppSettings) {
             viewModelScope.launch { store.update(transform) }
@@ -169,26 +195,38 @@ fun SensitiveContentRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     SensitiveContentScreen(
         state,
-        onBack = onBack,
-        onOpenPicker = { viewModel.loadTags() },
-        onToggleTag = viewModel::toggleTag,
-        onBlurRadius = viewModel::setBlurRadius,
-        onHidden = viewModel::setHidden,
+        SensitiveContentActions(
+            onBack = onBack,
+            onOpenPicker = viewModel::loadTags,
+            onToggleTag = viewModel::toggleTag,
+            onBlurEnabled = viewModel::setBlurEnabled,
+            onBlurRadius = viewModel::setBlurRadius,
+            onHidden = viewModel::setHidden,
+        ),
     )
 }
 
-/** [derived] Sensitive content: blur or hide Home covers by genre / tag, blur strength, and the hidden series. */
+data class SensitiveContentActions(
+    val onBack: () -> Unit = {},
+    val onOpenPicker: () -> Unit = {},
+    val onToggleTag: (TagKind, String) -> Unit = { _, _ -> },
+    val onBlurEnabled: (Boolean) -> Unit = {},
+    val onBlurRadius: (Int) -> Unit = {},
+    val onHidden: (seriesId: Int, hidden: Boolean, library: Boolean) -> Unit = { _, _, _ -> },
+)
+
+/** [derived] Sensitive content: blur covers or hide series by genre / tag, on Home and in Library. */
 @Composable
 fun SensitiveContentScreen(
     state: SensitiveContentUiState,
-    onBack: () -> Unit,
-    onOpenPicker: () -> Unit,
-    onToggleTag: (TagKind, String) -> Unit,
-    onBlurRadius: (Int) -> Unit,
-    onHidden: (seriesId: Int, hidden: Boolean) -> Unit,
+    actions: SensitiveContentActions,
     modifier: Modifier = Modifier,
 ) {
     var picker by rememberSaveable { mutableStateOf<TagKind?>(null) }
+    val pick = { kind: TagKind ->
+        picker = kind
+        actions.onOpenPicker()
+    }
     Column(
         modifier
             .fillMaxSize()
@@ -203,32 +241,39 @@ fun SensitiveContentScreen(
         CircleIconButton(
             KavitaIcons.ChevronLeft,
             stringResource(R.string.you_back),
-            onBack,
+            actions.onBack,
             Modifier.padding(top = 8.dp),
         )
         LargeTitleHeader(stringResource(R.string.sensitive_title))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             GroupedList {
-                TagsRow(R.string.sensitive_blur_tags, state.settings.blurTags, divider = true) {
-                    picker = TagKind.Blur
-                    onOpenPicker()
-                }
+                GroupedSwitchRow(
+                    stringResource(R.string.sensitive_blur),
+                    state.settings.blurEnabled,
+                    actions.onBlurEnabled,
+                    divider = true,
+                )
+                TagsRow(TagKind.Blur, state.tags(TagKind.Blur), divider = true) { pick(TagKind.Blur) }
                 val label = stringResource(R.string.sensitive_blur_strength)
                 GroupedRow(label, value = "${state.settings.blurRadius}")
                 Slider(
                     value = state.settings.blurRadius.toFloat(),
-                    onValueChange = { onBlurRadius(it.toInt()) },
+                    onValueChange = { actions.onBlurRadius(it.toInt()) },
                     modifier =
                         Modifier
                             .padding(horizontal = 16.dp)
                             .padding(bottom = 8.dp)
                             .semantics { contentDescription = label },
+                    enabled = state.settings.blurEnabled,
                     valueRange = 1f..AppSettings.MAX_BLUR_RADIUS.toFloat(),
                     colors =
                         SliderDefaults.colors(
                             thumbColor = Kavita.colors.accent,
                             activeTrackColor = Kavita.colors.accent,
                             inactiveTrackColor = Kavita.colors.separator,
+                            disabledThumbColor = Kavita.colors.labelTertiary,
+                            disabledActiveTrackColor = Kavita.colors.labelTertiary,
+                            disabledInactiveTrackColor = Kavita.colors.separator,
                         ),
                 )
             }
@@ -236,67 +281,69 @@ fun SensitiveContentScreen(
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             GroupedList {
-                TagsRow(R.string.sensitive_hide_tags, state.settings.hideTags) {
-                    picker = TagKind.Hide
-                    onOpenPicker()
-                }
+                TagsRow(TagKind.Hide, state.tags(TagKind.Hide), divider = true) { pick(TagKind.Hide) }
+                TagsRow(TagKind.LibraryHide, state.tags(TagKind.LibraryHide)) { pick(TagKind.LibraryHide) }
             }
             Note(R.string.sensitive_hide_note)
         }
         if (state.settings.hideTags.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    stringResource(R.string.sensitive_hidden_series),
-                    Modifier.padding(horizontal = 16.dp),
-                    style = Kavita.type.headline,
-                    color = Kavita.colors.label,
-                )
-                if (state.hidden.isEmpty()) {
-                    Note(R.string.sensitive_hidden_empty)
-                } else {
-                    GroupedList {
-                        state.hidden.forEachIndexed { i, item ->
-                            GroupedSwitchRow(
-                                item.title,
-                                state.isHidden(item.seriesId),
-                                { onHidden(item.seriesId, it) },
-                                divider = i < state.hidden.lastIndex,
-                            )
-                        }
-                    }
-                    Note(R.string.sensitive_hidden_note)
-                }
-            }
+            HiddenList(R.string.sensitive_hidden_series, state.hidden, state, library = false, actions.onHidden)
+        }
+        if (state.settings.libraryHideTags.isNotEmpty()) {
+            HiddenList(R.string.sensitive_library_hidden, state.libraryHidden, state, library = true, actions.onHidden)
         }
     }
     picker?.let { kind ->
         TagPickerSheet(
-            title =
-                stringResource(
-                    if (kind ==
-                        TagKind.Blur
-                    ) {
-                        R.string.sensitive_blur_tags
-                    } else {
-                        R.string.sensitive_hide_tags
-                    },
-                ),
+            title = stringResource(kind.label),
             names = state.tagNames,
             selected = state.tags(kind),
-            onToggle = { onToggleTag(kind, it) },
+            onToggle = { actions.onToggleTag(kind, it) },
             onDismiss = { picker = null },
         )
     }
 }
 
+/** Series hidden by tag, each with a switch; off = shown anyway. */
+@Composable
+private fun HiddenList(
+    @StringRes title: Int,
+    items: List<HomeItem>,
+    state: SensitiveContentUiState,
+    library: Boolean,
+    onHidden: (Int, Boolean, Boolean) -> Unit,
+) = Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Text(
+        stringResource(title),
+        Modifier.padding(horizontal = 16.dp),
+        style = Kavita.type.headline,
+        color = Kavita.colors.label,
+    )
+    if (items.isEmpty()) {
+        Note(R.string.sensitive_hidden_empty)
+    } else {
+        GroupedList {
+            items.forEachIndexed { i, item ->
+                GroupedSwitchRow(
+                    item.title,
+                    state.isHidden(item.seriesId, library),
+                    { onHidden(item.seriesId, it, library) },
+                    divider = i < items.lastIndex,
+                )
+            }
+        }
+        Note(if (library) R.string.sensitive_library_hidden_note else R.string.sensitive_hidden_note)
+    }
+}
+
 @Composable
 private fun TagsRow(
-    @StringRes label: Int,
+    kind: TagKind,
     tags: List<String>,
     divider: Boolean = false,
     onClick: () -> Unit,
 ) = GroupedRow(
-    stringResource(label),
+    stringResource(kind.label),
     value = tags.joinToString(", ").ifEmpty { stringResource(R.string.sensitive_none) },
     onClick = onClick,
     divider = divider,

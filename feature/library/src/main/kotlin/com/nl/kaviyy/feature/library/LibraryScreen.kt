@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -91,6 +92,7 @@ fun LibraryRoute(
     val series = viewModel.series.collectAsLazyPagingItems()
     val downloaded by viewModel.downloaded.collectAsStateWithLifecycle()
     val offline by viewModel.offline.collectAsStateWithLifecycle()
+    val sensitive by viewModel.sensitive.collectAsStateWithLifecycle()
     val actions =
         LibraryActions(
             onSelect = viewModel::select,
@@ -104,7 +106,7 @@ fun LibraryRoute(
             onOpenFilter = { onOpenFilter(state.selectedId) },
             onOpenPinned = viewModel::openPinned,
         )
-    LibraryScreen(state, series, actions, modifier, downloaded, offline)
+    LibraryScreen(state, series, actions, modifier, downloaded, offline, sensitive::blurOf)
     LibrarySheets(state, actions)
 }
 
@@ -130,6 +132,7 @@ fun LibraryScreen(
     modifier: Modifier = Modifier,
     downloaded: Set<Int> = emptySet(),
     offline: Boolean = false,
+    blurOf: (seriesId: Int) -> Int = { 0 },
 ) {
     val coverUrl: (Int) -> String? = { id -> state.server?.seriesCoverUrl(id) }
     LazyVerticalGrid(
@@ -165,7 +168,7 @@ fun LibraryScreen(
                     fullWidth("libraries") { Libraries(state, actions.onSelect) }
                 }
                 fullWidth("chips") { QuickChips(state.filter, actions, state.pinned) }
-                seriesItems(series, state.grid, coverUrl, actions.onOpenSeries, downloaded, offline)
+                seriesItems(series, state.grid, coverUrl, actions.onOpenSeries, downloaded, offline, blurOf)
             }
         }
     }
@@ -184,6 +187,7 @@ private fun LazyGridScope.seriesItems(
     onOpen: (Int) -> Unit,
     downloaded: Set<Int>,
     offline: Boolean,
+    blurOf: (Int) -> Int,
 ) {
     val refresh = series.loadState.refresh
     if (series.itemCount == 0) {
@@ -205,7 +209,12 @@ private fun LazyGridScope.seriesItems(
     items(series.itemCount, key = series.itemKey { it.id }) { index ->
         val s = series[index] ?: return@items
         Box(Modifier.alpha(if (offline && s.id !in downloaded) OFFLINE_DIMMED else 1f)) {
-            if (grid) GridCard(s, coverUrl(s.id), onOpen, s.id in downloaded) else ListRow(s, coverUrl(s.id), onOpen)
+            val blur = blurOf(s.id).dp
+            if (grid) {
+                GridCard(s, coverUrl(s.id), onOpen, s.id in downloaded, blur)
+            } else {
+                ListRow(s, coverUrl(s.id), onOpen, blur)
+            }
         }
     }
     if (series.loadState.append is LoadState.Error) {
@@ -269,6 +278,7 @@ private fun GridCard(
     imageUrl: String?,
     onOpen: (Int) -> Unit,
     downloaded: Boolean,
+    blur: Dp,
 ) {
     // TODO(api): the canvas badge counts unread chapters; SeriesDto has no such field (only pages/pagesRead),
     // and per-series volume calls would be N requests per page. Progress bar shown instead.
@@ -281,6 +291,7 @@ private fun GridCard(
         progress = s.progressBar(),
         downloadedDescription = if (downloaded) stringResource(R.string.library_downloaded) else null,
         imageUrl = imageUrl,
+        blur = blur,
     )
 }
 
@@ -290,6 +301,7 @@ private fun ListRow(
     s: SeriesEntity,
     imageUrl: String?,
     onOpen: (Int) -> Unit,
+    blur: Dp,
 ) {
     val title = s.localizedName ?: s.name
     Row(
@@ -304,6 +316,7 @@ private fun ListRow(
             Modifier.size(48.dp, 72.dp),
             KavitaShapes.rowThumb,
             imageUrl = imageUrl,
+            blur = blur,
         )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(

@@ -16,6 +16,7 @@ import com.nl.kaviyy.core.data.OptionSource
 import com.nl.kaviyy.core.data.RelatedSeries
 import com.nl.kaviyy.core.data.RuleValue
 import com.nl.kaviyy.core.data.SavedFilter
+import com.nl.kaviyy.core.data.Sensitive
 import com.nl.kaviyy.core.data.SeriesDetail
 import com.nl.kaviyy.core.data.SeriesFilter
 import com.nl.kaviyy.core.data.SeriesSort
@@ -254,6 +255,22 @@ class LibraryViewModelTest {
                 assertEquals(false, after.grid)
                 assertNull(after.error)
             }
+        }
+
+    @Test
+    fun sensitiveStateFollowsTheActiveServer() =
+        runTest {
+            val asked = mutableListOf<Long>()
+            val vm =
+                LibraryViewModel(session, repo, store, smart, SavedStateHandle(), sensitiveSource = { s ->
+                    asked += s.id.value
+                    flowOf(Sensitive(blurIds = setOf(3), blurRadius = 20, hiddenIds = setOf(4)))
+                })
+            runCurrent()
+            assertEquals(listOf(server.id.value), asked)
+            assertEquals(20, vm.sensitive.value.blurOf(3))
+            assertEquals(0, vm.sensitive.value.blurOf(4))
+            assertEquals(setOf(4), vm.sensitive.value.hiddenIds)
         }
 }
 
