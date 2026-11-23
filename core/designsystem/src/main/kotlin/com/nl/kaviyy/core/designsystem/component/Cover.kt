@@ -1,5 +1,6 @@
 package com.nl.kaviyy.core.designsystem.component
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -81,6 +83,7 @@ fun CoverImage(
     titleBottomInset: Dp = 12.dp,
     sideInset: Dp = 10.dp,
     imageUrl: String? = null,
+    blur: Dp = 0.dp,
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     Box(modifier.clip(shape).background(color)) {
@@ -108,9 +111,17 @@ fun CoverImage(
                     .padding(start = sideInset, end = sideInset, bottom = titleBottomInset),
         )
         val loader = LocalCoverImageLoader.current
-        if (imageUrl != null && loader != null) {
+        // Blur needs Android 12; before that a blurred cover keeps its placeholder art instead.
+        val canDraw = blur <= 0.dp || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+        if (imageUrl != null && loader != null && canDraw) {
             // Decorative: the title is announced by the card's text.
-            AsyncImage(imageUrl, null, loader, Modifier.matchParentSize(), contentScale = ContentScale.Crop)
+            AsyncImage(
+                imageUrl,
+                null,
+                loader,
+                Modifier.matchParentSize().then(if (blur > 0.dp) Modifier.blur(blur) else Modifier),
+                contentScale = ContentScale.Crop,
+            )
         }
         overlay()
     }
@@ -203,6 +214,7 @@ fun CoverCard(
     unreadCount: Int? = null,
     downloadedDescription: String? = null,
     imageUrl: String? = null,
+    blur: Dp = 0.dp,
 ) {
     val colors = Kavita.colors
     val coverSize =
@@ -232,6 +244,7 @@ fun CoverCard(
             titleBottomInset = titleBottom,
             sideInset = size.inset,
             imageUrl = imageUrl,
+            blur = blur,
             modifier = coverSize.cssShadow(size.shape, size.shadowY, size.shadowBlur, 0.14f),
         ) {
             if (unreadCount != null && unreadCount > 0) UnreadBadge(unreadCount, size)

@@ -35,6 +35,7 @@ data class YouActions(
     val onAllStats: () -> Unit = {},
     val onTheme: () -> Unit = {},
     val onHomeLayout: () -> Unit = {},
+    val onSensitiveContent: () -> Unit = {},
     val onReaderPrefs: () -> Unit = {},
     val onServers: () -> Unit = {},
     val onDevices: () -> Unit = {},

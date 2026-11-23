@@ -1,7 +1,9 @@
 package com.nl.kaviyy.core.data
 
 import androidx.room.Room
+import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.database.KaviyyDatabase
+import com.nl.kaviyy.core.database.OutboxEntity
 import com.nl.kaviyy.core.database.ServerEntity
 import com.nl.kaviyy.core.datastore.AppSettings
 import com.nl.kaviyy.core.datastore.AppSettingsStore
@@ -15,6 +17,7 @@ import com.nl.kaviyy.core.network.ChapterDto
 import com.nl.kaviyy.core.network.CollectionDto
 import com.nl.kaviyy.core.network.DashboardStreamDto
 import com.nl.kaviyy.core.network.DecodeFilterDto
+import com.nl.kaviyy.core.network.GenreTagDto
 import com.nl.kaviyy.core.network.GroupedSeriesDto
 import com.nl.kaviyy.core.network.LibraryDto
 import com.nl.kaviyy.core.network.ReadingListDto
@@ -64,6 +67,32 @@ class HomeRepositoryTest {
     private val itemFilters = mutableListOf<SeriesFilterV2Dto>()
     private val wantedFilters = mutableListOf<SeriesFilterV2Dto>()
     private val settings = AppSettingsStore(InMemoryDataStore(AppSettings()))
+    private val taggedFilters = mutableListOf<SeriesFilterV2Dto>()
+    private val pushed = mutableListOf<Int>()
+    private val progress =
+        object : ProgressRepository {
+            override suspend fun resume(
+                server: Server,
+                chapter: ReaderChapter,
+            ) = ResumePosition(0)
+
+            override suspend fun record(
+                server: Server,
+                chapter: ReaderChapter,
+                page: Int,
+                position: String?,
+            ) = Unit
+
+            override suspend fun push(
+                server: Server,
+                chapterId: Int,
+            ): AppResult<Unit> {
+                // Pushed before anything is fetched.
+                assertEquals(null, onDeckFilter)
+                pushed += chapterId
+                return AppResult.Success(Unit)
+            }
+        }
 
     private val api =
         object : FakeKavitaApi() {
@@ -91,6 +120,14 @@ class HomeRepositoryTest {
             ): List<SeriesDto> {
                 if (offline) throw IOException("offline")
                 return when (filter.statements.firstOrNull()?.field) {
+                    FilterField.Genres.api, FilterField.Tags.api -> {
+                        taggedFilters += filter
+                        listOf(
+                            SeriesDto(41, name = "Spicy"),
+                            SeriesDto(1, libraryId = 2, name = "Ember Road", pages = 100),
+                        )
+                    }
+
                     FilterField.CollectionTags.api -> {
                         listOf(SeriesDto(31, name = "In Zeta")).also {
                             itemFilters +=
@@ -126,6 +163,11 @@ class HomeRepositoryTest {
 
             override suspend fun libraries() = online { listOf(LibraryDto(2, "Manga")) }
 
+            override suspend fun genres(libraryIds: String?) = online { listOf(GenreTagDto(5, "Ecchi")) }
+
+            override suspend fun tags(libraryIds: String?) =
+                online { listOf(GenreTagDto(6, "Mature"), GenreTagDto(7, "Action")) }
+
             private fun <T> online(value: () -> T): T = if (offline) throw IOException("offline") else value()
 
             override suspend fun continuePoint(seriesId: Int) =
@@ -152,6 +194,8 @@ class HomeRepositoryTest {
             OfflineFirstReadingListRepository({ api }, db.readingListDao()),
             OfflineFirstCatalogRepository(db.libraryDao(), db.seriesDao(), { api }),
             settings,
+            progress,
+            db.outboxDao(),
         )
 
     @After
@@ -331,4 +375,66 @@ class HomeRepositoryTest {
             assertEquals(2, home.rails[0].items.size)
             assertEquals(2, home.rails[1].items.size) // other streams still refreshed
         }
+
+    @Test
+    fun queuedPositionsArePushedBeforeFetching() =
+        runTest {
+            listOf("49", "49", "50").forEach {
+                db.outboxDao().enqueue(OutboxEntity(0, serverId, OUTBOX_PROGRESS, it, "{}", "u$it", 0))
+            }
+            repo.refresh(server)
+            assertEquals(listOf(49, 50), pushed)
+        }
+
+    @Test
+    fun blurAndHideTagsFetchMatchingSeriesIntoHiddenStreams() =
+        runTest {
+            settings.update { it.copy(blurTags = listOf("ecchi"), hideTags = listOf("MATURE", "Gone")) }
+            assertEquals(AppResult.Success(Unit), repo.refresh(server))
+            val (blur, hide) = taggedFilters
+            assertEquals(listOf(FilterField.Genres.api to "5"), blur.statements.map { it.field to it.value })
+            assertEquals(listOf(FilterField.Tags.api to "6"), hide.statements.map { it.field to it.value })
+            assertEquals(0, hide.combination) // Or
+            val home = repo.home(server).first()
+            assertEquals(setOf(41, 1), home.blurIds)
+            assertEquals(listOf("Spicy", "Ember Road"), home.tagHidden.map { it.title })
+            // Never shown as rails.
+            assertEquals(4, home.rails.size)
+            // Tags cleared: the lists empty on the next refresh.
+            settings.update { it.copy(blurTags = emptyList(), hideTags = emptyList()) }
+            repo.refresh(server)
+            assertEquals(emptySet(), repo.home(server).first().blurIds)
+        }
+
+    @Test
+    fun taggedFilterIsNullWhenNoNameExists() {
+        assertEquals(null, taggedFilter(setOf("nope"), listOf(GenreTagDto(1, "Ecchi")), emptyList()))
+        val f =
+            checkNotNull(
+                taggedFilter(setOf("ecchi"), listOf(GenreTagDto(1, "Ecchi"), GenreTagDto(2, "ECCHI")), emptyList()),
+            )
+        assertEquals("1,2", f.statements.single().value)
+    }
+
+    @Test
+    fun hidingSeriesMovesContinueReadingOnAndFinishedChaptersAreSkipped() {
+        fun chapter(
+            id: Int,
+            read: Int,
+        ) = ChapterEntity(serverId, id, 1, id, pages = 10, pagesRead = read, format = 0)
+        val items =
+            listOf(
+                HomeItem(1, 0, "Done", 10, 10, chapter = chapter(1, 10)),
+                HomeItem(2, 0, "Mid", 10, 4, chapter = chapter(2, 4)),
+                HomeItem(3, 0, "Next", 10, 1, chapter = chapter(3, 1)),
+            )
+        val rails = listOf(HomeRail(-1, StreamType.ON_DECK, "", items))
+        assertEquals(2, continuePick(rails)?.seriesId) // finished chapter skipped
+        val home = Home(continuePick(rails), rails, wantToRead = items)
+        val hidden = home.without(setOf(2))
+        assertEquals(3, hidden.continueReading?.seriesId)
+        assertEquals(listOf(1, 3), hidden.rails[0].items.map { it.seriesId })
+        assertEquals(listOf(1, 3), hidden.wantToRead.map { it.seriesId })
+        assertEquals(home, home.without(emptySet()))
+    }
 }

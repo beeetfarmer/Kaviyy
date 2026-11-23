@@ -118,11 +118,11 @@ open class FakeKavitaApi : KavitaApi {
 
     override suspend fun dashboard(visibleOnly: Boolean): List<DashboardStreamDto> = error("unused")
 
-    override suspend fun genres(libraryIds: String): List<GenreTagDto> = error("unused")
+    override suspend fun genres(libraryIds: String?): List<GenreTagDto> = error("unused")
 
     override suspend fun publicationStatuses(libraryIds: String): List<MetadataValueDto> = error("unused")
 
-    override suspend fun tags(libraryIds: String): List<GenreTagDto> = error("unused")
+    override suspend fun tags(libraryIds: String?): List<GenreTagDto> = error("unused")
 
     override suspend fun languages(libraryIds: String): List<LanguageDto> = error("unused")
 

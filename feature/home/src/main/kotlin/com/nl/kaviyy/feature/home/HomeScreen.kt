@@ -24,6 +24,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nl.kaviyy.core.data.HomeItem
 import com.nl.kaviyy.core.data.HomeRail
@@ -61,6 +63,8 @@ fun HomeRoute(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // Back from the reader (or the background): progress and On Deck have likely moved on.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     val locale = LocalConfiguration.current.locales[0]
     val today = remember(locale) { LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMMM", locale)) }
     HomeScreen(state, today, actions, viewModel::refresh, modifier)
@@ -87,7 +91,13 @@ fun HomeScreen(
         if (state.downloadedRail.isNotEmpty()) {
             item(key = "downloaded") {
                 val rail = HomeRail(DOWNLOADED_RAIL, 0, "", state.downloadedRail)
-                Rail(rail, coverUrl, actions.copy(onSeeAll = { actions.onSeeDownloads() }), state::isDimmed)
+                Rail(
+                    rail,
+                    coverUrl,
+                    actions.copy(onSeeAll = { actions.onSeeDownloads() }),
+                    state::isDimmed,
+                    blur = state::blurOf,
+                )
             }
         }
         if (state.showStaleNotice) {
@@ -129,6 +139,7 @@ internal fun ContinueCard(
     imageUrl: String?,
     actions: HomeActions,
     modifier: Modifier = Modifier,
+    blur: Int = 0,
 ) {
     val chapter = item.chapter ?: return
     val volume = chapter.volumeNumber()
@@ -157,6 +168,7 @@ internal fun ContinueCard(
         onResume = { actions.onResume(item) },
         coverOverline = volume?.let { stringResource(R.string.home_vol_overline, it) },
         imageUrl = imageUrl,
+        coverBlur = blur.dp,
         modifier = modifier,
     )
 }
@@ -168,6 +180,7 @@ internal fun Rail(
     actions: HomeActions,
     dimmed: (Int) -> Boolean,
     downloaded: (Int) -> Boolean = { false },
+    blur: (Int) -> Int = { 0 },
 ) {
     val title =
         when (rail.type) {
@@ -223,6 +236,7 @@ internal fun Rail(
                             null
                         },
                     imageUrl = coverUrl(item.seriesId),
+                    blur = blur(item.seriesId).dp,
                     // Still opens: Series shows its cache and explains when a chapter needs downloading.
                     modifier = Modifier.alpha(if (dimmed(item.seriesId)) DIMMED else 1f),
                 )

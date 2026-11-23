@@ -60,9 +60,34 @@ data class AppSettings(
     @ProtoNumber(17) val librarySort: String = "",
     /** Per-section order, "OnDeck=NameAsc,Collection:3=Random"; sections not listed use their default order. */
     @ProtoNumber(18) val homeOrder: String = "",
+    /** Home blurs the covers of series with any of these genres / tags (names, matched ignoring case). */
+    @ProtoNumber(19) val blurTags: List<String> = emptyList(),
+    /** Blur strength in dp. */
+    @ProtoNumber(20) val blurRadius: Int = DEFAULT_BLUR_RADIUS,
+    /** Home leaves out series with any of these genres / tags. */
+    @ProtoNumber(21) val hideTags: List<String> = emptyList(),
+    /** Series shown on Home despite [hideTags], as "serverId:seriesId". */
+    @ProtoNumber(22) val unhidden: List<String> = emptyList(),
 ) {
+    fun isUnhidden(
+        serverId: Long,
+        seriesId: Int,
+    ): Boolean = "$serverId:$seriesId" in unhidden
+
+    /** [unhidden] with ([show] = true) or without the series. */
+    fun withUnhidden(
+        serverId: Long,
+        seriesId: Int,
+        show: Boolean,
+    ): AppSettings {
+        val key = "$serverId:$seriesId"
+        return copy(unhidden = if (show) (unhidden + key).distinct() else unhidden - key)
+    }
+
     companion object {
         const val DEFAULT_ACCENT = "KavitaGreen"
+        const val DEFAULT_BLUR_RADIUS = 16
+        const val MAX_BLUR_RADIUS = 40
     }
 }
 

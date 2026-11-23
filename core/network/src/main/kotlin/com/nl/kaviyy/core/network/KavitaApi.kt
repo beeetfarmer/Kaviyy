@@ -61,7 +61,7 @@ interface KavitaApi {
     /** Genres in the given libraries (comma-separated ids). */
     @GET("api/Metadata/genres")
     suspend fun genres(
-        @Query("libraryIds") libraryIds: String,
+        @Query("libraryIds") libraryIds: String? = null,
     ): List<GenreTagDto>
 
     /** Publication statuses present in the given libraries. */
@@ -72,7 +72,7 @@ interface KavitaApi {
 
     @GET("api/Metadata/tags")
     suspend fun tags(
-        @Query("libraryIds") libraryIds: String,
+        @Query("libraryIds") libraryIds: String? = null,
     ): List<GenreTagDto>
 
     @GET("api/Metadata/languages")

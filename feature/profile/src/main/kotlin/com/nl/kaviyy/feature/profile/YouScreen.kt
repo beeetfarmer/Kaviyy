@@ -97,6 +97,13 @@ fun YouScreen(
             divider = true,
         )
         SettingsRow(
+            KavitaIcons.Lock,
+            SettingsTileColors.scrobbling,
+            stringResource(R.string.you_settings_sensitive),
+            actions.onSensitiveContent,
+            divider = true,
+        )
+        SettingsRow(
             KavitaIcons.Download,
             SettingsTileColors.downloads,
             stringResource(R.string.you_settings_downloads),

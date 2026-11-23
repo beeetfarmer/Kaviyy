@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nl.kaviyy.core.designsystem.icon.KavitaIcons
@@ -37,6 +38,7 @@ fun ContinueReadingCard(
     modifier: Modifier = Modifier,
     coverOverline: String? = null,
     imageUrl: String? = null,
+    coverBlur: Dp = 0.dp,
 ) {
     val colors = Kavita.colors
     Row(
@@ -57,6 +59,7 @@ fun ContinueReadingCard(
             titleBottomInset = 10.dp,
             sideInset = 9.dp,
             imageUrl = imageUrl,
+            blur = coverBlur,
             modifier = Modifier.size(92.dp, 138.dp).cssShadow(KavitaShapes.coverGrid, 6.dp, 16.dp, 0.30f, coverColor),
         )
         // Grows with large font scales instead of clipping; the cover sets the minimum height.

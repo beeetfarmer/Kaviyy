@@ -122,6 +122,8 @@ class OfflineFirstCatalogRepository
         ): AppResult<List<RuleValue>> {
             val api = apis.api(server)
             val libs = libraryIds.joinToString(",")
+            // No libraries = all of them (Kavita takes a missing libraryIds as "everything").
+            val scope = libs.ifEmpty { null }
 
             fun named(
                 id: Any,
@@ -130,11 +132,11 @@ class OfflineFirstCatalogRepository
             return apiCall {
                 when (source) {
                     OptionSource.Genres -> {
-                        api.genres(libs).mapNotNull { named(it.id, it.title) }
+                        api.genres(scope).mapNotNull { named(it.id, it.title) }
                     }
 
                     OptionSource.Tags -> {
-                        api.tags(libs).mapNotNull { named(it.id, it.title) }
+                        api.tags(scope).mapNotNull { named(it.id, it.title) }
                     }
 
                     OptionSource.Languages -> {

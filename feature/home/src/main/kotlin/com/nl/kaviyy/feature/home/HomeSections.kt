@@ -68,7 +68,9 @@ internal fun LazyListScope.homeSection(
                             items = found.items.ordered(order) { it.title },
                         )
                     }
-                item(key = "rail-${rail.streamId}") { Rail(rail, coverUrl, a, state::isDimmed, isDownloaded) }
+                item(key = "rail-${rail.streamId}") {
+                    Rail(rail, coverUrl, a, state::isDimmed, isDownloaded, state::blurOf)
+                }
             }
         }
     }
@@ -127,7 +129,7 @@ private fun LazyListScope.continueCard(
             Modifier
                 .padding(horizontal = KavitaSpacing.screenHorizontal)
                 .alpha(if (state.isDimmed(item.seriesId)) DIMMED else 1f)
-        ContinueCard(item, coverUrl(item.seriesId), actions, modifier)
+        ContinueCard(item, coverUrl(item.seriesId), actions, modifier, state.blurOf(item.seriesId))
     }
 }
 

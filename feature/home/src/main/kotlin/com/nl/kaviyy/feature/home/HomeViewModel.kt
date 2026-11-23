@@ -55,7 +55,12 @@ data class HomeUiState(
     val orders: Map<String, SectionOrder> = emptyMap(),
     /** Random orders shuffled on the phone use this; it changes with each refresh. */
     val shuffleSeed: Long = 0,
+    /** Cover blur in dp for series matching the blur tags. */
+    val blurRadius: Int = 0,
 ) {
+    /** Blur (dp) for this series' cover; 0 = none. */
+    fun blurOf(seriesId: Int): Int = if (seriesId in home?.blurIds.orEmpty()) blurRadius else 0
+
     fun order(pref: HomeSectionPref): SectionOrder = orders.orderOf(pref)
 
     /** Offline, downloads always come first, whatever the layout says. */
@@ -127,7 +132,20 @@ class HomeViewModel
                 ) { ui, st -> ui.copy(refreshing = st.running, error = st.error, shuffleSeed = st.seed) }
                 .combine(online) { ui, on -> ui.copy(offline = !on) }
                 .combine(settings.settings) { ui, a ->
-                    ui.copy(layout = parseHomeLayout(a.homeLayout), orders = homeOrders(a))
+                    val serverId = ui.server?.id?.value ?: 0L
+                    val hidden =
+                        ui.home
+                            ?.tagHidden
+                            ?.map { it.seriesId }
+                            ?.filterNot { a.isUnhidden(serverId, it) }
+                            .orEmpty()
+                            .toSet()
+                    ui.copy(
+                        home = ui.home?.without(hidden),
+                        layout = parseHomeLayout(a.homeLayout),
+                        orders = homeOrders(a),
+                        blurRadius = a.blurRadius,
+                    )
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeUiState())
 
         init {
@@ -135,17 +153,21 @@ class HomeViewModel
             viewModelScope.launch { server.filterNotNull().distinctUntilChangedBy { it.id }.collectLatest(::refresh) }
             // Back online: catch up.
             viewModelScope.launch { online.drop(1).filter { it }.collect { refresh() } }
-            // A collection / library rail switched on, or a server-side order changed: fetch again.
+            // A collection / library rail switched on, or a server-side order or blur / hide tags changed: refetch.
             viewModelScope.launch {
                 settings.settings
                     .map { a ->
                         val layout = parseHomeLayout(a.homeLayout)
                         val orders = homeOrders(a)
-                        layout.filter { it.visible && it.section.perItem }.toSet() to
+                        listOf(
+                            layout.filter { it.visible && it.section.perItem }.toSet(),
                             layout.filter { it.visible && it.section.serverOrdered }.associate {
                                 it.orderKey to
                                     orders.orderOf(it)
-                            }
+                            },
+                            a.blurTags.toSet(),
+                            a.hideTags.toSet(),
+                        )
                     }.distinctUntilChanged()
                     .drop(1)
                     .collect { refresh() }

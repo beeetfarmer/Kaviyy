@@ -4,6 +4,7 @@ import com.nl.kaviyy.core.database.ChapterEntity
 import com.nl.kaviyy.core.database.DashboardDao
 import com.nl.kaviyy.core.database.DashboardItemEntity
 import com.nl.kaviyy.core.database.DashboardStreamEntity
+import com.nl.kaviyy.core.database.OutboxDao
 import com.nl.kaviyy.core.database.ReadingListRow
 import com.nl.kaviyy.core.database.SeriesDao
 import com.nl.kaviyy.core.database.SeriesEntity
@@ -14,7 +15,9 @@ import com.nl.kaviyy.core.model.result.map
 import com.nl.kaviyy.core.model.server.Server
 import com.nl.kaviyy.core.network.DashboardStreamDto
 import com.nl.kaviyy.core.network.DecodeFilterDto
+import com.nl.kaviyy.core.network.GenreTagDto
 import com.nl.kaviyy.core.network.KavitaApi
+import com.nl.kaviyy.core.network.SeriesDto
 import com.nl.kaviyy.core.network.SeriesFilterStatementDto
 import com.nl.kaviyy.core.network.SeriesFilterV2Dto
 import com.nl.kaviyy.core.network.SeriesSortOptionDto
@@ -43,6 +46,10 @@ object StreamType {
 
     /** Local only: Want to Read on Home, in the order chosen for it (the Want to Read page keeps its own). */
     const val WANT_TO_READ = 103
+
+    /** Local only, never shown as rails: the series whose genres / tags match the blur / hide settings. */
+    const val BLUR = 104
+    const val HIDE = 105
 }
 
 /** Kavita `SeriesSortField.Random`. */
@@ -88,6 +95,10 @@ data class Home(
     val wantToRead: List<HomeItem> = emptyList(),
     /** Cached reading lists for their rail (server order; sorted in the UI). */
     val readingLists: List<ReadingListRow> = emptyList(),
+    /** Series matching the blur tags. */
+    val blurIds: Set<Int> = emptySet(),
+    /** Series matching the hide tags (before the user's exceptions), A–Z. */
+    val tagHidden: List<HomeItem> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() =
@@ -104,7 +115,26 @@ data class Home(
         }
 
     val downloadedIds: Set<Int> by lazy { downloaded.mapTo(HashSet()) { it.seriesId } }
+
+    /** Home without the series in [ids]; Continue Reading moves on to the next one. */
+    fun without(ids: Set<Int>): Home {
+        if (ids.isEmpty()) return this
+        val keep = { item: HomeItem -> item.seriesId !in ids }
+        val kept = rails.map { it.copy(items = it.items.filter(keep)) }
+        return copy(
+            continueReading = continuePick(kept),
+            rails = kept,
+            downloaded = downloaded.filter(keep),
+            wantToRead = wantToRead.filter(keep),
+        )
+    }
 }
+
+/** The first On Deck series whose resume chapter isn't finished (a finished one waits for the next refresh). */
+internal fun continuePick(rails: List<HomeRail>): HomeItem? =
+    rails.firstOrNull { it.type == StreamType.ON_DECK }?.items?.firstOrNull { item ->
+        item.chapter?.let { it.pages == 0 || it.pagesRead < it.pages } == true
+    }
 
 internal const val RAIL_SIZE = 20
 
@@ -135,6 +165,11 @@ internal val ON_DECK_FILTER =
 /** Continue-point lookups per refresh (one request each), for the On Deck subtitles and the Continue card. */
 internal const val CONTINUE_LOOKUPS = 10
 
+/** Tag-matched series are fetched in pages of this size, up to [TAGGED_MAX_PAGES]. */
+internal const val TAGGED_PAGE_SIZE = 500
+private const val TAGGED_MAX_PAGES = 20
+private const val COMBINE_OR = 0
+
 /** Home (screen 02): observe [home]; [refresh] fetches every stream. Interface = test seam for ViewModels. */
 interface HomeRepository {
     fun home(server: Server): Flow<Home>
@@ -154,6 +189,8 @@ class OfflineFirstHomeRepository
         private val readingLists: ReadingListRepository,
         private val catalog: CatalogRepository,
         private val settings: AppSettingsStore,
+        private val progress: ProgressRepository,
+        private val outbox: OutboxDao,
     ) : HomeRepository {
         override fun home(server: Server): Flow<Home> {
             val id = server.id.value
@@ -172,6 +209,13 @@ class OfflineFirstHomeRepository
         override suspend fun refresh(server: Server): AppResult<Unit> {
             val id = server.id.value
             val api = apis.api(server)
+            // Positions still queued go first, so On Deck and the continue points reflect the latest reading.
+            outbox
+                .pending(id)
+                .filter { it.type == OUTBOX_PROGRESS }
+                .mapNotNull { it.entityKey.toIntOrNull() }
+                .distinct()
+                .forEach { progress.push(server, it) }
             val layout = apiCall { api.dashboard() }
             val smartFilters =
                 when (layout) {
@@ -194,8 +238,14 @@ class OfflineFirstHomeRepository
                 (builtInStreams(id) + smartFilters + itemStreams(server))
                     .mapIndexed { i, stream -> stream.copy(position = i) }
                     .also { dashboard.replaceStreams(id, it) }
-            val orders = homeOrders(settings.settings.first())
-            val results = listOf(layout.map {}) + streams.map { refreshStream(id, api, it, orders) } + shelves
+            val app = settings.settings.first()
+            val orders = homeOrders(app)
+            val tagged =
+                listOf(StreamType.BLUR to app.blurTags, StreamType.HIDE to app.hideTags).map { (type, names) ->
+                    refreshTagged(id, api, -type, names)
+                }
+            val results =
+                listOf(layout.map {}) + streams.map { refreshStream(id, api, it, orders) } + tagged + shelves
             return results.firstOrNull { it is AppResult.Failure } ?: AppResult.Success(Unit)
         }
 
@@ -289,6 +339,39 @@ class OfflineFirstHomeRepository
             }
         }
 
+        /** Every series with any of the genres / tags [names], kept under the local stream [streamId]. */
+        private suspend fun refreshTagged(
+            serverId: Long,
+            api: KavitaApi,
+            streamId: Int,
+            names: List<String>,
+        ): AppResult<Unit> {
+            val found = if (names.isEmpty()) AppResult.Success(emptyList()) else apiCall { fetchTagged(api, names) }
+            return found.map { list ->
+                series.upsertSeries(list.map { it.toEntity(serverId) })
+                dashboard.replaceItems(
+                    serverId,
+                    streamId,
+                    list.mapIndexed { i, s -> DashboardItemEntity(serverId, streamId, i, s.id) },
+                )
+            }
+        }
+
+        private suspend fun fetchTagged(
+            api: KavitaApi,
+            names: List<String>,
+        ): List<SeriesDto> {
+            val wanted = names.mapTo(HashSet()) { it.lowercase() }
+            val filter = taggedFilter(wanted, api.genres(), api.tags()) ?: return emptyList()
+            val found = mutableListOf<SeriesDto>()
+            var page = 1
+            do {
+                val list = api.series(filter, page++, TAGGED_PAGE_SIZE)
+                found += list
+            } while (list.size == TAGGED_PAGE_SIZE && page <= TAGGED_MAX_PAGES)
+            return found
+        }
+
         /** Decode the stream's filter on the server, then list its series. Non-series filters are skipped. */
         private suspend fun refreshSmartFilter(
             serverId: Long,
@@ -352,10 +435,16 @@ class OfflineFirstHomeRepository
                 }
         }
 
-        /** On Deck, Recently Updated / Added and Want to Read, with fixed local ids (server ids are positive). */
+        /**
+         * On Deck, Recently Updated / Added and Want to Read, with fixed local ids (server ids are positive), plus the
+         * hidden blur / hide streams (filled by [refreshTagged]).
+         */
         private fun builtInStreams(serverId: Long) =
             listOf(StreamType.ON_DECK, StreamType.RECENTLY_UPDATED, StreamType.NEWLY_ADDED, StreamType.WANT_TO_READ)
-                .mapIndexed { i, type -> DashboardStreamEntity(serverId, -type, "", i, type, visible = true) }
+                .mapIndexed { i, type -> DashboardStreamEntity(serverId, -type, "", i, type, visible = true) } +
+                listOf(StreamType.BLUR, StreamType.HIDE).map {
+                    DashboardStreamEntity(serverId, -it, "", 0, it, visible = false)
+                }
     }
 
 /** A collection's or library's series in [order]; by default newest first. */
@@ -371,6 +460,28 @@ internal fun itemFilter(
         statements = listOf(SeriesFilterStatementDto(Comparison.Contains.api, field, "$id")),
         sortOptions = order.sortOptions(newest),
     )
+}
+
+/** Series with any genre or tag named in [wanted] (lowercase); null when none of them exist on the server. */
+internal fun taggedFilter(
+    wanted: Set<String>,
+    genres: List<GenreTagDto>,
+    tags: List<GenreTagDto>,
+): SeriesFilterV2Dto? {
+    fun ids(list: List<GenreTagDto>) =
+        list.filter { it.title?.lowercase() in wanted }.joinToString(",") { "${it.id}" }.takeIf { it.isNotEmpty() }
+    val statements =
+        listOfNotNull(
+            ids(genres)?.let { SeriesFilterStatementDto(Comparison.Contains.api, FilterField.Genres.api, it) },
+            ids(tags)?.let { SeriesFilterStatementDto(Comparison.Contains.api, FilterField.Tags.api, it) },
+        )
+    return statements.takeIf { it.isNotEmpty() }?.let {
+        SeriesFilterV2Dto(
+            statements = it,
+            combination = COMBINE_OR,
+            sortOptions = SeriesSortOptionDto(SeriesSort.Title.field, isAscending = true),
+        )
+    }
 }
 
 /** The server sort for [this] order, or [default] when it has none of its own. */
@@ -412,9 +523,17 @@ private fun assemble(
                 }
             HomeRail(stream.id, stream.streamType, stream.name, rows)
         }
-    val continueReading = rails.firstOrNull { it.type == StreamType.ON_DECK }?.items?.firstOrNull { it.chapter != null }
     val wantToRead = rails.firstOrNull { it.type == StreamType.WANT_TO_READ }?.items.orEmpty()
-    return Home(continueReading, rails, downloaded.map { it.toHomeItem() }, wantToRead)
+
+    fun tagged(type: Int) = byStream[-type].orEmpty().mapNotNull { seriesById[it.seriesId]?.toHomeItem() }
+    return Home(
+        continuePick(rails),
+        rails,
+        downloaded.map { it.toHomeItem() },
+        wantToRead,
+        blurIds = tagged(StreamType.BLUR).mapTo(HashSet()) { it.seriesId },
+        tagHidden = tagged(StreamType.HIDE),
+    )
 }
 
 private fun SeriesEntity.toHomeItem(

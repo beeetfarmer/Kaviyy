@@ -60,6 +60,7 @@ import com.nl.kaviyy.feature.profile.HomeLayoutRoute
 import com.nl.kaviyy.feature.profile.PrivacyRoute
 import com.nl.kaviyy.feature.profile.ReaderPrefsRoute
 import com.nl.kaviyy.feature.profile.ScrobblingRoute
+import com.nl.kaviyy.feature.profile.SensitiveContentRoute
 import com.nl.kaviyy.feature.profile.ThemeRoute
 import com.nl.kaviyy.feature.profile.YouActions
 import com.nl.kaviyy.feature.profile.YouRoute
@@ -130,6 +131,9 @@ private data object ReaderPrefsDestination
 
 @Serializable
 private data object HomeLayoutDestination
+
+@Serializable
+private data object SensitiveContentDestination
 
 @Serializable
 private data object DevicesDestination
@@ -231,6 +235,7 @@ internal fun MainScreen(
                         onAllStats = { nav.navigate(AllStatsDestination) },
                         onTheme = { nav.navigate(ThemeDestination) },
                         onHomeLayout = { nav.navigate(HomeLayoutDestination) },
+                        onSensitiveContent = { nav.navigate(SensitiveContentDestination) },
                         onReaderPrefs = { nav.navigate(ReaderPrefsDestination) },
                         onDevices = { nav.navigate(DevicesDestination) },
                         onScrobbling = { nav.navigate(ScrobblingDestination) },
@@ -247,6 +252,7 @@ internal fun MainScreen(
                             selected = Tab.Library.ordinal
                         },
                         onLibraryOpened = { openLibrary = null },
+                        onRead = { seriesId, chapterId -> nav.navigate(ReaderDestination(seriesId, chapterId)) },
                     ),
                 ) { filterFor = it }
             }
@@ -288,6 +294,7 @@ internal fun MainScreen(
             composable<ThemeDestination> { ThemeRoute(onBack = { nav.popBackStack() }) }
             composable<ReaderPrefsDestination> { ReaderPrefsRoute(onBack = { nav.popBackStack() }) }
             composable<HomeLayoutDestination> { HomeLayoutRoute(onBack = { nav.popBackStack() }) }
+            composable<SensitiveContentDestination> { SensitiveContentRoute(onBack = { nav.popBackStack() }) }
             composable<DevicesDestination> { DevicesRoute(onBack = { nav.popBackStack() }) }
             composable<AccountDestination> {
                 AccountRoute(
@@ -383,6 +390,7 @@ private data class TabNav(
     val onTheme: () -> Unit,
     val onHomeLayout: () -> Unit,
     val onReaderPrefs: () -> Unit,
+    val onSensitiveContent: () -> Unit,
     val onDevices: () -> Unit,
     val onScrobbling: () -> Unit,
     val onAccount: () -> Unit,
@@ -394,6 +402,7 @@ private data class TabNav(
     val openLibrary: Int? = null,
     val onOpenLibrary: (Int) -> Unit = {},
     val onLibraryOpened: () -> Unit = {},
+    val onRead: (seriesId: Int, chapterId: Int) -> Unit = { _, _ -> },
 )
 
 @Suppress("LongParameterList")
@@ -415,6 +424,8 @@ private fun TabContent(
                     onSeeAll = { onSelect(Tab.Library) },
                     onSeeDownloads = { onSelect(Tab.Downloads) },
                     onOpenSeries = onOpenSeries,
+                    // The image reader hands EPUB / PDF chapters on to the book reader.
+                    onResume = { item -> item.chapter?.let { lists.onRead(item.seriesId, it.id) } },
                     onSeeWantToRead = lists.onOpenWantToRead,
                     onOpenCollection = lists.onOpenCollection,
                     onOpenReadingList = lists.onOpenReadingList,
@@ -449,6 +460,7 @@ private fun TabContent(
                     onAllStats = lists.onAllStats,
                     onTheme = lists.onTheme,
                     onHomeLayout = lists.onHomeLayout,
+                    onSensitiveContent = lists.onSensitiveContent,
                     onReaderPrefs = lists.onReaderPrefs,
                     onServers = onServerPill,
                     onDevices = lists.onDevices,

@@ -3,10 +3,13 @@ package com.nl.kaviyy.feature.home
 import app.cash.turbine.test
 import com.nl.kaviyy.core.data.AuthSession
 import com.nl.kaviyy.core.data.Home
+import com.nl.kaviyy.core.data.HomeItem
+import com.nl.kaviyy.core.data.HomeRail
 import com.nl.kaviyy.core.data.HomeRepository
 import com.nl.kaviyy.core.data.HomeSection
 import com.nl.kaviyy.core.data.HomeSectionPref
 import com.nl.kaviyy.core.data.SectionOrder
+import com.nl.kaviyy.core.data.StreamType
 import com.nl.kaviyy.core.datastore.AppSettings
 import com.nl.kaviyy.core.datastore.AppSettingsStore
 import com.nl.kaviyy.core.model.result.AppError
@@ -168,6 +171,53 @@ class HomeViewModelTest {
                 runCurrent()
                 assertEquals(listOf(1L, 1L), refreshed)
                 settings.update { it.copy(homeLayout = "Collection:3", homeOrder = "Collection:3=Random") }
+                runCurrent()
+                assertEquals(listOf(1L, 1L, 1L), refreshed)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun tagHiddenSeriesLeaveHomeUnlessUnhiddenAndBlurUsesTheChosenStrength() =
+        runTest {
+            val items = listOf(HomeItem(1, 0, "A", 1, 0), HomeItem(2, 0, "B", 1, 0), HomeItem(3, 0, "C", 1, 0))
+            homes.value =
+                Home(
+                    null,
+                    listOf(HomeRail(-3, StreamType.NEWLY_ADDED, "", items)),
+                    blurIds = setOf(3),
+                    tagHidden = items.take(2),
+                )
+            settings.update { it.copy(blurRadius = 25).withUnhidden(1, 2, show = true) }
+            val vm = HomeViewModel(session, repo, { online }, settings)
+            vm.state.test {
+                runCurrent()
+                val state = expectMostRecentItem()
+                assertEquals(
+                    listOf(2, 3),
+                    state.home
+                        ?.rails
+                        ?.single()
+                        ?.items
+                        ?.map { it.seriesId },
+                )
+                assertEquals(25, state.blurOf(3))
+                assertEquals(0, state.blurOf(2))
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun changingBlurOrHideTagsFetchesAgain() =
+        runTest {
+            val vm = HomeViewModel(session, repo, { online }, settings)
+            vm.state.test {
+                runCurrent()
+                settings.update { it.copy(hideTags = listOf("Mature")) }
+                runCurrent()
+                settings.update { it.copy(blurTags = listOf("Ecchi")) }
+                runCurrent()
+                settings.update { it.copy(blurRadius = 3) } // local only
                 runCurrent()
                 assertEquals(listOf(1L, 1L, 1L), refreshed)
                 cancelAndIgnoreRemainingEvents()
